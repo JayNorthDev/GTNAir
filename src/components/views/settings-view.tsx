@@ -42,7 +42,7 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
       aria-hidden={!isOpen}
     >
       <div 
-        className="absolute inset-0 bg-slate-900/90 backdrop-blur-2xl"
+        className="absolute inset-0 bg-slate-900/80 backdrop-blur-2xl"
         onClick={onClose} 
       />
       <div className="relative h-full w-full max-w-4xl mx-auto flex flex-col">
