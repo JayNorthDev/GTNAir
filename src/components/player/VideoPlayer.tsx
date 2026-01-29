@@ -72,10 +72,10 @@ export default function VideoPlayer({ channel }: VideoPlayerProps) {
           <video ref={videoRef} className="video-js vjs-big-play-centered w-full h-full" />
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground bg-black">
-          <MonitorPlay className="w-24 h-24 mb-4" />
+        <div className="flex flex-col items-center justify-center h-full text-slate-400 bg-transparent">
+          <MonitorPlay className="w-24 h-24 mb-4 text-slate-600" />
           <h2 className="text-2xl font-semibold">Select a channel to start watching</h2>
-          <p>Choose from the list on the left</p>
+          <p>Choose from the list on the left or from the Home screen</p>
         </div>
       )}
     </main>
