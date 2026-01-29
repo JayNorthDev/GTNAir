@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Play, Heart, Settings } from "lucide-react";
+import { Play, Heart } from "lucide-react";
 import { GtnLogo } from "../gtn-logo";
 import { CustomHomeIcon } from "../custom-home-icon";
+import { CustomSettingsIcon } from "../custom-settings-icon";
 
 type NavRailProps = {
   view: "home" | "player" | "favorites" | "settings";
@@ -67,7 +68,7 @@ export function NavRail({ view, setView }: NavRailProps) {
                 : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
             )}
           >
-            <Settings
+            <CustomSettingsIcon
               className={cn(
                 "w-7 h-7 transition-transform duration-300 fill-current",
                 view === "settings" &&
@@ -83,7 +84,7 @@ export function NavRail({ view, setView }: NavRailProps) {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/50 flex justify-around items-center z-50">
         {[
           ...navItems,
-          { id: "settings", label: "Settings", icon: Settings },
+          { id: "settings", label: "Settings", icon: CustomSettingsIcon },
         ].map((item) => {
           const isActive = view === item.id;
           return (
