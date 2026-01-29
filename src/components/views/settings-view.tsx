@@ -42,12 +42,12 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
       aria-hidden={!isOpen}
     >
       <div 
-        className="absolute inset-0 bg-slate-900/80 backdrop-blur-2xl"
+        className="absolute inset-0 bg-slate-900/90 backdrop-blur-2xl"
         onClick={onClose} 
       />
       <div className="relative h-full w-full max-w-4xl mx-auto flex flex-col">
         <div className="absolute top-4 right-4 md:top-6 md:right-6 z-10">
-          <button onClick={onClose} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-slate-200 transition-colors">
+          <button onClick={onClose} className="p-2 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 transition-colors">
             <X className="w-6 h-6" />
             <span className="sr-only">Close Settings</span>
           </button>
