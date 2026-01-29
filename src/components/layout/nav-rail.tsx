@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Home, Play, Heart, Settings } from "lucide-react";
+import { Play, Heart, Settings } from "lucide-react";
 import { GtnLogo } from "../gtn-logo";
-import Link from "next/link";
+import { CustomHomeIcon } from "../custom-home-icon";
 
 type NavRailProps = {
   view: "home" | "player" | "favorites" | "settings";
@@ -12,7 +12,7 @@ type NavRailProps = {
 };
 
 const navItems = [
-  { id: "home", label: "Home", icon: Home },
+  { id: "home", label: "Home", icon: CustomHomeIcon },
   { id: "player", label: "Live TV", icon: Play },
   { id: "favorites", label: "Favorites", icon: Heart },
 ];
