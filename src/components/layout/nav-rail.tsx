@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { LayoutGrid, Tv } from "lucide-react";
+import { Home, Tv } from "lucide-react";
 import { GtnLogo } from "../gtn-logo";
 
 type NavRailProps = {
@@ -10,7 +10,7 @@ type NavRailProps = {
 };
 
 const navItems = [
-  { id: "home", label: "Home", icon: LayoutGrid },
+  { id: "home", label: "Home", icon: Home },
   { id: "player", label: "Live TV", icon: Tv },
 ];
 
