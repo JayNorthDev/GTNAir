@@ -36,7 +36,7 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 transform-gpu transition-transform duration-500 ease-in-out",
+        "fixed inset-y-0 right-0 left-0 md:left-20 z-50 transform-gpu transition-transform duration-500 ease-in-out",
         isOpen ? "translate-y-0" : "translate-y-full"
       )}
       aria-hidden={!isOpen}
