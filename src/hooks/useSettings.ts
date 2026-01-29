@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 const SETTINGS_KEY = 'iptv-player-settings';
 
-export type View = 'home' | 'player' | 'favorites' | 'settings';
+export type View = 'home' | 'player' | 'favorites';
 
 export type Settings = {
   autoSkip: boolean;
@@ -30,7 +30,12 @@ export function useSettings() {
       if (item) {
         // Merge saved settings with defaults to avoid breaking changes
         const savedSettings = JSON.parse(item);
-        setSettings({ ...defaultSettings, ...savedSettings });
+        const newSettings = { ...defaultSettings, ...savedSettings };
+        // Ensure defaultView is a valid value
+        if (newSettings.defaultView === 'settings') {
+          newSettings.defaultView = 'home';
+        }
+        setSettings(newSettings);
       } else {
         setSettings(defaultSettings);
       }

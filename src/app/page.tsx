@@ -23,6 +23,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [view, setView] = useState<SettingsViewType>("home");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const favoriteChannels = useMemo(
     () => allChannels.filter(channel => favoriteUrls.includes(channel.url)),
@@ -95,8 +96,6 @@ export default function Home() {
           );
         }
         return <HomeGrid channels={favoriteChannels} onChannelSelect={handleChannelClick} />;
-      case "settings":
-        return <SettingsView />;
       case "player":
         return (
           <div className="flex h-full">
@@ -137,10 +136,16 @@ export default function Home() {
 
   return (
     <div className="flex h-screen overflow-hidden text-foreground">
-      <NavRail view={view} setView={setView} />
+      <NavRail 
+        view={view} 
+        setView={setView} 
+        isSettingsOpen={isSettingsOpen}
+        setIsSettingsOpen={setIsSettingsOpen}
+      />
       <main className="flex-1 overflow-hidden">
         {renderContent()}
       </main>
+      <SettingsView isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }
