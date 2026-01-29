@@ -95,9 +95,8 @@ export default function Home() {
             <div className="flex flex-col flex-1 overflow-hidden">
               <Header
                 selectedChannel={selectedChannel}
+                isSidebarOpen={isSidebarOpen}
                 setIsSidebarOpen={setIsSidebarOpen}
-                isFavorite={isFavorite}
-                toggleFavorite={toggleFavorite}
               />
               <VideoPlayer channel={selectedChannel} />
             </div>
