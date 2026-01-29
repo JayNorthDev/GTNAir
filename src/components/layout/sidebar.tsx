@@ -31,9 +31,9 @@ export default function Sidebar({
   loading,
 }: SidebarProps) {
   return (
-    <aside className={`absolute md:relative z-20 h-full bg-sidebar/80 backdrop-blur-lg border-r border-border/20 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-80' : 'w-0 md:w-20'} overflow-hidden flex flex-col`}>
+    <aside className={`absolute md:relative z-20 h-full bg-sidebar/80 backdrop-blur-lg border-r border-border/20 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-80' : 'w-0'} overflow-hidden flex flex-col`}>
       <div className="flex items-center justify-between p-4 h-16 border-b border-border/20 shrink-0">
-        <div className={`flex items-center gap-2 ${!isSidebarOpen && 'md:hidden'}`}>
+        <div className={`flex items-center gap-2`}>
           <Tv className="w-8 h-8 text-primary" />
           <h1 className="text-xl font-bold">IPTVPlayer</h1>
         </div>
@@ -42,23 +42,20 @@ export default function Sidebar({
         </button>
       </div>
 
-      <div className={`p-4 shrink-0 ${!isSidebarOpen && 'md:p-2 md:flex md:justify-center'}`}>
+      <div className={`p-4 shrink-0`}>
         <div className="relative">
-          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground ${!isSidebarOpen && 'md:hidden'}`} />
-          <button className={`p-2 rounded-full hover:bg-sidebar-accent ${isSidebarOpen && 'md:hidden'} hidden md:block`} onClick={() => !isSidebarOpen && setIsSidebarOpen(true)}>
-            <Search className="w-5 h-5 text-muted-foreground" />
-          </button>
+          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
           <input
             type="text"
             placeholder="Search channels..."
-            className={`w-full bg-card/50 border border-input rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary ${!isSidebarOpen && 'md:hidden'}`}
+            className={`w-full bg-card/50 border border-input rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      <div className={`px-4 pb-2 ${!isSidebarOpen && 'md:hidden'}`}>
+      <div className={`px-4 pb-2`}>
         <p className="text-sm text-muted-foreground font-semibold mb-2">Categories</p>
         <select
           onChange={(e) => setSelectedCategory(e.target.value)}
@@ -72,7 +69,7 @@ export default function Sidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-        <h3 className={`text-lg font-semibold mb-4 ${!isSidebarOpen && 'md:hidden'}`}>{selectedCategory} Channels</h3>
+        <h3 className={`text-lg font-semibold mb-4`}>{selectedCategory} Channels</h3>
         {loading && displayChannels.length === 0 ? (
           <div className="space-y-2">
             {[...Array(15)].map((_, i) => (
@@ -95,14 +92,14 @@ export default function Sidebar({
               >
                 {channel.tvg.logo ? <img src={channel.tvg.logo} alt={channel.name} className="w-10 h-10 object-contain rounded-md bg-black/20 shrink-0" onError={(e) => {(e.target as HTMLImageElement).style.display='none';}}/> : <div className="w-10 h-10 flex items-center justify-center bg-card rounded-md shrink-0"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
                  {!channel.tvg.logo && <div className="w-10 h-10 flex items-center justify-center bg-card rounded-md shrink-0"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
-                <div className={`flex-1 overflow-hidden ${!isSidebarOpen && 'md:hidden'}`}>
+                <div className={`flex-1 overflow-hidden`}>
                   <p className="font-semibold truncate text-slate-200">{channel.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{channel.group.title || "No Group"}</p>
                 </div>
               </button>
             ))}
             {displayChannels.length === 0 && searchTerm && (
-              <div className={`text-center py-8 text-muted-foreground ${!isSidebarOpen && 'md:hidden'}`}>
+              <div className={`text-center py-8 text-muted-foreground`}>
                 <p>No channels found for "{searchTerm}".</p>
               </div>
             )}

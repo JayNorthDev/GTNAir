@@ -29,7 +29,7 @@ export default function Header({ selectedChannel, isSidebarOpen, setIsSidebarOpe
         onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
         className="p-2 hover:bg-secondary transition-colors hidden md:block"
       >
-        {isSidebarOpen ? <SidebarOpen /> : <SidebarClose />}
+        {isSidebarOpen ? <SidebarClose /> : <SidebarOpen />}
         <span className="sr-only">Toggle Channel List</span>
       </button>
     </header>
