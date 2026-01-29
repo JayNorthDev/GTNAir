@@ -4,6 +4,7 @@ import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import { Channel } from '@/lib/m3u-parser';
 import { MonitorPlay } from 'lucide-react';
+import type Player from 'video.js/dist/types/player';
 
 type VideoPlayerProps = {
   channel: Channel | null;
@@ -14,72 +15,59 @@ type VideoPlayerProps = {
 
 export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playerRef = useRef<any>(null);
-  const isInitialPlay = useRef(true);
+  const playerRef = useRef<Player | null>(null);
 
   useEffect(() => {
-    // Suppress subtitle and bandwidth warnings
-    const originalWarn = videojs.log.warn;
-    videojs.log.warn = function (...args: any[]) {
-      if (
-        (args[0] && typeof args[0] === 'string' && args[0].includes('Problem encountered loading the subtitle track')) ||
-        (args[0] && typeof args[0] === 'string' && args[0].includes('Aborted early because there isn\'t enough bandwidth'))
-      ) {
-        return;
-      }
-      originalWarn.apply(this, args);
-    };
-
-    if (videoRef.current && !playerRef.current) {
-        const videoElement = videoRef.current;
-        playerRef.current = videojs(videoElement, {
-          autoplay: false, // We will control autoplay manually
-          controls: true,
-          fluid: true,
-          liveui: true,
-        });
-
-        playerRef.current.on('error', () => {
-          if (autoSkip && onStreamError) {
-            console.log("Stream error, auto-skipping to next channel.");
-            onStreamError();
-          }
-        });
+    // If a player instance already exists, dispose of it before creating a new one.
+    // This is the key to fixing the black screen issue, as it ensures a clean state for each new channel.
+    if (playerRef.current) {
+      playerRef.current.dispose();
+      playerRef.current = null;
     }
 
-    return () => {
-        if (playerRef.current) {
-            playerRef.current.dispose();
-            playerRef.current = null;
+    // Only proceed if a channel is selected and the video element is available.
+    if (channel && videoRef.current) {
+      // Initialize a new Video.js player.
+      const player = playerRef.current = videojs(videoRef.current, {
+        autoplay: true, // We want the new channel to play immediately.
+        controls: true,
+        fluid: true,
+        liveui: true,
+        muted: isMuted, // Apply the mute setting from props.
+        sources: [{
+          src: channel.url,
+          type: channel.http?.['content-type'] || 'application/x-mpegURL',
+        }],
+      });
+
+      // Set up error handling for the new player instance.
+      player.on('error', () => {
+        const error = player.error();
+        // Suppress minor subtitle errors that don't affect playback.
+        if (error && error.message.includes('Problem encountered loading the subtitle track')) {
+          console.log('Ignoring subtitle loading error.');
+          player.error(null); // Clear the error state
+          return;
         }
+        
+        console.error("Video.js stream error:", error);
+        if (autoSkip && onStreamError) {
+          console.log("Stream error, attempting to auto-skip to the next channel.");
+          onStreamError();
+        }
+      });
     }
-  }, [autoSkip, onStreamError]);
 
-  useEffect(() => {
-    if (playerRef.current && channel) {
-        playerRef.current.ready(() => {
-            if (isInitialPlay.current) {
-                playerRef.current.muted(isMuted);
-                isInitialPlay.current = false;
-            }
-            playerRef.current.pause();
-            playerRef.current.src({
-                src: channel.url,
-                type: channel.http?.['content-type'] || 'application/x-mpegURL',
-            });
-            playerRef.current.load();
-            const playPromise = playerRef.current.play();
-            if (playPromise !== undefined) {
-                playPromise.catch((error: any) => { 
-                  // Ignore user abort errors, but log others
-                  if (error.name !== 'AbortError') {
-                    console.error('Video.js play promise rejected:', error);
-                  }
-                 });
-            }
-        });
-    }
-  }, [channel, isMuted]);
+    // The cleanup function for this effect will run when the channel changes again or the component unmounts.
+    return () => {
+      if (playerRef.current && !playerRef.current.isDisposed()) {
+        playerRef.current.dispose();
+        playerRef.current = null;
+      }
+    };
+    // The effect should re-run whenever the channel itself changes.
+    // Other props are passed directly during initialization.
+  }, [channel, autoSkip, onStreamError, isMuted]);
 
   return (
     <main className="flex-1 flex flex-col bg-black">
