@@ -102,6 +102,14 @@ export function HomeGrid({ channels, onChannelSelect }: HomeGridProps) {
               height={height}
               width={width}
               itemData={{ channels, columnCount }}
+              itemKey={({ columnIndex, rowIndex, data }) => {
+                const index = rowIndex * data.columnCount + columnIndex;
+                if (index >= data.channels.length) {
+                  return `empty-${rowIndex}-${columnIndex}`;
+                }
+                const channel = data.channels[index];
+                return channel.url;
+              }}
               className="!overflow-x-hidden"
             >
               {Cell}
