@@ -1,17 +1,18 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Home, Play } from "lucide-react";
+import { Home, Play, Heart } from "lucide-react";
 import { GtnLogo } from "../gtn-logo";
 
 type NavRailProps = {
-  view: "home" | "player";
-  setView: (view: "home" | "player") => void;
+  view: "home" | "player" | "favorites";
+  setView: (view: "home" | "player" | "favorites") => void;
 };
 
 const navItems = [
   { id: "home", label: "Home", icon: Home },
   { id: "player", label: "Live TV", icon: Play },
+  { id: "favorites", label: "Favorites", icon: Heart },
 ];
 
 export function NavRail({ view, setView }: NavRailProps) {
@@ -26,7 +27,7 @@ export function NavRail({ view, setView }: NavRailProps) {
             return (
               <button
                 key={item.id}
-                onClick={() => setView(item.id as 'home' | 'player')}
+                onClick={() => setView(item.id as 'home' | 'player' | 'favorites')}
                 className={cn(
                   "flex flex-col items-center w-full p-2 rounded-lg transition-colors duration-200",
                   isActive ? "text-sky-400" : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
@@ -47,7 +48,7 @@ export function NavRail({ view, setView }: NavRailProps) {
           return (
             <button
               key={item.id}
-              onClick={() => setView(item.id as 'home' | 'player')}
+              onClick={() => setView(item.id as 'home' | 'player' | 'favorites')}
               className={cn(
                 "flex flex-col items-center justify-center h-full w-full transition-colors duration-200",
                 isActive ? "text-sky-400" : "text-slate-400"

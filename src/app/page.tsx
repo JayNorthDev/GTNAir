@@ -1,22 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useChannels } from "@/hooks/useChannels";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import VideoPlayer from "@/components/player/VideoPlayer";
 import { Channel } from "@/lib/m3u-parser";
-import { AlertTriangle, Loader } from "lucide-react";
+import { AlertTriangle, Loader, Heart } from "lucide-react";
 import { NavRail } from "@/components/layout/nav-rail";
 import { HomeGrid } from "@/components/views/home-grid";
+import { useFavorites } from "@/hooks/useFavorites";
 
 export default function Home() {
   const { allChannels, displayChannels, categories, loading, error, filterChannels } = useChannels();
+  const { favoriteUrls, toggleFavorite, isFavorite } = useFavorites();
+  
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [view, setView] = useState<"home" | "player">("home");
+  const [view, setView] = useState<'home' | 'player' | 'favorites'>("home");
+
+  const favoriteChannels = useMemo(
+    () => allChannels.filter(channel => favoriteUrls.includes(channel.url)),
+    [allChannels, favoriteUrls]
+  );
 
   useEffect(() => {
     filterChannels(searchTerm, selectedCategory);
@@ -53,14 +61,23 @@ export default function Home() {
     )
   }
 
-  return (
-    <div className="flex h-screen overflow-hidden text-foreground">
-      <NavRail view={view} setView={setView} />
-      <main className="flex-1 overflow-hidden">
-        {view === "home" && (
-            <HomeGrid channels={allChannels} onChannelSelect={handleChannelClick} />
-        )}
-        {view === "player" && (
+  const renderContent = () => {
+    switch (view) {
+      case "home":
+        return <HomeGrid channels={allChannels} onChannelSelect={handleChannelClick} />;
+      case "favorites":
+        if (favoriteChannels.length === 0) {
+          return (
+            <div className="flex flex-col items-center justify-center h-full text-slate-400">
+              <Heart className="w-24 h-24 mb-4 text-slate-600" />
+              <h2 className="text-2xl font-semibold">No Favorites Yet</h2>
+              <p>Click the heart on a channel in the player to add it here.</p>
+            </div>
+          );
+        }
+        return <HomeGrid channels={favoriteChannels} onChannelSelect={handleChannelClick} />;
+      case "player":
+        return (
           <div className="flex h-full">
             <Sidebar
               isSidebarOpen={isSidebarOpen}
@@ -79,11 +96,23 @@ export default function Home() {
               <Header
                 selectedChannel={selectedChannel}
                 setIsSidebarOpen={setIsSidebarOpen}
+                isFavorite={isFavorite}
+                toggleFavorite={toggleFavorite}
               />
               <VideoPlayer channel={selectedChannel} />
             </div>
           </div>
-        )}
+        );
+      default:
+        return <HomeGrid channels={allChannels} onChannelSelect={handleChannelClick} />;
+    }
+  };
+
+  return (
+    <div className="flex h-screen overflow-hidden text-foreground">
+      <NavRail view={view} setView={setView} />
+      <main className="flex-1 overflow-hidden">
+        {renderContent()}
       </main>
     </div>
   );
