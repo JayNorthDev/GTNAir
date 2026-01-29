@@ -17,6 +17,12 @@ const CARD_MIN_WIDTH = 200;
 export function HomeGrid({ channels, onChannelSelect }: HomeGridProps) {
   const gridRef = React.useRef<FixedSizeGrid>(null);
 
+  React.useEffect(() => {
+    if (gridRef.current) {
+      gridRef.current.scrollTo({ scrollTop: 0 });
+    }
+  }, [channels]);
+
   const Cell = ({
     columnIndex,
     rowIndex,
@@ -81,7 +87,7 @@ export function HomeGrid({ channels, onChannelSelect }: HomeGridProps) {
       <AutoSizer>
         {({ height, width }) => {
           if (width === 0) return null;
-          const columnCount = Math.floor(width / (CARD_MIN_WIDTH + GAP_SIZE));
+          const columnCount = Math.max(1, Math.floor(width / (CARD_MIN_WIDTH + GAP_SIZE)));
           const columnWidth = width / columnCount;
           const rowCount = Math.ceil(channels.length / columnCount);
           const rowHeight = columnWidth * (9 / 16);

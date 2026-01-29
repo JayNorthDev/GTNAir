@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Channel } from '@/lib/m3u-parser';
 
 const FAVORITES_KEY = 'iptv-favorites-urls';
@@ -29,7 +29,7 @@ export function useFavorites() {
     }
   };
 
-  const toggleFavorite = useCallback((channel: Channel | null) => {
+  const toggleFavorite = (channel: Channel | null) => {
     if (!channel || !channel.url) return;
 
     setFavoriteUrls(prevUrls => {
@@ -43,12 +43,12 @@ export function useFavorites() {
       updateLocalStorage(newUrls);
       return newUrls;
     });
-  }, []);
+  };
 
-  const isFavorite = useCallback((channel: Channel | null): boolean => {
+  const isFavorite = (channel: Channel | null): boolean => {
     if (!channel || !channel.url) return false;
     return favoriteUrls.includes(channel.url);
-  }, [favoriteUrls]);
+  };
 
   return { favoriteUrls, toggleFavorite, isFavorite };
 }
