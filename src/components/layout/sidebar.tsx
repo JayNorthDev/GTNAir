@@ -91,7 +91,6 @@ export default function Sidebar({
                 className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all ${selectedChannel?.url === channel.url ? 'bg-primary/20 text-white shadow-lg' : 'hover:bg-secondary'}`}
               >
                 {channel.tvg.logo ? <img src={channel.tvg.logo} alt={channel.name} className="w-10 h-10 object-contain rounded-md bg-black/20 shrink-0" onError={(e) => {(e.target as HTMLImageElement).style.display='none';}}/> : <div className="w-10 h-10 flex items-center justify-center bg-card rounded-md shrink-0"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
-                 {!channel.tvg.logo && <div className="w-10 h-10 flex items-center justify-center bg-card rounded-md shrink-0"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
                 <div className={`flex-1 overflow-hidden`}>
                   <p className="font-semibold truncate text-slate-200">{channel.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{channel.group.title || "No Group"}</p>
