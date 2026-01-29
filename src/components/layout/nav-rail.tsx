@@ -42,7 +42,7 @@ export function NavRail({ view, setView }: NavRailProps) {
                   >
                     <item.icon
                       className={cn(
-                        "w-7 h-7 transition-transform duration-300",
+                        "w-7 h-7 transition-transform duration-300 fill-current",
                         isActive &&
                           "scale-110 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)]"
                       )}
@@ -69,7 +69,7 @@ export function NavRail({ view, setView }: NavRailProps) {
           >
             <Settings
               className={cn(
-                "w-7 h-7 transition-transform duration-300",
+                "w-7 h-7 transition-transform duration-300 fill-current",
                 view === "settings" &&
                   "scale-110 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)]"
               )}
@@ -102,7 +102,7 @@ export function NavRail({ view, setView }: NavRailProps) {
               {isActive && <div className="absolute inset-x-0 top-0 h-0.5 bg-sky-400 shadow-[0_0_8px_theme(colors.sky.400)]"></div>}
               <item.icon
                 className={cn(
-                  "w-6 h-6",
+                  "w-6 h-6 fill-current",
                   isActive && "drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
                 )}
               />
