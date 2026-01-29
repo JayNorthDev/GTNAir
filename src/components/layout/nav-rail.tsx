@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Home, Tv } from "lucide-react";
+import { Home, Play } from "lucide-react";
 import { GtnLogo } from "../gtn-logo";
 
 type NavRailProps = {
@@ -11,7 +11,7 @@ type NavRailProps = {
 
 const navItems = [
   { id: "home", label: "Home", icon: Home },
-  { id: "player", label: "Live TV", icon: Tv },
+  { id: "player", label: "Live TV", icon: Play },
 ];
 
 export function NavRail({ view, setView }: NavRailProps) {
