@@ -2,10 +2,8 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Play, Heart } from "lucide-react";
+import { Play, Heart, Home, Settings } from "lucide-react";
 import { GtnLogo } from "../gtn-logo";
-import { CustomHomeIcon } from "../custom-home-icon";
-import { CustomSettingsIcon } from "../custom-settings-icon";
 
 type NavRailProps = {
   view: "home" | "player" | "favorites" | "settings";
@@ -13,7 +11,7 @@ type NavRailProps = {
 };
 
 const navItems = [
-  { id: "home", label: "Home", icon: CustomHomeIcon },
+  { id: "home", label: "Home", icon: Home },
   { id: "player", label: "Live TV", icon: Play },
   { id: "favorites", label: "Favorites", icon: Heart },
 ];
@@ -43,7 +41,7 @@ export function NavRail({ view, setView }: NavRailProps) {
                   >
                     <item.icon
                       className={cn(
-                        "w-7 h-7 transition-transform duration-300 fill-current",
+                        "w-7 h-7 transition-transform duration-300",
                         isActive &&
                           "scale-110 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)]"
                       )}
@@ -68,9 +66,9 @@ export function NavRail({ view, setView }: NavRailProps) {
                 : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
             )}
           >
-            <CustomSettingsIcon
+            <Settings
               className={cn(
-                "w-7 h-7 transition-transform duration-300 fill-current",
+                "w-7 h-7 transition-transform duration-300",
                 view === "settings" &&
                   "scale-110 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)]"
               )}
@@ -84,7 +82,7 @@ export function NavRail({ view, setView }: NavRailProps) {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/50 flex justify-around items-center z-50">
         {[
           ...navItems,
-          { id: "settings", label: "Settings", icon: CustomSettingsIcon },
+          { id: "settings", label: "Settings", icon: Settings },
         ].map((item) => {
           const isActive = view === item.id;
           return (
@@ -103,7 +101,7 @@ export function NavRail({ view, setView }: NavRailProps) {
               {isActive && <div className="absolute inset-x-0 top-0 h-0.5 bg-sky-400 shadow-[0_0_8px_theme(colors.sky.400)]"></div>}
               <item.icon
                 className={cn(
-                  "w-6 h-6 fill-current",
+                  "w-6 h-6",
                   isActive && "drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
                 )}
               />
