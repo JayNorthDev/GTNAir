@@ -22,25 +22,27 @@ export function NavRail({ view, setView }: NavRailProps) {
       {/* Desktop Nav Rail */}
       <aside className="hidden md:flex flex-col items-center w-20 bg-slate-950/50 backdrop-blur-xl border-r border-slate-800/50 py-4 z-20">
         <GtnLogo className="w-8 h-8 text-white" />
-        <nav className="flex flex-col items-center space-y-6 mt-8">
-          {navItems.map((item) => {
-            const isActive = view === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setView(item.id as 'home' | 'player' | 'favorites')}
-                className={cn(
-                  "flex flex-col items-center w-full p-2 rounded-lg transition-colors duration-200",
-                  isActive ? "text-sky-400" : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
-                )}
-              >
-                <item.icon className={cn("w-7 h-7 transition-transform duration-200", isActive && "scale-110 drop-shadow-[0_0_10px_rgba(56,189,248,0.5)]")} />
-                <span className="text-xs mt-1">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-        <div className="mt-auto">
+        <div className="flex-1 flex items-center">
+            <nav className="flex flex-col items-center space-y-6">
+              {navItems.map((item) => {
+                const isActive = view === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setView(item.id as 'home' | 'player' | 'favorites')}
+                    className={cn(
+                      "flex flex-col items-center w-full p-2 rounded-lg transition-colors duration-200",
+                      isActive ? "text-sky-400" : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
+                    )}
+                  >
+                    <item.icon className={cn("w-7 h-7 transition-transform duration-200", isActive && "scale-110 drop-shadow-[0_0_10px_rgba(56,189,248,0.5)]")} />
+                    <span className="text-xs mt-1">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+        </div>
+        <div>
            <button
               onClick={() => setView('settings')}
               className={cn(
