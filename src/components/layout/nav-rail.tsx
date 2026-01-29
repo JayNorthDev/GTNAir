@@ -34,20 +34,20 @@ export function NavRail({ view, setView }: NavRailProps) {
                       setView(item.id as "home" | "player" | "favorites")
                     }
                     className={cn(
-                      "flex flex-col items-center w-full p-2 rounded-lg transition-colors duration-200",
+                      "flex flex-col items-center w-full p-3 rounded-lg transition-all duration-300",
                       isActive
-                        ? "text-sky-400"
+                        ? "text-sky-300 bg-sky-900/30"
                         : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
                     )}
                   >
                     <item.icon
                       className={cn(
-                        "w-7 h-7 transition-transform duration-200",
+                        "w-7 h-7 transition-transform duration-300",
                         isActive &&
-                          "scale-110 drop-shadow-[0_0_10px_rgba(56,189,248,0.5)]"
+                          "scale-110 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)]"
                       )}
                     />
-                    <span className="text-xs mt-1">{item.label}</span>
+                    <span className="text-xs mt-1.5">{item.label}</span>
                   </button>
                   {index < navItems.length - 1 && (
                     <div className="w-12 h-px bg-slate-700/50 shadow-lg my-4"></div>
@@ -61,20 +61,20 @@ export function NavRail({ view, setView }: NavRailProps) {
           <button
             onClick={() => setView("settings")}
             className={cn(
-              "flex flex-col items-center w-full p-2 rounded-lg transition-colors duration-200",
+              "flex flex-col items-center w-full p-3 rounded-lg transition-all duration-300",
               view === "settings"
-                ? "text-sky-400"
+                ? "text-sky-300 bg-sky-900/30"
                 : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
             )}
           >
             <Settings
               className={cn(
-                "w-7 h-7 transition-transform duration-200",
+                "w-7 h-7 transition-transform duration-300",
                 view === "settings" &&
-                  "scale-110 drop-shadow-[0_0_10px_rgba(56,189,248,0.5)]"
+                  "scale-110 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)]"
               )}
             />
-            <span className="text-xs mt-1">Settings</span>
+            <span className="text-xs mt-1.5">Settings</span>
           </button>
         </div>
       </aside>
@@ -95,10 +95,11 @@ export function NavRail({ view, setView }: NavRailProps) {
                 )
               }
               className={cn(
-                "flex flex-col items-center justify-center h-full w-full transition-colors duration-200",
+                "flex flex-col items-center justify-center h-full w-full transition-all duration-300 relative",
                 isActive ? "text-sky-400" : "text-slate-400"
               )}
             >
+              {isActive && <div className="absolute inset-x-0 top-0 h-0.5 bg-sky-400 shadow-[0_0_8px_theme(colors.sky.400)]"></div>}
               <item.icon
                 className={cn(
                   "w-6 h-6",
