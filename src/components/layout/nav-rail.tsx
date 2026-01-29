@@ -1,13 +1,13 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Home, Play, Heart } from "lucide-react";
+import { Home, Play, Heart, Settings } from "lucide-react";
 import { GtnLogo } from "../gtn-logo";
 import Link from "next/link";
 
 type NavRailProps = {
-  view: "home" | "player" | "favorites";
-  setView: (view: "home" | "player" | "favorites") => void;
+  view: "home" | "player" | "favorites" | "settings";
+  setView: (view: "home" | "player" | "favorites" | "settings") => void;
 };
 
 const navItems = [
@@ -41,17 +41,27 @@ export function NavRail({ view, setView }: NavRailProps) {
           })}
         </nav>
         <div className="mt-auto">
+           <button
+              onClick={() => setView('settings')}
+              className={cn(
+                "flex flex-col items-center w-full p-2 rounded-lg transition-colors duration-200",
+                view === 'settings' ? "text-sky-400" : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"
+              )}
+            >
+              <Settings className={cn("w-7 h-7 transition-transform duration-200", view === 'settings' && "scale-110 drop-shadow-[0_0_10px_rgba(56,189,248,0.5)]")} />
+              <span className="text-xs mt-1">Settings</span>
+            </button>
         </div>
       </aside>
 
       {/* Mobile Bottom Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/50 flex justify-around items-center z-50">
-        {navItems.map((item) => {
+        {[...navItems, { id: 'settings', label: 'Settings', icon: Settings }].map((item) => {
           const isActive = view === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => setView(item.id as 'home' | 'player' | 'favorites')}
+              onClick={() => setView(item.id as 'home' | 'player' | 'favorites' | 'settings')}
               className={cn(
                 "flex flex-col items-center justify-center h-full w-full transition-colors duration-200",
                 isActive ? "text-sky-400" : "text-slate-400"

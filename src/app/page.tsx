@@ -10,21 +10,31 @@ import { AlertTriangle, Loader, Heart } from "lucide-react";
 import { NavRail } from "@/components/layout/nav-rail";
 import { HomeGrid } from "@/components/views/home-grid";
 import { useFavorites } from "@/hooks/useFavorites";
+import { useSettings, View as SettingsViewType } from "@/hooks/useSettings";
+import { SettingsView } from "@/components/views/settings-view";
 
 export default function Home() {
-  const { allChannels, displayChannels, categories, loading, error, filterChannels } = useChannels();
+  const { settings, isLoaded: settingsLoaded } = useSettings();
+  const { allChannels, displayChannels, categories, loading, error, filterChannels } = useChannels(settings.customPlaylistUrl);
   const { favoriteUrls, toggleFavorite, isFavorite } = useFavorites();
   
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [view, setView] = useState<'home' | 'player' | 'favorites'>("home");
+  const [view, setView] = useState<SettingsViewType>("home");
 
   const favoriteChannels = useMemo(
     () => allChannels.filter(channel => favoriteUrls.includes(channel.url)),
     [allChannels, favoriteUrls]
   );
+  
+  useEffect(() => {
+    if (settingsLoaded) {
+      setView(settings.defaultView);
+    }
+  }, [settingsLoaded, settings.defaultView]);
+
 
   useEffect(() => {
     filterChannels(searchTerm, selectedCategory);
@@ -35,6 +45,15 @@ export default function Home() {
     setView("player");
     if (window.innerWidth < 768) { // md breakpoint
       setIsSidebarOpen(false);
+    }
+  };
+
+  const handleNextChannel = () => {
+    if (!selectedChannel) return;
+    const currentIndex = displayChannels.findIndex(c => c.url === selectedChannel.url);
+    if (currentIndex !== -1) {
+      const nextIndex = (currentIndex + 1) % displayChannels.length;
+      handleChannelClick(displayChannels[nextIndex]);
     }
   };
   
@@ -50,7 +69,7 @@ export default function Home() {
     );
   }
   
-  if (loading && allChannels.length === 0) {
+  if ((loading && allChannels.length === 0) || !settingsLoaded) {
     return (
         <div className="flex h-screen items-center justify-center text-foreground">
             <div className="flex flex-col items-center gap-4">
@@ -76,6 +95,8 @@ export default function Home() {
           );
         }
         return <HomeGrid channels={favoriteChannels} onChannelSelect={handleChannelClick} />;
+      case "settings":
+        return <SettingsView />;
       case "player":
         return (
           <div className="flex h-full">
@@ -97,8 +118,15 @@ export default function Home() {
                 selectedChannel={selectedChannel}
                 isSidebarOpen={isSidebarOpen}
                 setIsSidebarOpen={setIsSidebarOpen}
+                isFavorite={isFavorite(selectedChannel)}
+                onToggleFavorite={() => toggleFavorite(selectedChannel)}
               />
-              <VideoPlayer channel={selectedChannel} />
+              <VideoPlayer 
+                channel={selectedChannel}
+                onStreamError={handleNextChannel}
+                autoSkip={settings.autoSkip}
+                isMuted={settings.muteOnStartup}
+              />
             </div>
           </div>
         );

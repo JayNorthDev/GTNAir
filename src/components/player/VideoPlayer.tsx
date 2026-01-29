@@ -1,4 +1,3 @@
-
 "use client";
 import { useEffect, useRef } from 'react';
 import videojs from 'video.js';
@@ -8,20 +7,15 @@ import { MonitorPlay } from 'lucide-react';
 
 type VideoPlayerProps = {
   channel: Channel | null;
+  onStreamError?: () => void;
+  autoSkip?: boolean;
+  isMuted?: boolean;
 };
 
-export default function VideoPlayer({ channel }: VideoPlayerProps) {
+export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
-
-  useEffect(() => {
-    return () => {
-        if (playerRef.current) {
-            playerRef.current.dispose();
-            playerRef.current = null;
-        }
-    }
-  }, []);
+  const isInitialPlay = useRef(true);
 
   useEffect(() => {
     // Suppress subtitle and bandwidth warnings
@@ -36,21 +30,38 @@ export default function VideoPlayer({ channel }: VideoPlayerProps) {
       originalWarn.apply(this, args);
     };
 
-    if (videoRef.current) {
-        if (!playerRef.current) {
-          const videoElement = videoRef.current;
-          playerRef.current = videojs(videoElement, {
-            autoplay: true,
-            controls: true,
-            fluid: true,
-            liveui: true,
-          });
-        }
+    if (videoRef.current && !playerRef.current) {
+        const videoElement = videoRef.current;
+        playerRef.current = videojs(videoElement, {
+          autoplay: false, // We will control autoplay manually
+          controls: true,
+          fluid: true,
+          liveui: true,
+        });
+
+        playerRef.current.on('error', () => {
+          if (autoSkip && onStreamError) {
+            console.log("Stream error, auto-skipping to next channel.");
+            onStreamError();
+          }
+        });
     }
 
+    return () => {
+        if (playerRef.current) {
+            playerRef.current.dispose();
+            playerRef.current = null;
+        }
+    }
+  }, [autoSkip, onStreamError]);
 
+  useEffect(() => {
     if (playerRef.current && channel) {
         playerRef.current.ready(() => {
+            if (isInitialPlay.current) {
+                playerRef.current.muted(isMuted);
+                isInitialPlay.current = false;
+            }
             playerRef.current.pause();
             playerRef.current.src({
                 src: channel.url,
@@ -59,11 +70,16 @@ export default function VideoPlayer({ channel }: VideoPlayerProps) {
             playerRef.current.load();
             const playPromise = playerRef.current.play();
             if (playPromise !== undefined) {
-                playPromise.catch(() => { /* Ignore abort errors */ });
+                playPromise.catch((error: any) => { 
+                  // Ignore user abort errors, but log others
+                  if (error.name !== 'AbortError') {
+                    console.error('Video.js play promise rejected:', error);
+                  }
+                 });
             }
         });
     }
-  }, [channel]);
+  }, [channel, isMuted]);
 
   return (
     <main className="flex-1 flex flex-col bg-black">
