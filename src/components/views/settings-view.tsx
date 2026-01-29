@@ -53,8 +53,8 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
           </button>
         </div>
         
-        <div className="h-full w-full p-4 pt-16 md:p-8 md:pt-20 overflow-y-auto">
-          <header className="mb-8">
+        <div className="h-full w-full p-4 pt-8 md:p-8 md:pt-10 overflow-y-auto">
+          <header className="mb-6">
             <h1 className="text-4xl font-bold tracking-tight">Settings</h1>
             <p className="text-muted-foreground mt-2">Manage your player preferences and settings.</p>
           </header>
