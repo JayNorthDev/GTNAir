@@ -44,17 +44,17 @@ export function SettingsView() {
         </TabsList>
         
         <TabsContent value="general" className="mt-6">
-          <div className="grid gap-8 max-w-2xl">
-            <Card className="bg-card/50">
+          <div className="space-y-8">
+            <Card>
               <CardHeader>
                 <CardTitle>Playback</CardTitle>
                 <CardDescription>Customize video playback behavior.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between space-x-2 p-4 rounded-lg bg-background/50 border">
-                  <Label htmlFor="auto-skip" className="flex flex-col space-y-1">
-                    <span>Auto-skip Broken Streams</span>
-                    <span className="font-normal leading-snug text-muted-foreground text-sm">
+              <CardContent className="divide-y divide-border">
+                <div className="flex items-center justify-between py-6">
+                  <Label htmlFor="auto-skip" className="flex flex-col space-y-1 pr-6">
+                    <span className="font-semibold">Auto-skip Broken Streams</span>
+                    <span className="font-normal leading-snug text-muted-foreground">
                       Automatically play the next channel if a stream fails to load.
                     </span>
                   </Label>
@@ -64,10 +64,10 @@ export function SettingsView() {
                     onCheckedChange={(checked) => updateSettings({ autoSkip: checked })}
                   />
                 </div>
-                 <div className="flex items-center justify-between space-x-2 p-4 rounded-lg bg-background/50 border">
-                  <Label htmlFor="mute-on-startup" className="flex flex-col space-y-1">
-                    <span>Mute by Default</span>
-                    <span className="font-normal leading-snug text-muted-foreground text-sm">
+                 <div className="flex items-center justify-between py-6">
+                  <Label htmlFor="mute-on-startup" className="flex flex-col space-y-1 pr-6">
+                    <span className="font-semibold">Mute by Default</span>
+                    <span className="font-normal leading-snug text-muted-foreground">
                       Start all videos in a muted state.
                     </span>
                   </Label>
@@ -80,22 +80,22 @@ export function SettingsView() {
               </CardContent>
             </Card>
 
-            <Card className="bg-card/50">
+            <Card>
               <CardHeader>
                 <CardTitle>Interface</CardTitle>
                 <CardDescription>Adjust the look and feel of the application.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between space-x-2 p-4 rounded-lg bg-background/50 border">
-                  <Label htmlFor="default-view" className="flex flex-col space-y-1">
-                    <span>Default View on Startup</span>
-                     <span className="font-normal leading-snug text-muted-foreground text-sm">
+                <div className="flex items-center justify-between py-6">
+                  <Label htmlFor="default-view" className="flex flex-col space-y-1 pr-6">
+                    <span className="font-semibold">Default View on Startup</span>
+                     <span className="font-normal leading-snug text-muted-foreground">
                       Choose which screen to see when you open the app.
                     </span>
                   </Label>
                   <Select
                     value={settings.defaultView}
-                    onValueChange={(value) => updateSettings({ defaultView: value as 'home' | 'player' | 'favorites' })}
+                    onValueChange={(value) => updateSettings({ defaultView: value as 'home' | 'player' | 'favorites' | 'settings' })}
                   >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Select a view" />
@@ -104,6 +104,7 @@ export function SettingsView() {
                       <SelectItem value="home">Home</SelectItem>
                       <SelectItem value="player">Live TV</SelectItem>
                       <SelectItem value="favorites">Favorites</SelectItem>
+                      <SelectItem value="settings">Settings</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -113,14 +114,14 @@ export function SettingsView() {
         </TabsContent>
 
         <TabsContent value="playlist" className="mt-6">
-           <Card className="max-w-2xl bg-card/50">
+           <Card>
               <CardHeader>
                 <CardTitle>Custom Playlist</CardTitle>
                 <CardDescription>
                   Provide a direct URL to your own M3U playlist file. This will override the default playlist.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div className="space-y-2">
                   <Label htmlFor="playlist-url">M3U Playlist URL</Label>
                   <Input 
