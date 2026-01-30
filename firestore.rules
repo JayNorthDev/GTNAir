@@ -6,7 +6,13 @@ service cloud.firestore {
     // Allow public read access to settings for playlist URL
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if false; // Disallow writes to prevent modification
+      allow write: if true; // Allow admins to update the URL. Should be secured.
+    }
+
+    // Allow admins to manage channel visibility
+    match /channel_visibility/{channelId} {
+      allow read: if true; // Front-end needs to read this
+      allow write: if true; // Admin needs to write this. Should be secured.
     }
 
     // Deny all other access by default

@@ -1,19 +1,21 @@
 "use client";
 import { useState, useEffect } from 'react';
-import { db } from '../../firebase/config'; // Import Firebase config
+import { db } from '../../firebase/config';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { Save, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
-import Link from 'next/link';
+import { Save, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
-export default function AdminDashboard() {
+export default function AdminPlaylistPage() {
   const [url, setUrl] = useState('');
   const [isFetching, setIsFetching] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState(null); // { type: 'success' | 'error', text: '' }
+  const [message, setMessage] = useState(null);
   const DB_SETTINGS_COLLECTION = "settings";
   const DB_PLAYLIST_DOCUMENT = "playlist";
 
-  // 1. Get the previously saved URL from the Database
   useEffect(() => {
     async function fetchCurrentUrl() {
       try {
@@ -36,28 +38,25 @@ export default function AdminDashboard() {
     if (message) {
       const timer = setTimeout(() => {
         setMessage(null);
-      }, 5000); // Clear message after 5 seconds
+      }, 5000);
       return () => clearTimeout(timer);
     }
   }, [message]);
 
-  // 2. Save the new URL
   const handleSave = async (e) => {
     e.preventDefault();
     setMessage(null);
     setIsSaving(true);
 
     try {
-      // Validation: Check if a link is provided
       if (!url.trim()) {
-        throw new Error("Please enter a valid URL");
+        throw new Error("Please enter a valid URL.");
       }
 
-      // Send to Firestore Database
       await setDoc(doc(db, DB_SETTINGS_COLLECTION, DB_PLAYLIST_DOCUMENT), {
         url: url.trim(),
         updatedAt: new Date().toISOString()
-      });
+      }, { merge: true });
 
       setMessage({ type: 'success', text: 'Playlist URL updated successfully!' });
     } catch (error) {
@@ -66,82 +65,68 @@ export default function AdminDashboard() {
       setIsSaving(false);
     }
   };
-
-  if (isFetching) {
-    return (
-        <div className="min-h-screen bg-[#0f0f0f] text-gray-200 flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-2xl bg-[#1a1a1a] border border-[#333] rounded-2xl p-8 shadow-2xl">
-                <div className="animate-pulse">
-                    <div className="h-8 bg-gray-700 rounded w-1/2 mb-8"></div>
-                    <div className="space-y-6">
-                        <div className="h-4 bg-gray-700 rounded w-1/4 mb-2"></div>
-                        <div className="h-12 bg-gray-700 rounded"></div>
-                        <div className="h-4 bg-gray-700 rounded w-3/4"></div>
-                    </div>
-                    <div className="mt-8">
-                        <div className="h-12 bg-gray-700 rounded"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-  }
-
+  
   return (
-    <div className="min-h-screen bg-[#0f0f0f] text-gray-200 flex flex-col items-center justify-center p-4">
-      
-      <div className="w-full max-w-2xl bg-[#1a1a1a] border border-[#333] rounded-2xl p-8 shadow-2xl">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-white tracking-tight">Admin <span className="text-purple-500">Dashboard</span></h1>
-          <Link href="/" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
-            <ArrowLeft size={16} /> Back to Player
-          </Link>
-        </div>
+    <div className="w-full max-w-4xl mx-auto">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold text-white tracking-tight">M3U Playlist Settings</h1>
+        <p className="text-gray-400 mt-1">Manage the primary M3U playlist URL for the application.</p>
+      </header>
 
-        {/* Form */}
-        <form onSubmit={handleSave} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              M3U Playlist URL
-            </label>
-            <input
-              type="text"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://example.com/playlist.m3u"
-              className="w-full bg-[#0a0a0a] text-white p-4 rounded-xl border border-[#333] focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-600"
-              disabled={isFetching}
-            />
-            <p className="text-xs text-gray-500 mt-2">
-              Enter the direct link to your .m3u or .m3u8 file. This will update the player for all users.
-            </p>
-          </div>
-
-          {/* Messages */}
-          {message && (
-            <div className={`p-4 rounded-lg flex items-center gap-3 ${message.type === 'success' ? 'bg-green-900/20 text-green-400 border border-green-900/50' : 'bg-red-900/20 text-red-400 border border-red-900/50'}`}>
-              {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-              <span>{message.text}</span>
+      <Card className="bg-[#1a1a1a] border-[#333]">
+        <CardHeader>
+          <CardTitle className="text-white">Playlist URL</CardTitle>
+          <CardDescription>
+            Enter the direct link to your .m3u or .m3u8 file. This will update the player for all users.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isFetching ? (
+            <div className="flex items-center justify-center h-40">
+                <Loader className="w-8 h-8 animate-spin text-purple-500" />
             </div>
+          ) : (
+            <form onSubmit={handleSave} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="playlist-url" className="text-gray-400">M3U Playlist URL</Label>
+                <Input
+                  id="playlist-url"
+                  type="text"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://example.com/playlist.m3u"
+                  className="w-full bg-[#0a0a0a] text-white p-4 rounded-xl border border-[#333] focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-600"
+                  disabled={isSaving}
+                />
+              </div>
+
+              {message && (
+                <div className={`p-4 rounded-lg flex items-center gap-3 ${message.type === 'success' ? 'bg-green-900/20 text-green-400 border border-green-900/50' : 'bg-red-900/20 text-red-400 border border-red-900/50'}`}>
+                  {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+                  <span>{message.text}</span>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={isSaving}
+                className="w-full max-w-xs py-3 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed"
+              >
+                {isSaving ? (
+                    <>
+                        <Loader className="w-5 h-5 animate-spin" />
+                        Saving...
+                    </>
+                ) : (
+                  <>
+                    <Save size={20} /> Save Playlist
+                  </>
+                )}
+              </Button>
+            </form>
           )}
-
-          {/* Save Button */}
-          <button
-            type="submit"
-            disabled={isSaving || isFetching}
-            className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${isSaving || isFetching ? 'bg-gray-700 cursor-not-allowed opacity-50' : 'bg-purple-600 hover:bg-purple-700 hover:scale-[1.02] shadow-lg shadow-purple-900/20 text-white'}`}
-          >
-            {isFetching ? 'Loading...' : isSaving ? 'Saving...' : (
-              <>
-                <Save size={20} /> Save Playlist
-              </>
-            )}
-          </button>
-        </form>
-
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

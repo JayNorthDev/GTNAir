@@ -13,6 +13,22 @@
         }
       },
       "required": ["url"]
+    },
+    "channelVisibility": {
+      "title": "Channel Visibility",
+      "description": "Controls the visibility of a specific channel on the front-end.",
+      "type": "object",
+      "properties": {
+        "channelId": {
+          "type": "string",
+          "description": "The unique TVG ID of the channel."
+        },
+        "visible": {
+          "type": "boolean",
+          "description": "Whether the channel should be visible to users."
+        }
+      },
+      "required": ["channelId", "visible"]
     }
   },
   "auth": {
@@ -22,6 +38,10 @@
     "/settings/{settingId}": {
       "schema": { "$ref": "#/entities/playlist" },
       "description": "Global application settings."
+    },
+    "/channel_visibility/{channelId}": {
+      "schema": { "$ref": "#/entities/channelVisibility" },
+      "description": "Stores visibility status for individual channels, keyed by TVG ID."
     }
   }
 }
