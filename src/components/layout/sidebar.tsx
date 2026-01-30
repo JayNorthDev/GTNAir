@@ -35,7 +35,7 @@ export default function Sidebar({
       <div className="flex items-center justify-between p-4 h-16 border-b border-border/20 shrink-0">
         <div className={`flex items-center gap-2`}>
           <Tv className="w-8 h-8 text-primary" />
-          <h1 className="text-xl font-bold">IPTVPlayer</h1>
+          <h1 className="text-xl font-bold">369Player</h1>
         </div>
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-full hover:bg-sidebar-accent md:hidden">
           {isSidebarOpen ? <X /> : null}
