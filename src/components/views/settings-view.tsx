@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -11,8 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { X } from 'lucide-react';
+import { X, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+
 
 type SettingsViewProps = {
   isOpen: boolean;
@@ -25,18 +28,37 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
   const { toast } = useToast();
 
   const handleSavePlaylist = () => {
+    const isChanging = customUrl !== settings.customPlaylistUrl;
+    if (customUrl && isChanging) {
+        if (!window.confirm("This will disconnect you from the current playlist source. Are you sure you want to continue?")) {
+            return;
+        }
+    }
+    
     updateSettings({ customPlaylistUrl: customUrl });
     toast({
       title: 'Playlist URL Saved',
-      description: 'The channel list will refresh with the new URL.',
+      description: 'The player will now refresh to load the new playlist.',
     });
-    window.location.reload();
+    
+    // Defer reload to allow toast to be seen
+    setTimeout(() => window.location.reload(), 1000);
   };
+
+  const handleResetPlaylist = () => {
+    updateSettings({ customPlaylistUrl: '' });
+    setCustomUrl('');
+    toast({
+        title: 'Playlist Reset',
+        description: 'The player will now refresh and restore the default playlist.',
+    });
+    setTimeout(() => window.location.reload(), 1000);
+  }
 
   return (
     <div
       className={cn(
-        "fixed inset-y-0 right-0 left-0 md:left-24 z-50 transform-gpu transition-transform duration-500 ease-in-out md:border-l md:border-white/5",
+        "fixed inset-y-0 right-0 left-0 md:left-auto z-50 transform-gpu transition-transform duration-500 ease-in-out md:border-l md:border-white/5 md:w-full md:max-w-xl",
         isOpen ? "translate-y-0" : "translate-y-full"
       )}
       aria-hidden={!isOpen}
@@ -139,7 +161,7 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
                   <CardHeader>
                     <CardTitle>Custom Playlist</CardTitle>
                     <CardDescription>
-                      Provide a direct URL to your own M3U playlist file. This will override the default playlist.
+                      Provide a direct URL to your own M3U playlist file. This will override the application's default playlist for this device only.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4 pt-6">
@@ -152,9 +174,30 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
                         onChange={(e) => setCustomUrl(e.target.value)}
                       />
                     </div>
-                    <Button onClick={handleSavePlaylist}>Save and Refresh</Button>
+                    <div className="flex items-center gap-2">
+                        <Button onClick={handleSavePlaylist}>Save and Refresh</Button>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="outline" disabled={!customUrl}>Reset to Default</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure you want to reset?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will remove your custom playlist URL and restore the application's default playlist. This action cannot be undone.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleResetPlaylist}>
+                                    Continue
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
                      <p className="text-xs text-muted-foreground pt-4">
-                      For advanced playlist management, developers can use the <Link href="/admin" className="underline hover:text-primary">Admin Dashboard</Link>.
+                      For advanced playlist management for all users, developers can use the <Link href="/admin" className="underline hover:text-primary">Admin Dashboard</Link>.
                     </p>
                   </CardContent>
                 </Card>
