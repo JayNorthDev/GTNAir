@@ -3,27 +3,24 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow public read access to settings for playlist URL
+    // Allow public read and write access to settings for playlist URL
     match /settings/{settingId} {
-      allow read: if true;
-      allow write: if true; // Allow admins to update the URL. Should be secured.
+      allow read, write: if true;
     }
 
-    // Allow admins to manage channel visibility
+    // Allow public read and write for channel visibility
     match /channel_visibility/{channelId} {
-      allow read: if true; // Front-end needs to read this
-      allow write: if true; // Admin needs to write this. Should be secured.
+      allow read, write: if true;
     }
 
-    // Allow public read and admin write for homepage content
+    // Allow public read and write for homepage content
     match /hero_slides/{slideId} {
-      allow read: if true;
-      allow write: if true; // Should be secured to admin users
+      allow read, write: if true;
     }
 
+    // Allow public read and write for services content
     match /services/{serviceId} {
-      allow read: if true;
-      allow write: if true; // Should be secured to admin users
+      allow read, write: if true;
     }
 
     // Deny all other access by default
