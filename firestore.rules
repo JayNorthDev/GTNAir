@@ -15,6 +15,17 @@ service cloud.firestore {
       allow write: if true; // Admin needs to write this. Should be secured.
     }
 
+    // Allow public read and admin write for homepage content
+    match /hero_slides/{slideId} {
+      allow read: if true;
+      allow write: if true; // Should be secured to admin users
+    }
+
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if true; // Should be secured to admin users
+    }
+
     // Deny all other access by default
     match /{document=**} {
       allow read, write: if false;

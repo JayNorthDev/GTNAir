@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ListVideo, Settings, Home } from "lucide-react";
+import { ListVideo, Settings, Home, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GtnLogo } from "../gtn-logo";
 
 const navItems = [
   { href: "/admin", label: "Playlist Settings", icon: Settings },
   { href: "/admin/channels", label: "Channel Management", icon: ListVideo },
+  { href: "/admin/homepage", label: "Homepage Content", icon: LayoutDashboard },
 ];
 
 export function AdminSidebar() {
@@ -24,7 +25,7 @@ export function AdminSidebar() {
       </div>
       <nav className="flex-1 px-4 py-4 space-y-2">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}

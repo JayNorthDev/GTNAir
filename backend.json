@@ -29,6 +29,50 @@
         }
       },
       "required": ["channelId", "visible"]
+    },
+    "heroSlide": {
+      "title": "Hero Slide",
+      "description": "A single slide for the homepage hero carousel.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The main headline of the slide."
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "The supporting text below the headline."
+        },
+        "cta": {
+          "type": "string",
+          "description": "The text for the call-to-action button."
+        },
+        "imageId": {
+          "type": "string",
+          "description": "The ID of the image from placeholder-images.json."
+        }
+      },
+      "required": ["title", "subtitle", "cta", "imageId"]
+    },
+    "service": {
+      "title": "Service",
+      "description": "A service offered by the media agency.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the service."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the service."
+        },
+        "imageId": {
+          "type": "string",
+          "description": "The ID of the image from placeholder-images.json."
+        }
+      },
+      "required": ["title", "description", "imageId"]
     }
   },
   "auth": {
@@ -42,6 +86,14 @@
     "/channel_visibility/{channelId}": {
       "schema": { "$ref": "#/entities/channelVisibility" },
       "description": "Stores visibility status for individual channels, keyed by TVG ID."
+    },
+    "/hero_slides/{slideId}": {
+      "schema": { "$ref": "#/entities/heroSlide" },
+      "description": "Stores data for the homepage hero carousel slides."
+    },
+    "/services/{serviceId}": {
+      "schema": { "$ref": "#/entities/service" },
+      "description": "Stores data for the media services offered."
     }
   }
 }

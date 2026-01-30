@@ -8,3 +8,6 @@ export type ImagePlaceholder = {
 };
 
 export const PlaceHolderImages: ImagePlaceholder[] = data.placeholderImages;
+
+// Exporting the raw list for use in admin forms
+export const placeholderImagesList: ImagePlaceholder[] = data.placeholderImages;
