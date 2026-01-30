@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import { Channel } from '@/lib/m3u-parser';
 import { MonitorPlay } from 'lucide-react';
 import type Player from 'video.js/dist/types/player';
+import { GtnLogo } from '@/components/gtn-logo';
 
 type VideoPlayerProps = {
   channel: Channel | null;
@@ -16,37 +17,41 @@ type VideoPlayerProps = {
 export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<Player | null>(null);
+  const [showAdOverlay, setShowAdOverlay] = useState(false);
 
   useEffect(() => {
-    // If a player instance already exists, dispose of it before creating a new one.
-    // This is the key to fixing the black screen issue, as it ensures a clean state for each new channel.
+    // Show ad overlay for 10 seconds whenever the channel changes
+    let adTimer: NodeJS.Timeout;
+    if (channel) {
+        setShowAdOverlay(true);
+        adTimer = setTimeout(() => {
+            setShowAdOverlay(false);
+        }, 10000);
+    }
+
     if (playerRef.current) {
       playerRef.current.dispose();
       playerRef.current = null;
     }
 
-    // Only proceed if a channel is selected and the video element is available.
     if (channel && videoRef.current) {
-      // Initialize a new Video.js player.
       const player = playerRef.current = videojs(videoRef.current, {
-        autoplay: true, // We want the new channel to play immediately.
+        autoplay: true,
         controls: true,
         fluid: true,
         liveui: true,
-        muted: isMuted, // Apply the mute setting from props.
+        muted: isMuted,
         sources: [{
           src: channel.url,
           type: channel.http?.['content-type'] || 'application/x-mpegURL',
         }],
       });
 
-      // Set up error handling for the new player instance.
       player.on('error', () => {
         const error = player.error();
-        // Suppress minor subtitle errors that don't affect playback.
         if (error && error.message.includes('Problem encountered loading the subtitle track')) {
           console.log('Ignoring subtitle loading error.');
-          player.error(null); // Clear the error state
+          player.error(null); 
           return;
         }
         
@@ -58,22 +63,29 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
       });
     }
 
-    // The cleanup function for this effect will run when the channel changes again or the component unmounts.
     return () => {
+      clearTimeout(adTimer); // Clean up the ad timer
       if (playerRef.current && !playerRef.current.isDisposed()) {
         playerRef.current.dispose();
         playerRef.current = null;
       }
     };
-    // The effect should re-run whenever the channel itself changes.
-    // Other props are passed directly during initialization.
   }, [channel, autoSkip, onStreamError, isMuted]);
 
   return (
-    <main className="flex-1 flex flex-col bg-black">
+    <main className="flex-1 flex flex-col bg-black relative">
       {channel ? (
         <div data-vjs-player className="w-full h-full">
           <video ref={videoRef} className="video-js vjs-big-play-centered w-full h-full" />
+           {showAdOverlay && (
+              <div className="absolute bottom-4 right-4 z-10 bg-black/50 backdrop-blur-sm p-3 rounded-lg flex items-center gap-3 animate-in fade-in duration-500">
+                  <GtnLogo className="w-8 h-8 text-primary" />
+                  <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground">Powered by</span>
+                      <span className="text-base font-semibold text-white">GTNPlay Media</span>
+                  </div>
+              </div>
+          )}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-full text-slate-400 bg-transparent">

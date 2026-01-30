@@ -9,9 +9,12 @@ import { Channel } from "@/lib/m3u-parser";
 import { AlertTriangle, Loader, Heart } from "lucide-react";
 import { NavRail } from "@/components/layout/nav-rail";
 import { HomeGrid } from "@/components/views/home-grid";
+import { HomeView } from "@/components/views/home-view";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useSettings, View as SettingsViewType } from "@/hooks/useSettings";
 import { SettingsView } from "@/components/views/settings-view";
+import { cn } from "@/lib/utils";
+
 
 export default function Home() {
   const { settings, isLoaded: settingsLoaded } = useSettings();
@@ -84,7 +87,7 @@ export default function Home() {
   const renderContent = () => {
     switch (view) {
       case "home":
-        return <HomeGrid channels={allChannels} onChannelSelect={handleChannelClick} />;
+        return <HomeView channels={allChannels} onChannelSelect={handleChannelClick} />;
       case "favorites":
         if (favoriteChannels.length === 0) {
           return (
@@ -95,7 +98,12 @@ export default function Home() {
             </div>
           );
         }
-        return <HomeGrid channels={favoriteChannels} onChannelSelect={handleChannelClick} />;
+        return (
+          <div className="p-4 md:p-8">
+            <h2 className="font-headline text-2xl md:text-3xl font-bold tracking-tight mb-4">Your Favorite Channels</h2>
+            <HomeGrid items={favoriteChannels} onChannelSelect={handleChannelClick} />
+          </div>
+        );
       case "player":
         return (
           <div className="flex h-full">
@@ -130,7 +138,7 @@ export default function Home() {
           </div>
         );
       default:
-        return <HomeGrid channels={allChannels} onChannelSelect={handleChannelClick} />;
+        return <HomeView channels={allChannels} onChannelSelect={handleChannelClick} />;
     }
   };
 
@@ -142,7 +150,7 @@ export default function Home() {
         isSettingsOpen={isSettingsOpen}
         setIsSettingsOpen={setIsSettingsOpen}
       />
-      <main className="flex-1 overflow-hidden">
+      <main className={cn("flex-1", view === 'player' ? 'overflow-hidden' : 'overflow-y-auto')}>
         {renderContent()}
       </main>
       <SettingsView isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
