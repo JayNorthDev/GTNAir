@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState } from 'react';
@@ -58,7 +59,7 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
   return (
     <div
       className={cn(
-        "fixed inset-y-0 right-0 left-0 md:left-auto z-50 transform-gpu transition-transform duration-500 ease-in-out md:border-l md:border-white/5 md:w-full md:max-w-xl",
+        "fixed inset-y-0 right-0 left-0 md:left-24 z-50 transform-gpu transition-transform duration-500 ease-in-out",
         isOpen ? "translate-y-0" : "translate-y-full"
       )}
       aria-hidden={!isOpen}
