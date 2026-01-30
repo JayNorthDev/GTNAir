@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSettings } from '@/hooks/useSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,32 +28,67 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
   const [customUrl, setCustomUrl] = useState(settings.customPlaylistUrl);
   const { toast } = useToast();
 
-  const handleSavePlaylist = () => {
-    const isChanging = customUrl !== settings.customPlaylistUrl;
-    if (customUrl && isChanging) {
-        if (!window.confirm("This will disconnect you from the current playlist source. Are you sure you want to continue?")) {
-            return;
-        }
+  // State for the confirmation dialog
+  const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
+
+  // Sync local state if settings change from behind (e.g. another tab)
+  useEffect(() => {
+    setCustomUrl(settings.customPlaylistUrl);
+  }, [settings.customPlaylistUrl]);
+
+  const handleSaveClick = () => {
+    const isChanging = customUrl.trim() !== settings.customPlaylistUrl;
+
+    if (!isChanging) {
+      toast({
+        title: 'No Changes',
+        description: 'The playlist URL is already up to date.',
+      });
+      return;
     }
     
-    updateSettings({ customPlaylistUrl: customUrl });
+    // An empty URL means they want to reset, which should use the reset button.
+    // Block saving an empty URL here to guide user to the correct button.
+    if (customUrl.trim() === '') {
+        toast({
+            variant: 'destructive',
+            title: 'Empty URL',
+            description: 'Please use the "Reset to Default" button to clear the custom playlist.',
+        });
+        return;
+    }
+    
+    // If we have a new URL, open the confirmation dialog.
+    setIsSaveConfirmOpen(true);
+  };
+  
+  const performSave = () => {
+    updateSettings({ customPlaylistUrl: customUrl.trim() });
     toast({
       title: 'Playlist URL Saved',
       description: 'The player will now refresh to load the new playlist.',
     });
     
     // Defer reload to allow toast to be seen
-    setTimeout(() => window.location.reload(), 1000);
-  };
+    setTimeout(() => window.location.reload(), 1500);
+  }
 
   const handleResetPlaylist = () => {
+    if (!settings.customPlaylistUrl) {
+         toast({
+            title: 'Already Default',
+            description: 'The default playlist is already in use.',
+        });
+        return;
+    }
+    
     updateSettings({ customPlaylistUrl: '' });
     setCustomUrl('');
     toast({
         title: 'Playlist Reset',
         description: 'The player will now refresh and restore the default playlist.',
     });
-    setTimeout(() => window.location.reload(), 1000);
+    setTimeout(() => window.location.reload(), 1500);
   }
 
   return (
@@ -176,10 +211,10 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button onClick={handleSavePlaylist}>Save and Refresh</Button>
+                        <Button onClick={handleSaveClick}>Save and Refresh</Button>
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
-                                <Button variant="outline" disabled={!customUrl}>Reset to Default</Button>
+                                <Button variant="outline" disabled={!settings.customPlaylistUrl}>Reset to Default</Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
@@ -204,6 +239,24 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
                 </Card>
             </TabsContent>
           </Tabs>
+
+            <AlertDialog open={isSaveConfirmOpen} onOpenChange={setIsSaveConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Change Playlist Source?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will disconnect you from the current playlist source and refresh the application to load the new one. Are you sure you want to continue?
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={performSave}>
+                        Save and Refresh
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
         </div>
       </div>
     </div>
