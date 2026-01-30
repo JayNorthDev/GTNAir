@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -8,6 +9,14 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { AlertCircle, Tv } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type VisibilityMap = { [key: string]: boolean };
 
@@ -77,19 +86,41 @@ export function ChannelList() {
 
     if (loading) {
         return (
-             <div className="space-y-4">
-                {[...Array(10)].map((_, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-[#0f0f0f] border border-[#333]">
-                        <div className="flex items-center gap-4">
-                            <Skeleton className="w-10 h-10 rounded-md" />
-                            <div className="space-y-2">
-                                <Skeleton className="h-4 w-48" />
-                                <Skeleton className="h-3 w-32" />
-                            </div>
-                        </div>
-                        <Skeleton className="h-6 w-11 rounded-full" />
-                    </div>
-                ))}
+             <div className="rounded-lg border border-[#333] overflow-hidden">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="hover:bg-[#1a1a1a]">
+                            <TableHead className="w-[72px] px-4">Icon</TableHead>
+                            <TableHead className="px-4">Channel</TableHead>
+                            <TableHead className="px-4">ID</TableHead>
+                            <TableHead className="text-right px-4">Status</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {[...Array(15)].map((_, i) => (
+                            <TableRow key={i} className="border-b-[#333]">
+                                <TableCell className="p-2">
+                                    <Skeleton className="w-12 h-12 rounded-md" />
+                                </TableCell>
+                                <TableCell className="p-4">
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-4 w-48" />
+                                        <Skeleton className="h-3 w-32" />
+                                    </div>
+                                </TableCell>
+                                <TableCell className="p-4">
+                                     <Skeleton className="h-4 w-40" />
+                                </TableCell>
+                                <TableCell className="p-4 text-right">
+                                    <div className="flex justify-end items-center gap-3">
+                                        <Skeleton className="h-4 w-10" />
+                                        <Skeleton className="h-6 w-11 rounded-full" />
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
             </div>
         );
     }
@@ -105,35 +136,58 @@ export function ChannelList() {
     }
     
     return (
-        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
-            {channels.map(channel => {
-                const channelId = channel.tvg.id;
-                // Default to visible if not in map
-                const isVisible = visibility[channelId] !== false; 
-                
-                return (
-                    <div key={channelId} className="flex items-center justify-between p-3 rounded-lg bg-[#0f0f0f] border border-transparent hover:border-[#333] transition-colors">
-                        <div className="flex items-center gap-4 overflow-hidden">
-                           {channel.tvg.logo ? 
-                                <img src={channel.tvg.logo} alt="" className="w-10 h-10 object-contain rounded-md bg-black/20 shrink-0" onError={(e) => {(e.target as HTMLImageElement).style.display='none';}}/> 
-                                : <div className="w-10 h-10 flex items-center justify-center bg-card rounded-md shrink-0"><Tv className="w-5 h-5 text-muted-foreground" /></div>
-                            }
-                            <div className='overflow-hidden'>
-                                <p className="font-medium text-white truncate">{channel.name}</p>
-                                <p className="text-sm text-gray-400 truncate">{channel.group.title}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                             <Label htmlFor={`switch-${channelId}`} className="text-sm text-gray-400">{isVisible ? 'Visible' : 'Hidden'}</Label>
-                             <Switch
-                                id={`switch-${channelId}`}
-                                checked={isVisible}
-                                onCheckedChange={(checked) => handleVisibilityChange(channelId, checked)}
-                            />
-                        </div>
-                    </div>
-                );
-            })}
+        <div className="rounded-lg border border-[#333] overflow-hidden max-h-[calc(100vh-280px)] overflow-y-auto">
+            <Table>
+                <TableHeader className="sticky top-0 bg-[#1a1a1a]/80 backdrop-blur-sm z-10">
+                    <TableRow className="border-b-[#333] hover:bg-[#1a1a1a]">
+                        <TableHead className="w-[72px] px-4">Icon</TableHead>
+                        <TableHead className="px-4">Channel</TableHead>
+                        <TableHead className="px-4">ID</TableHead>
+                        <TableHead className="text-right px-4">Status</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {channels.map(channel => {
+                        const channelId = channel.tvg.id;
+                        // Default to visible if not in map
+                        const isVisible = visibility[channelId] !== false; 
+                        
+                        return (
+                            <TableRow key={channelId} className="border-b-[#333] hover:bg-[#2a2a2a]/50">
+                                <TableCell className="p-2">
+                                    <div className="w-12 h-12 flex items-center justify-center bg-black/20 rounded-md">
+                                        {channel.tvg.logo ? 
+                                            <img src={channel.tvg.logo} alt="" className="max-w-full max-h-full object-contain" onError={(e) => {(e.target as HTMLImageElement).closest('div')?.remove();}}/> 
+                                            : <div className="w-12 h-12 flex items-center justify-center"><Tv className="w-6 h-6 text-muted-foreground" /></div>
+                                        }
+                                    </div>
+                                </TableCell>
+                                <TableCell className="p-4 font-medium text-white">
+                                    <div className='overflow-hidden'>
+                                        <p className="font-medium text-white truncate">{channel.name}</p>
+                                        <p className="text-sm text-gray-400 truncate">{channel.group.title}</p>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="p-4 text-sm text-gray-400 font-mono">
+                                    {channelId}
+                                </TableCell>
+                                <TableCell className="p-4 text-right">
+                                    <div className="flex items-center justify-end gap-3">
+                                        <Label htmlFor={`switch-${channelId}`} className="text-sm text-gray-400">{isVisible ? 'On' : 'Off'}</Label>
+                                        <Switch
+                                            id={`switch-${channelId}`}
+                                            checked={isVisible}
+                                            onCheckedChange={(checked) => handleVisibilityChange(channelId, checked)}
+                                        />
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        );
+                    })}
+                </TableBody>
+            </Table>
         </div>
     );
 }
+
+    
