@@ -38,7 +38,7 @@ export function HomeGrid({ items, onChannelSelect }: HomeGridProps) {
               )}
             >
               <img
-                src={channel.tvg.logo}
+                src={channel.tvg.logo || "https://placehold.co/300x170/020617/334155?text=No+Logo"}
                 alt={channel.name}
                 loading="lazy"
                 className="absolute inset-0 h-full w-full object-contain p-4 bg-black/20"
