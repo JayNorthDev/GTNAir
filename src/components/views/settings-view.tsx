@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -13,10 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { X, AlertTriangle } from 'lucide-react';
+import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-
 
 type SettingsViewProps = {
   isOpen: boolean;
@@ -28,10 +26,8 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
   const [customUrl, setCustomUrl] = useState(settings.customPlaylistUrl);
   const { toast } = useToast();
 
-  // State for the confirmation dialog
   const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
 
-  // Sync local state if settings change from behind (e.g. another tab)
   useEffect(() => {
     setCustomUrl(settings.customPlaylistUrl);
   }, [settings.customPlaylistUrl]);
@@ -47,8 +43,6 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
       return;
     }
     
-    // An empty URL means they want to reset, which should use the reset button.
-    // Block saving an empty URL here to guide user to the correct button.
     if (customUrl.trim() === '') {
         toast({
             variant: 'destructive',
@@ -58,7 +52,6 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
         return;
     }
     
-    // If we have a new URL, open the confirmation dialog.
     setIsSaveConfirmOpen(true);
   };
   
@@ -69,7 +62,6 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
       description: 'The player will now refresh to load the new playlist.',
     });
     
-    // Defer reload to allow toast to be seen
     setTimeout(() => window.location.reload(), 1500);
   }
 
@@ -100,7 +92,7 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
       aria-hidden={!isOpen}
     >
       <div 
-        className="absolute inset-0 bg-slate-950/80 backdrop-blur-lg"
+        className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"
         onClick={onClose} 
       />
       <div className="relative h-full w-full max-w-4xl mx-auto flex flex-col">
@@ -197,15 +189,15 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
                   <CardHeader>
                     <CardTitle>Custom Playlist</CardTitle>
                     <CardDescription>
-                      Provide a direct URL to your own M3U playlist file. This will override the application's default playlist for this device only.
+                      Provide a direct URL to your own .m3u or .m3u8 playlist file. This will override the application's default playlist for this device only.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4 pt-6">
                     <div className="space-y-2">
-                      <Label htmlFor="playlist-url">M3U Playlist URL</Label>
+                      <Label htmlFor="playlist-url">Playlist URL (.m3u/.m3u8)</Label>
                       <Input 
                         id="playlist-url" 
-                        placeholder="https://example.com/my_playlist.m3u"
+                        placeholder="https://example.com/my_playlist.m3u8"
                         value={customUrl}
                         onChange={(e) => setCustomUrl(e.target.value)}
                       />

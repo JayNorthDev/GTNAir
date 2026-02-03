@@ -1,3 +1,4 @@
+
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import videojs from 'video.js';
@@ -35,6 +36,12 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
     }
 
     if (channel && videoRef.current) {
+      // Determine source type: prefer HLS for .m3u8 extensions
+      const isHls = channel.url.toLowerCase().includes('.m3u8') || 
+                    channel.http?.['content-type'] === 'application/x-mpegURL';
+      
+      const sourceType = isHls ? 'application/x-mpegURL' : (channel.http?.['content-type'] || 'application/x-mpegURL');
+
       const player = playerRef.current = videojs(videoRef.current, {
         autoplay: true,
         controls: true,
@@ -43,12 +50,13 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
         muted: isMuted,
         sources: [{
           src: channel.url,
-          type: channel.http?.['content-type'] || 'application/x-mpegURL',
+          type: sourceType,
         }],
       });
 
       player.on('error', () => {
         const error = player.error();
+        // Subtitle errors are common and often non-fatal for playback
         if (error && error.message.includes('Problem encountered loading the subtitle track')) {
           console.log('Ignoring subtitle loading error.');
           player.error(null); 
@@ -64,7 +72,7 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
     }
 
     return () => {
-      clearTimeout(adTimer); // Clean up the ad timer
+      clearTimeout(adTimer);
       if (playerRef.current && !playerRef.current.isDisposed()) {
         playerRef.current.dispose();
         playerRef.current = null;

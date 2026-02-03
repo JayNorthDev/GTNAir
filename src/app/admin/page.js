@@ -1,3 +1,4 @@
+
 "use client";
 import { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
@@ -69,8 +70,8 @@ export default function AdminPlaylistPage() {
   return (
     <div className="w-full max-w-4xl mx-auto">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-white tracking-tight">M3U Playlist Settings</h1>
-        <p className="text-gray-400 mt-1">Manage the primary M3U playlist URL for the application.</p>
+        <h1 className="text-3xl font-bold text-white tracking-tight">M3U/M3U8 Playlist Settings</h1>
+        <p className="text-gray-400 mt-1">Manage the primary IPTV playlist URL for the application.</p>
       </header>
 
       <Card className="bg-[#1a1a1a] border-[#333]">
@@ -88,13 +89,13 @@ export default function AdminPlaylistPage() {
           ) : (
             <form onSubmit={handleSave} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="playlist-url" className="text-gray-400">M3U Playlist URL</Label>
+                <Label htmlFor="playlist-url" className="text-gray-400">Playlist URL (.m3u or .m3u8)</Label>
                 <Input
                   id="playlist-url"
                   type="text"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://example.com/playlist.m3u"
+                  placeholder="https://example.com/playlist.m3u8"
                   className="w-full bg-[#0a0a0a] text-white p-4 rounded-xl border border-[#333] focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-600"
                   disabled={isSaving}
                 />
