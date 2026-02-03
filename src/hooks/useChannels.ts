@@ -8,6 +8,8 @@ import { manualParse, Channel } from '@/lib/m3u-parser';
 
 export type VisibilityMap = { [key: string]: boolean };
 
+const CACHE_PREFIX = 'playlist_cache_';
+
 export function useChannels(customPlaylistUrl?: string) {
   const [allChannels, setAllChannels] = useState<Channel[]>([]);
   const [displayChannels, setDisplayChannels] = useState<Channel[]>([]);
@@ -17,7 +19,6 @@ export function useChannels(customPlaylistUrl?: string) {
 
   useEffect(() => {
     async function fetchChannels() {
-      setLoading(true);
       setError(null);
       
       try {
@@ -38,18 +39,39 @@ export function useChannels(customPlaylistUrl?: string) {
             console.warn('Could not fetch custom playlist URL, using default.', error);
           }
         }
+
+        // 2. Check Cache for "Instant" Load
+        const cacheKey = `${CACHE_PREFIX}${playlistUrl}`;
+        const cachedContent = localStorage.getItem(cacheKey);
         
-        // 2. Fetch Visibility Settings
+        if (cachedContent) {
+            try {
+                const cachedData = JSON.parse(cachedContent);
+                if (cachedData && Array.isArray(cachedData.items)) {
+                    setAllChannels(cachedData.items);
+                    setDisplayChannels(cachedData.items.slice(0, 200));
+                    const uniqueCategories = ['All', ...new Set(cachedData.items.map((item: any) => item.group.title || 'Other').filter(Boolean) as string[])];
+                    setCategories(uniqueCategories.sort());
+                    setLoading(false); // We have enough to show the UI
+                }
+            } catch (e) {
+                console.warn('Failed to parse cached playlist data', e);
+            }
+        } else {
+            setLoading(true);
+        }
+        
+        // 3. Fetch Visibility Settings (Always fresh)
         const visibilityCollection = collection(db, 'channel_visibility');
         const visibilitySnapshot = await getDocs(visibilityCollection);
         const visibilityMap: VisibilityMap = {};
         visibilitySnapshot.forEach(doc => {
-            if (doc.data().visible === false) { // only store hidden channels to save memory
+            if (doc.data().visible === false) { 
                 visibilityMap[doc.id] = false;
             }
         });
 
-        // 3. Fetch and Parse Playlist
+        // 4. Fetch and Parse Playlist (Background refresh)
         const response = await fetch(playlistUrl);
         if (!response.ok) {
           throw new Error(`Failed to fetch playlist: ${response.statusText}`);
@@ -57,21 +79,31 @@ export function useChannels(customPlaylistUrl?: string) {
         const text = await response.text();
         const playlist = manualParse(text);
 
-        // 4. Filter channels based on visibility
+        // 5. Filter channels based on visibility
         const validAndVisibleChannels = playlist.items.filter(item => {
-            const isVisible = visibilityMap[item.tvg.id] !== false; // Default to true if not in map
+            const isVisible = visibilityMap[item.tvg.id] !== false; 
             return item.url && isVisible;
         });
 
+        // 6. Update State and Cache
         setAllChannels(validAndVisibleChannels);
         setDisplayChannels(validAndVisibleChannels.slice(0, 200));
 
         const uniqueCategories = ['All', ...new Set(validAndVisibleChannels.map(item => item.group.title || 'Other').filter(Boolean))];
         setCategories(uniqueCategories.sort());
 
+        // Update cache for next time
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify({ items: validAndVisibleChannels, timestamp: Date.now() }));
+        } catch (e) {
+            console.warn('LocalStorage quota exceeded, could not cache playlist.');
+        }
+
       } catch (e: any) {
         console.error('Error loading playlist:', e);
-        setError(e.message || 'Failed to load playlist.');
+        if (allChannels.length === 0) {
+            setError(e.message || 'Failed to load playlist.');
+        }
       } finally {
         setLoading(false);
       }

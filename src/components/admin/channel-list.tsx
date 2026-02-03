@@ -7,7 +7,7 @@ import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 import { manualParse, Channel } from '@/lib/m3u-parser';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Tv } from 'lucide-react';
+import { AlertCircle, Tv, Loader2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import {
   Table,
@@ -19,34 +19,45 @@ import {
 } from "@/components/ui/table";
 
 type VisibilityMap = { [key: string]: boolean };
+const CACHE_PREFIX = 'admin_playlist_cache_';
 
 export function ChannelList() {
     const [channels, setChannels] = useState<Channel[]>([]);
     const [visibility, setVisibility] = useState<VisibilityMap>({});
     const [loading, setLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const fetchChannelsAndVisibility = useCallback(async () => {
-        setLoading(true);
         setError(null);
         try {
             // 1. Fetch playlist URL
             const playlistDocRef = doc(db, 'settings', 'playlist');
             const docSnap = await getDoc(playlistDocRef);
-            let playlistUrl = 'https://iptv-org.github.io/iptv/index.m3u'; // Default
+            let playlistUrl = 'https://iptv-org.github.io/iptv/index.m3u'; 
             if (docSnap.exists() && docSnap.data().url) {
                 playlistUrl = docSnap.data().url;
             }
 
-            // 2. Fetch and parse playlist
-            const response = await fetch(playlistUrl);
-            if (!response.ok) throw new Error(`Failed to fetch playlist: ${response.statusText}`);
-            const m3uText = await response.text();
-            const parsedPlaylist = manualParse(m3uText);
-            const validChannels = parsedPlaylist.items.filter(c => c.url && c.tvg?.id);
-            setChannels(validChannels);
+            // 2. Check Cache for instant load
+            const cacheKey = `${CACHE_PREFIX}${playlistUrl}`;
+            const cachedContent = localStorage.getItem(cacheKey);
+            if (cachedContent) {
+                try {
+                    const cachedData = JSON.parse(cachedContent);
+                    if (cachedData && Array.isArray(cachedData.items)) {
+                        setChannels(cachedData.items);
+                        setLoading(false);
+                        setIsRefreshing(true); // Indicate background refresh
+                    }
+                } catch (e) {
+                    console.warn('Admin cache parse failed', e);
+                }
+            } else {
+                setLoading(true);
+            }
 
-            // 3. Fetch visibility states from Firestore
+            // 3. Fetch Visibility States
             const visibilityCollection = collection(db, 'channel_visibility');
             const visibilitySnapshot = await getDocs(visibilityCollection);
             const visibilityMap: VisibilityMap = {};
@@ -55,22 +66,40 @@ export function ChannelList() {
             });
             setVisibility(visibilityMap);
 
+            // 4. Fetch and Parse Playlist (Refresh)
+            const response = await fetch(playlistUrl);
+            if (!response.ok) throw new Error(`Failed to fetch playlist: ${response.statusText}`);
+            const m3uText = await response.text();
+            const parsedPlaylist = manualParse(m3uText);
+            const validChannels = parsedPlaylist.items.filter(c => c.url && c.tvg?.id);
+            
+            setChannels(validChannels);
+
+            // Update cache
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify({ items: validChannels, timestamp: Date.now() }));
+            } catch (e) {
+                console.warn('Admin LocalStorage quota exceeded');
+            }
+
         } catch (e: any) {
-            setError(e.message || 'An unknown error occurred.');
+            if (channels.length === 0) {
+                setError(e.message || 'An unknown error occurred.');
+            }
             console.error(e);
         } finally {
             setLoading(false);
+            setIsRefreshing(false);
         }
-    }, []);
+    }, [channels.length]);
 
     useEffect(() => {
         fetchChannelsAndVisibility();
-    }, [fetchChannelsAndVisibility]);
+    }, []);
 
     const handleVisibilityChange = async (channelId: string, isVisible: boolean) => {
         if (!channelId) return;
         
-        // Optimistic update
         setVisibility(prev => ({ ...prev, [channelId]: isVisible }));
 
         try {
@@ -78,9 +107,7 @@ export function ChannelList() {
             await setDoc(visibilityDocRef, { visible: isVisible, channelId: channelId }, { merge: true });
         } catch (error) {
             console.error('Failed to update visibility:', error);
-            // Revert optimistic update on error
             setVisibility(prev => ({ ...prev, [channelId]: !isVisible }));
-            // Optionally, show a toast message to the user
         }
     };
 
@@ -136,58 +163,63 @@ export function ChannelList() {
     }
     
     return (
-        <div className="rounded-lg border border-[#333] overflow-hidden max-h-[calc(100vh-280px)] overflow-y-auto">
-            <Table>
-                <TableHeader className="sticky top-0 bg-[#1a1a1a]/80 backdrop-blur-sm z-10">
-                    <TableRow className="border-b-[#333] hover:bg-[#1a1a1a]">
-                        <TableHead className="w-[72px] px-4">Icon</TableHead>
-                        <TableHead className="px-4">Channel</TableHead>
-                        <TableHead className="px-4">ID</TableHead>
-                        <TableHead className="text-right px-4">Status</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {channels.map(channel => {
-                        const channelId = channel.tvg.id;
-                        // Default to visible if not in map
-                        const isVisible = visibility[channelId] !== false; 
-                        
-                        return (
-                            <TableRow key={channelId} className="border-b-[#333] hover:bg-[#2a2a2a]/50">
-                                <TableCell className="p-2">
-                                    <div className="w-12 h-12 flex items-center justify-center bg-black/20 rounded-md">
-                                        {channel.tvg.logo ? 
-                                            <img src={channel.tvg.logo} alt="" className="max-w-full max-h-full object-contain" onError={(e) => {(e.target as HTMLImageElement).closest('div')?.remove();}}/> 
-                                            : <div className="w-12 h-12 flex items-center justify-center"><Tv className="w-6 h-6 text-muted-foreground" /></div>
-                                        }
-                                    </div>
-                                </TableCell>
-                                <TableCell className="p-4 font-medium text-white">
-                                    <div className='overflow-hidden'>
-                                        <p className="font-medium text-white truncate">{channel.name}</p>
-                                        <p className="text-sm text-gray-400 truncate">{channel.group.title}</p>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="p-4 text-sm text-gray-400 font-mono">
-                                    {channelId}
-                                </TableCell>
-                                <TableCell className="p-4 text-right">
-                                    <div className="flex items-center justify-end gap-3">
-                                        <Label htmlFor={`switch-${channelId}`} className="text-sm text-gray-400">{isVisible ? 'On' : 'Off'}</Label>
-                                        <Switch
-                                            id={`switch-${channelId}`}
-                                            checked={isVisible}
-                                            onCheckedChange={(checked) => handleVisibilityChange(channelId, checked)}
-                                        />
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        );
-                    })}
-                </TableBody>
-            </Table>
+        <div className="relative">
+            {isRefreshing && (
+                <div className="absolute top-2 right-4 z-20 flex items-center gap-2 px-3 py-1 bg-purple-600/20 border border-purple-500/30 rounded-full text-xs text-purple-300 backdrop-blur-sm animate-pulse">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Updating playlist...
+                </div>
+            )}
+            <div className="rounded-lg border border-[#333] overflow-hidden max-h-[calc(100vh-280px)] overflow-y-auto">
+                <Table>
+                    <TableHeader className="sticky top-0 bg-[#1a1a1a]/80 backdrop-blur-sm z-10">
+                        <TableRow className="border-b-[#333] hover:bg-[#1a1a1a]">
+                            <TableHead className="w-[72px] px-4">Icon</TableHead>
+                            <TableHead className="px-4">Channel</TableHead>
+                            <TableHead className="px-4">ID</TableHead>
+                            <TableHead className="text-right px-4">Status</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {channels.map(channel => {
+                            const channelId = channel.tvg.id;
+                            const isVisible = visibility[channelId] !== false; 
+                            
+                            return (
+                                <TableRow key={channelId} className="border-b-[#333] hover:bg-[#2a2a2a]/50">
+                                    <TableCell className="p-2">
+                                        <div className="w-12 h-12 flex items-center justify-center bg-black/20 rounded-md">
+                                            {channel.tvg.logo ? 
+                                                <img src={channel.tvg.logo} alt="" className="max-w-full max-h-full object-contain" onError={(e) => {(e.target as HTMLImageElement).closest('div')?.remove();}}/> 
+                                                : <div className="w-12 h-12 flex items-center justify-center"><Tv className="w-6 h-6 text-muted-foreground" /></div>
+                                            }
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="p-4 font-medium text-white">
+                                        <div className='overflow-hidden'>
+                                            <p className="font-medium text-white truncate">{channel.name}</p>
+                                            <p className="text-sm text-gray-400 truncate">{channel.group.title}</p>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="p-4 text-sm text-gray-400 font-mono">
+                                        {channelId}
+                                    </TableCell>
+                                    <TableCell className="p-4 text-right">
+                                        <div className="flex items-center justify-end gap-3">
+                                            <Label htmlFor={`switch-${channelId}`} className="text-sm text-gray-400">{isVisible ? 'On' : 'Off'}</Label>
+                                            <Switch
+                                                id={`switch-${channelId}`}
+                                                checked={isVisible}
+                                                onCheckedChange={(checked) => handleVisibilityChange(channelId, checked)}
+                                            />
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })}
+                    </TableBody>
+                </Table>
+            </div>
         </div>
     );
 }
-
-    
