@@ -1,11 +1,10 @@
-
 "use client";
 
 import { useState } from "react";
 import { AdminSidebar } from "@/components/admin/sidebar";
 import { Button } from "@/components/ui/button";
 import { PanelLeftOpen } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
 
 export default function AdminLayout({
   children,
@@ -13,6 +12,15 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const pathname = usePathname();
+
+  // Determine the title based on the current path
+  const getPageTitle = () => {
+    if (pathname === "/admin") return "Playlist Settings";
+    if (pathname === "/admin/channels") return "Channel Management";
+    if (pathname === "/admin/homepage") return "Homepage Content";
+    return "Admin Dashboard";
+  };
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-gray-200 flex overflow-hidden">
@@ -31,7 +39,7 @@ export default function AdminLayout({
             </Button>
           )}
           <div className="flex-1">
-             {/* Header Title or Breadcrumbs could go here */}
+             <h2 className="text-lg font-semibold text-white tracking-tight">{getPageTitle()}</h2>
           </div>
         </header>
         <main className="flex-1 p-4 md:p-8 overflow-y-auto">
