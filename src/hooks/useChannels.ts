@@ -9,7 +9,7 @@ import { manualParse, Channel } from '@/lib/m3u-parser';
 export type VisibilityMap = { [key: string]: boolean };
 
 const CACHE_PREFIX = 'playlist_cache_';
-const INITIAL_PAGE_SIZE = 200;
+const INITIAL_PAGE_SIZE = 100;
 const PAGE_INCREMENT = 100;
 
 export function useChannels(customPlaylistUrl?: string) {
