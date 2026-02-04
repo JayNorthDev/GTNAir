@@ -1,15 +1,17 @@
+
 "use client";
 import { useState, useEffect, useCallback } from 'react';
 
 const SETTINGS_KEY = 'iptv-player-settings';
 
-export type View = 'home' | 'player' | 'favorites';
+export type View = 'home' | 'player' | 'favorites' | 'categories';
 
 export type Settings = {
   autoSkip: boolean;
   muteOnStartup: boolean;
   defaultView: View;
   customPlaylistUrl: string;
+  selectedPlaylistId: string;
 };
 
 export const defaultSettings: Settings = {
@@ -17,6 +19,7 @@ export const defaultSettings: Settings = {
   muteOnStartup: false,
   defaultView: 'home',
   customPlaylistUrl: '',
+  selectedPlaylistId: '',
 };
 
 export function useSettings() {
@@ -31,6 +34,7 @@ export function useSettings() {
         // Merge saved settings with defaults to avoid breaking changes
         const savedSettings = JSON.parse(item);
         const newSettings = { ...defaultSettings, ...savedSettings };
+        
         // Ensure defaultView is a valid value
         if (newSettings.defaultView === 'settings') {
           newSettings.defaultView = 'home';

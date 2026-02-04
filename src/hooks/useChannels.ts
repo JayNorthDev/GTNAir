@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { doc, getDoc, getDocs, collection } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, orderBy } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { app } from '@/firebase/config';
 const db = getFirestore(app);
@@ -12,7 +12,7 @@ const CACHE_PREFIX = 'playlist_cache_';
 const INITIAL_PAGE_SIZE = 100;
 const PAGE_INCREMENT = 100;
 
-export function useChannels(customPlaylistUrl?: string) {
+export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: string) {
   const [allChannels, setAllChannels] = useState<Channel[]>([]);
   const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
   const [visibleCount, setVisibleCount] = useState(INITIAL_PAGE_SIZE);
@@ -30,15 +30,33 @@ export function useChannels(customPlaylistUrl?: string) {
 
       if (customPlaylistUrl) {
           playlistUrl = customPlaylistUrl;
-      } else {
+      } else if (selectedPlaylistId) {
         try {
-          const playlistDocRef = doc(db, 'settings', 'playlist');
+          const playlistDocRef = doc(db, 'playlists', selectedPlaylistId);
           const docSnap = await getDoc(playlistDocRef);
           if (docSnap.exists() && docSnap.data().url) {
             playlistUrl = docSnap.data().url;
           }
         } catch (error) {
-          console.warn('Could not fetch custom playlist URL, using default.', error);
+          console.warn('Could not fetch selected playlist URL', error);
+        }
+      } else {
+        // Fallback to general settings or first available playlist
+        try {
+          const playlistDocRef = doc(db, 'settings', 'playlist');
+          const docSnap = await getDoc(playlistDocRef);
+          if (docSnap.exists() && docSnap.data().url) {
+            playlistUrl = docSnap.data().url;
+          } else {
+             // Try to get the first one from playlists collection
+             const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
+             const plSnap = await getDocs(q);
+             if (!plSnap.empty) {
+               playlistUrl = plSnap.docs[0].data().url;
+             }
+          }
+        } catch (error) {
+          console.warn('Could not fetch default playlist URL', error);
         }
       }
 
@@ -109,7 +127,7 @@ export function useChannels(customPlaylistUrl?: string) {
     } finally {
       setLoading(false);
     }
-  }, [customPlaylistUrl, allChannels.length]);
+  }, [customPlaylistUrl, selectedPlaylistId, allChannels.length]);
 
   useEffect(() => {
     fetchChannels();

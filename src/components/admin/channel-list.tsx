@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -26,9 +27,10 @@ const BATCH_SIZE = 100;
 
 interface ChannelListProps {
     onRefreshing?: (refreshing: boolean) => void;
+    forcedPlaylistUrl?: string;
 }
 
-export function ChannelList({ onRefreshing }: ChannelListProps) {
+export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProps) {
     const [channels, setChannels] = useState<Channel[]>([]);
     const [visibility, setVisibility] = useState<VisibilityMap>({});
     const [loading, setLoading] = useState(true);
@@ -50,11 +52,15 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
     const fetchChannelsAndVisibility = useCallback(async () => {
         setError(null);
         try {
-            const playlistDocRef = doc(db, 'settings', 'playlist');
-            const docSnap = await getDoc(playlistDocRef);
-            let playlistUrl = 'https://iptv-org.github.io/iptv/index.m3u'; 
-            if (docSnap.exists() && docSnap.data().url) {
-                playlistUrl = docSnap.data().url;
+            let playlistUrl = forcedPlaylistUrl;
+            
+            if (!playlistUrl) {
+                const playlistDocRef = doc(db, 'settings', 'playlist');
+                const docSnap = await getDoc(playlistDocRef);
+                playlistUrl = 'https://iptv-org.github.io/iptv/index.m3u'; 
+                if (docSnap.exists() && docSnap.data().url) {
+                    playlistUrl = docSnap.data().url;
+                }
             }
 
             const cacheKey = `${CACHE_PREFIX}${playlistUrl}`;
@@ -105,11 +111,11 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
             setLoading(false);
             setIsRefreshing(false);
         }
-    }, [channels.length]);
+    }, [channels.length, forcedPlaylistUrl]);
 
     useEffect(() => {
         fetchChannelsAndVisibility();
-    }, []);
+    }, [fetchChannelsAndVisibility]);
 
     const filteredChannels = useMemo(() => {
         return channels.filter(channel => {
@@ -357,7 +363,7 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
                                     {visibleCount < filteredChannels.length && (
                                         <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
                                             <Loader2 className="w-4 h-4 animate-spin" />
-                                            Loading more channels...
+                                            Loading more...
                                         </div>
                                     )}
                                 </td>

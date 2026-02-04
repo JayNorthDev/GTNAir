@@ -7,10 +7,11 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import VideoPlayer from "@/components/player/VideoPlayer";
 import { Channel } from "@/lib/m3u-parser";
-import { AlertTriangle, Loader, Heart } from "lucide-react";
+import { AlertTriangle, Loader, Heart, Grid2X2 } from "lucide-react";
 import { NavRail } from "@/components/layout/nav-rail";
 import { HomeGrid } from "@/components/views/home-grid";
 import { HomeView } from "@/components/views/home-view";
+import { CategoriesView } from "@/components/views/categories-view";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useSettings, View as SettingsViewType } from "@/hooks/useSettings";
 import { SettingsView } from "@/components/views/settings-view";
@@ -18,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 
 export default function Home() {
-  const { settings, isLoaded: settingsLoaded } = useSettings();
+  const { settings, updateSettings, isLoaded: settingsLoaded } = useSettings();
   const { 
     allChannels, 
     displayChannels, 
@@ -28,7 +29,7 @@ export default function Home() {
     filterChannels,
     loadMore,
     hasMore
-  } = useChannels(settings.customPlaylistUrl);
+  } = useChannels(settings.customPlaylistUrl, settings.selectedPlaylistId);
   
   const { favoriteUrls, toggleFavorite, isFavorite } = useFavorites();
   
@@ -61,6 +62,12 @@ export default function Home() {
     if (window.innerWidth < 768) { // md breakpoint
       setIsSidebarOpen(false);
     }
+  };
+
+  const handlePlaylistSelect = (playlistId: string) => {
+    updateSettings({ selectedPlaylistId: playlistId });
+    setView("player");
+    setSelectedChannel(null); // Reset player state
   };
 
   const handleNextChannel = () => {
@@ -104,6 +111,13 @@ export default function Home() {
             onChannelSelect={handleChannelClick} 
             loadMore={loadMore} 
             hasMore={hasMore} 
+          />
+        );
+      case "categories":
+        return (
+          <CategoriesView 
+            onSelectPlaylist={handlePlaylistSelect} 
+            currentPlaylistId={settings.selectedPlaylistId} 
           />
         );
       case "favorites":
