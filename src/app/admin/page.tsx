@@ -1,17 +1,18 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
 import { db } from '@/firebase/config';
-import { collection, doc, getDocs, setDoc, deleteDoc, query, orderBy, addDoc, updateDoc } from 'firebase/firestore';
-import { Plus, Edit2, Trash2, Globe, CheckCircle, AlertCircle, Loader, Save, X } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { collection, doc, onSnapshot, setDoc, deleteDoc, query, orderBy, addDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { Plus, Edit2, Trash2, Loader, Save } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface Playlist {
   id: string;
@@ -29,40 +30,41 @@ export default function AdminPlaylistsPage() {
 
   const [formData, setFormData] = useState({ id: '', name: '', url: '' });
 
-  const fetchPlaylists = async () => {
-    setIsLoading(true);
-    try {
-      const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Playlist));
-      
-      // If no playlists exist, try to migrate the old "General" playlist from settings
-      if (data.length === 0) {
-        const settingsRef = doc(db, 'settings', 'playlist');
-        const settingsSnap = await (await import('firebase/firestore')).getDoc(settingsRef);
-        if (settingsSnap.exists() && settingsSnap.data().url) {
-          const newPlaylist = {
-            name: 'General',
-            url: settingsSnap.data().url,
-            updatedAt: new Date().toISOString()
-          };
-          const docRef = await addDoc(collection(db, 'playlists'), newPlaylist);
-          setPlaylists([{ id: docRef.id, ...newPlaylist }]);
-        }
-      } else {
-        setPlaylists(data);
-      }
-    } catch (error) {
-      console.error("Error fetching playlists:", error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to load playlists.' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchPlaylists();
-  }, []);
+    const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Playlist));
+      
+      // Migration logic: only runs once if no playlists exist
+      if (data.length === 0 && isLoading) {
+        const settingsRef = doc(db, 'settings', 'playlist');
+        getDoc(settingsRef).then(settingsSnap => {
+          if (settingsSnap.exists() && settingsSnap.data().url) {
+            const newPlaylist = {
+              name: 'General',
+              url: settingsSnap.data().url,
+              updatedAt: new Date().toISOString()
+            };
+            addDoc(collection(db, 'playlists'), newPlaylist);
+          }
+        });
+      }
+      
+      setPlaylists(data);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Playlists listener error:", error);
+      const permissionError = new FirestorePermissionError({
+        path: 'playlists',
+        operation: 'list',
+      });
+      errorEmitter.emit('permission-error', permissionError);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [isLoading]);
 
   const handleOpenDialog = (playlist?: Playlist) => {
     if (playlist) {
@@ -73,43 +75,64 @@ export default function AdminPlaylistsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.url.trim()) return;
+    const name = formData.name.trim();
+    const url = formData.url.trim();
+
+    if (!name || !url) {
+      toast({ variant: 'destructive', title: 'Required', description: 'Name and URL are required.' });
+      return;
+    }
 
     setIsSaving(true);
-    try {
-      const payload = {
-        name: formData.name.trim(),
-        url: formData.url.trim(),
-        updatedAt: new Date().toISOString()
-      };
+    const payload = {
+      name,
+      url,
+      updatedAt: new Date().toISOString()
+    };
 
-      if (formData.id) {
-        await updateDoc(doc(db, 'playlists', formData.id), payload);
-        toast({ title: 'Success', description: 'Playlist updated successfully.' });
-      } else {
-        await addDoc(collection(db, 'playlists'), payload);
-        toast({ title: 'Success', description: 'Playlist added successfully.' });
-      }
-      setIsDialogOpen(false);
-      fetchPlaylists();
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save playlist.' });
-    } finally {
-      setIsSaving(false);
+    if (formData.id) {
+      const docRef = doc(db, 'playlists', formData.id);
+      updateDoc(docRef, payload)
+        .catch(async () => {
+          const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: payload,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
+    } else {
+      const colRef = collection(db, 'playlists');
+      addDoc(colRef, payload)
+        .catch(async () => {
+          const permissionError = new FirestorePermissionError({
+            path: colRef.path,
+            operation: 'create',
+            requestResourceData: payload,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
     }
+
+    setIsDialogOpen(false);
+    setIsSaving(false);
+    toast({ title: 'Playlist Saved', description: 'Your changes have been committed.' });
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('Are you sure you want to delete this playlist?')) return;
-    try {
-      await deleteDoc(doc(db, 'playlists', id));
-      toast({ title: 'Deleted', description: 'Playlist removed.' });
-      fetchPlaylists();
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete playlist.' });
-    }
+    const docRef = doc(db, 'playlists', id);
+    deleteDoc(docRef)
+      .catch(async () => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
+    toast({ title: 'Deleted', description: 'Playlist removed successfully.' });
   };
 
   return (
