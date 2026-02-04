@@ -160,7 +160,12 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
       
       {/* Channel Grid */}
       <div className="p-4 md:p-8">
-        <h2 className="font-headline text-2xl md:text-3xl font-bold tracking-tight mb-4">Live Channels</h2>
+        <div className="mb-6">
+          <h2 className="font-headline text-2xl md:text-3xl font-bold tracking-tight">Live Channels</h2>
+          <p className="text-muted-foreground mt-2 text-lg max-w-4xl">
+            Experience the world in high definition with 5,000+ premium global channels—more variety, better stability, and a faster streaming experience than any other app.
+          </p>
+        </div>
         <HomeGrid 
           items={itemsWithAds} 
           onChannelSelect={onChannelSelect} 
