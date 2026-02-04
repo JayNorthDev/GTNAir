@@ -155,8 +155,8 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
                     <TableHeader>
                         <TableRow className="hover:bg-[#1a1a1a] border-b-[#333]">
                             <TableHead className="w-[72px] px-4">Icon</TableHead>
-                            <TableHead className="px-4 w-[250px]">ID</TableHead>
                             <TableHead className="px-4">Channel</TableHead>
+                            <TableHead className="px-4 w-[250px]">ID</TableHead>
                             <TableHead className="text-right px-4 w-[150px]">Status</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -167,13 +167,13 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
                                     <Skeleton className="w-12 h-12 rounded-md" />
                                 </TableCell>
                                 <TableCell className="p-4">
-                                     <Skeleton className="h-4 w-40" />
-                                </TableCell>
-                                <TableCell className="p-4">
                                     <div className="space-y-2">
                                         <Skeleton className="h-4 w-48" />
                                         <Skeleton className="h-3 w-32" />
                                     </div>
+                                </TableCell>
+                                <TableCell className="p-4">
+                                     <Skeleton className="h-4 w-40" />
                                 </TableCell>
                                 <TableCell className="p-4 text-right">
                                     <div className="flex justify-end items-center gap-3">
@@ -210,8 +210,8 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
                         <TableHeader className="sticky top-0 bg-[#1a1a1a] z-10 shadow-sm shadow-black/20">
                             <TableRow className="border-b-[#333] hover:bg-[#1a1a1a]">
                                 <TableHead className="w-[80px] px-4 bg-[#1a1a1a]">Icon</TableHead>
-                                <TableHead className="px-4 w-[250px] bg-[#1a1a1a]">ID</TableHead>
                                 <TableHead className="px-4 bg-[#1a1a1a]">Channel</TableHead>
+                                <TableHead className="px-4 w-[250px] bg-[#1a1a1a]">ID</TableHead>
                                 <TableHead className="text-right px-4 w-[120px] bg-[#1a1a1a]">Status</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -236,17 +236,17 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
                                                 }
                                             </div>
                                         </TableCell>
-                                        <TableCell className="p-4 text-sm text-gray-400 font-mono">
-                                            <div className="truncate" title={channelId}>
-                                                {channelId}
-                                            </div>
-                                        </TableCell>
                                         <TableCell className="p-4 font-medium text-white">
                                             <div className='overflow-hidden'>
                                                 <p className="font-medium text-white truncate" title={channel.name}>{channel.name}</p>
                                                 <p className="text-sm text-gray-400 truncate" title={channel.group.title || 'No Group'}>
                                                     {channel.group.title || 'No Group'}
                                                 </p>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="p-4 text-sm text-gray-400 font-mono">
+                                            <div className="truncate" title={channelId}>
+                                                {channelId}
                                             </div>
                                         </TableCell>
                                         <TableCell className="p-4 text-right">
