@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { db } from '@/firebase/config';
 import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 import { manualParse, Channel } from '@/lib/m3u-parser';
@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 
 type VisibilityMap = { [key: string]: boolean };
 const CACHE_PREFIX = 'admin_playlist_cache_';
+const BATCH_SIZE = 1000;
 
 export function ChannelList() {
     const [channels, setChannels] = useState<Channel[]>([]);
@@ -28,6 +29,10 @@ export function ChannelList() {
     const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+    
+    const containerRef = useRef<HTMLDivElement>(null);
+    const observerTarget = useRef<HTMLDivElement>(null);
 
     const fetchChannelsAndVisibility = useCallback(async () => {
         setError(null);
@@ -98,6 +103,29 @@ export function ChannelList() {
         fetchChannelsAndVisibility();
     }, []);
 
+    // Intersection Observer for Infinite Scroll
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && channels.length > visibleCount) {
+                    setVisibleCount((prev) => prev + BATCH_SIZE);
+                }
+            },
+            { threshold: 0.1, root: containerRef.current }
+        );
+
+        const target = observerTarget.current;
+        if (target) {
+            observer.observe(target);
+        }
+
+        return () => {
+            if (target) {
+                observer.unobserve(target);
+            }
+        };
+    }, [channels.length, visibleCount]);
+
     const handleVisibilityChange = async (channelId: string, isVisible: boolean) => {
         if (!channelId) return;
         
@@ -105,12 +133,20 @@ export function ChannelList() {
 
         try {
             const visibilityDocRef = doc(db, 'channel_visibility', channelId);
-            await setDoc(visibilityDocRef, { visible: isVisible, channelId: channelId }, { merge: true });
+            setDoc(visibilityDocRef, { visible: isVisible, channelId: channelId }, { merge: true })
+                .catch(async (error) => {
+                    console.error('Failed to update visibility:', error);
+                    // Revert state on error (though we optimistic update)
+                    setVisibility(prev => ({ ...prev, [channelId]: !isVisible }));
+                });
         } catch (error) {
-            console.error('Failed to update visibility:', error);
-            setVisibility(prev => ({ ...prev, [channelId]: !isVisible }));
+            console.error('Failed to initiate visibility update:', error);
         }
     };
+
+    const displayedChannels = useMemo(() => {
+        return channels.slice(0, visibleCount);
+    }, [channels, visibleCount]);
 
     if (loading) {
         return (
@@ -172,49 +208,60 @@ export function ChannelList() {
                 </div>
             )}
             <div className="rounded-lg border border-[#333] bg-[#1a1a1a]/30 overflow-hidden">
-                <div className="max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-auto">
-                    <Table className="min-w-[800px]">
-                        <TableHeader className="sticky top-0 bg-[#1a1a1a] z-10">
+                <div 
+                    ref={containerRef}
+                    className="max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-[#333] scrollbar-track-transparent"
+                >
+                    <Table className="min-w-[800px] table-fixed">
+                        <TableHeader className="sticky top-0 bg-[#1a1a1a] z-10 shadow-sm shadow-black/20">
                             <TableRow className="border-b-[#333] hover:bg-[#1a1a1a]">
-                                <TableHead className="w-[72px] px-4">Icon</TableHead>
-                                <TableHead className="px-4">Channel</TableHead>
-                                <TableHead className="px-4 w-[250px]">ID</TableHead>
-                                <TableHead className="text-right px-4 w-[150px]">Status</TableHead>
+                                <TableHead className="w-[80px] px-4 bg-[#1a1a1a]">Icon</TableHead>
+                                <TableHead className="px-4 bg-[#1a1a1a]">Channel</TableHead>
+                                <TableHead className="px-4 w-[250px] bg-[#1a1a1a]">ID</TableHead>
+                                <TableHead className="text-right px-4 w-[120px] bg-[#1a1a1a]">Status</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {channels.map(channel => {
+                            {displayedChannels.map((channel, index) => {
                                 const channelId = channel.tvg.id;
                                 const isVisible = visibility[channelId] !== false; 
                                 
                                 return (
-                                    <TableRow key={channelId} className="border-b-[#333] hover:bg-[#2a2a2a]/50 group">
+                                    <TableRow key={`${channelId}-${index}`} className="border-b-[#333] hover:bg-[#2a2a2a]/50 group">
                                         <TableCell className="p-2">
-                                            <div className="w-12 h-12 flex items-center justify-center bg-black/20 rounded-md overflow-hidden">
+                                            <div className="w-12 h-12 flex items-center justify-center bg-black/20 rounded-md overflow-hidden shrink-0">
                                                 {channel.tvg.logo ? 
-                                                    <img src={channel.tvg.logo} alt="" className="max-w-full max-h-full object-contain" onError={(e) => {(e.target as HTMLImageElement).src = "https://placehold.co/48x48?text=?";}}/> 
+                                                    <img 
+                                                        src={channel.tvg.logo} 
+                                                        alt="" 
+                                                        className="max-w-full max-h-full object-contain" 
+                                                        onError={(e) => {(e.target as HTMLImageElement).src = "https://placehold.co/48x48?text=?";}}
+                                                        loading="lazy"
+                                                    /> 
                                                     : <div className="w-12 h-12 flex items-center justify-center"><Tv className="w-6 h-6 text-muted-foreground" /></div>
                                                 }
                                             </div>
                                         </TableCell>
-                                        <TableCell className="p-4 font-medium text-white max-w-[300px]">
+                                        <TableCell className="p-4 font-medium text-white">
                                             <div className='overflow-hidden'>
-                                                <p className="font-medium text-white truncate">{channel.name}</p>
-                                                <p className="text-sm text-gray-400 truncate">{channel.group.title || 'No Group'}</p>
+                                                <p className="font-medium text-white truncate" title={channel.name}>{channel.name}</p>
+                                                <p className="text-sm text-gray-400 truncate" title={channel.group.title || 'No Group'}>
+                                                    {channel.group.title || 'No Group'}
+                                                </p>
                                             </div>
                                         </TableCell>
                                         <TableCell className="p-4 text-sm text-gray-400 font-mono">
-                                            <div className="max-w-[250px] truncate" title={channelId}>
+                                            <div className="truncate" title={channelId}>
                                                 {channelId}
                                             </div>
                                         </TableCell>
                                         <TableCell className="p-4 text-right">
                                             <div className="flex items-center justify-end gap-3">
-                                                <Label htmlFor={`switch-${channelId}`} className="text-sm text-gray-400 cursor-pointer hidden sm:block">
+                                                <Label htmlFor={`switch-${channelId}-${index}`} className="text-sm text-gray-400 cursor-pointer hidden sm:block">
                                                     {isVisible ? 'On' : 'Off'}
                                                 </Label>
                                                 <Switch
-                                                    id={`switch-${channelId}`}
+                                                    id={`switch-${channelId}-${index}`}
                                                     checked={isVisible}
                                                     onCheckedChange={(checked) => handleVisibilityChange(channelId, checked)}
                                                 />
@@ -223,6 +270,17 @@ export function ChannelList() {
                                     </TableRow>
                                 );
                             })}
+                            {/* Sentinel element for infinite scroll */}
+                            <tr ref={observerTarget} className="h-10">
+                                <td colSpan={4} className="text-center py-4">
+                                    {visibleCount < channels.length && (
+                                        <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            Loading more channels...
+                                        </div>
+                                    )}
+                                </td>
+                            </tr>
                         </TableBody>
                     </Table>
                 </div>
@@ -235,4 +293,3 @@ export function ChannelList() {
         </div>
     );
 }
-
