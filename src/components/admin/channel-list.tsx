@@ -6,7 +6,7 @@ import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 import { manualParse, Channel } from '@/lib/m3u-parser';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Tv, Loader2 } from 'lucide-react';
+import { AlertCircle, Tv, Loader2, Search, Filter } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import {
   Table,
@@ -17,6 +17,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
 
 type VisibilityMap = { [key: string]: boolean };
 const CACHE_PREFIX = 'admin_playlist_cache_';
@@ -33,6 +35,10 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+    
+    // Search and Filter State
+    const [searchTerm, setSearchTerm] = useState("");
+    const [activeFilters, setActiveFilters] = useState<string[]>([]);
     
     const containerRef = useRef<HTMLDivElement>(null);
     const observerTarget = useRef<HTMLDivElement>(null);
@@ -105,10 +111,32 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
         fetchChannelsAndVisibility();
     }, []);
 
+    const filteredChannels = useMemo(() => {
+        return channels.filter(channel => {
+            const name = channel.name.toLowerCase();
+            const id = channel.tvg.id.toLowerCase();
+            const search = searchTerm.toLowerCase();
+            
+            const matchesSearch = name.includes(search) || id.includes(search);
+            
+            const isGeoBlocked = channel.name.includes('[Geo-blocked]');
+            const isNot247 = channel.name.includes('[Not 24/7]');
+            
+            const matchesGeo = activeFilters.includes('geo') ? isGeoBlocked : true;
+            const matches247 = activeFilters.includes('not247') ? isNot247 : true;
+
+            return matchesSearch && matchesGeo && matches247;
+        });
+    }, [channels, searchTerm, activeFilters]);
+
+    useEffect(() => {
+        setVisibleCount(BATCH_SIZE);
+    }, [searchTerm, activeFilters]);
+
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
-                if (entries[0].isIntersecting && channels.length > visibleCount) {
+                if (entries[0].isIntersecting && filteredChannels.length > visibleCount) {
                     setVisibleCount((prev) => prev + BATCH_SIZE);
                 }
             },
@@ -125,7 +153,7 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
                 observer.unobserve(target);
             }
         };
-    }, [channels.length, visibleCount]);
+    }, [filteredChannels.length, visibleCount]);
 
     const handleVisibilityChange = async (channelId: string, isVisible: boolean) => {
         if (!channelId) return;
@@ -144,9 +172,15 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
         }
     };
 
+    const toggleFilter = (filter: string) => {
+        setActiveFilters(prev => 
+            prev.includes(filter) ? prev.filter(f => f !== filter) : [...prev, filter]
+        );
+    };
+
     const displayedChannels = useMemo(() => {
-        return channels.slice(0, visibleCount);
-    }, [channels, visibleCount]);
+        return filteredChannels.slice(0, visibleCount);
+    }, [filteredChannels, visibleCount]);
 
     if (loading) {
         return (
@@ -200,7 +234,61 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
     }
     
     return (
-        <div className="relative">
+        <div className="relative space-y-4">
+            {/* Search and Filters Bar */}
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+                <div className="relative flex-1 w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Input 
+                        placeholder="Search channels by name or ID..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 bg-[#0f0f0f] border-[#333] focus:border-purple-500 focus:ring-purple-500/20"
+                    />
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex gap-2">
+                        <Button
+                            variant={activeFilters.includes('geo') ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => toggleFilter('geo')}
+                            className={cn(
+                                "h-9 px-4 rounded-full text-xs font-semibold transition-all",
+                                activeFilters.includes('geo') 
+                                    ? "bg-purple-600 hover:bg-purple-700 border-transparent shadow-lg shadow-purple-500/20" 
+                                    : "bg-transparent border-[#333] text-gray-400 hover:text-white hover:border-gray-600"
+                            )}
+                        >
+                            [Geo-blocked]
+                        </Button>
+                        <Button
+                            variant={activeFilters.includes('not247') ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => toggleFilter('not247')}
+                            className={cn(
+                                "h-9 px-4 rounded-full text-xs font-semibold transition-all",
+                                activeFilters.includes('not247') 
+                                    ? "bg-purple-600 hover:bg-purple-700 border-transparent shadow-lg shadow-purple-500/20" 
+                                    : "bg-transparent border-[#333] text-gray-400 hover:text-white hover:border-gray-600"
+                            )}
+                        >
+                            [Not 24/7]
+                        </Button>
+                    </div>
+                    {activeFilters.length > 0 && (
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setActiveFilters([])}
+                            className="text-xs text-gray-500 hover:text-white h-9"
+                        >
+                            Clear
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            {/* Table Content */}
             <div className="rounded-lg border border-[#333] bg-[#1a1a1a]/30 overflow-hidden">
                 <div 
                     ref={containerRef}
@@ -266,7 +354,7 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
                             })}
                             <tr ref={observerTarget} className="h-10">
                                 <td colSpan={4} className="text-center py-4">
-                                    {visibleCount < channels.length && (
+                                    {visibleCount < filteredChannels.length && (
                                         <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
                                             <Loader2 className="w-4 h-4 animate-spin" />
                                             Loading more channels...
@@ -278,9 +366,10 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
                     </Table>
                 </div>
             </div>
-            {channels.length === 0 && !loading && (
-                <div className="text-center py-12 text-gray-500 border border-dashed border-[#333] rounded-lg mt-4">
-                    No channels found in the playlist.
+            {filteredChannels.length === 0 && !loading && (
+                <div className="text-center py-12 text-gray-500 border border-dashed border-[#333] rounded-lg mt-4 flex flex-col items-center gap-2">
+                    <Filter className="w-8 h-8 opacity-20" />
+                    <p>No channels found matching your search or filters.</p>
                 </div>
             )}
         </div>
