@@ -24,17 +24,17 @@ export function AdminSidebar({ isOpen, setIsOpen }: AdminSidebarProps) {
   return (
     <aside 
       className={cn(
-        "bg-[#1a1a1a] border-r border-[#333] flex flex-col transition-all duration-300 ease-in-out h-screen z-40 shrink-0",
-        isOpen ? "w-64" : "w-0 -translate-x-full md:translate-x-0 md:border-r-0"
+        "bg-[#1a1a1a] border-r border-[#333] flex flex-col transition-all duration-300 ease-in-out h-screen z-40 shrink-0 overflow-hidden",
+        isOpen ? "w-64 border-r" : "w-0 -translate-x-full md:translate-x-0 border-r-0"
       )}
     >
-      <div className="h-16 flex items-center justify-between px-6 border-b border-[#333] shrink-0 overflow-hidden">
+      <div className="h-16 flex items-center justify-between px-6 border-b border-[#333] shrink-0 overflow-hidden w-64">
          <Link href="/" className="flex items-center gap-2 text-white shrink-0">
             <GtnLogo className="w-8 h-8 text-purple-500 shrink-0" />
             <span className="text-xl font-bold whitespace-nowrap">GTNPlay <span className="text-sm font-normal text-gray-400">Admin</span></span>
          </Link>
       </div>
-      <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto overflow-x-hidden">
+      <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto overflow-x-hidden w-64">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
@@ -56,7 +56,7 @@ export function AdminSidebar({ isOpen, setIsOpen }: AdminSidebarProps) {
           );
         })}
       </nav>
-      <div className="px-4 py-4 border-t border-[#333] shrink-0 overflow-hidden">
+      <div className="px-4 py-4 border-t border-[#333] shrink-0 overflow-hidden w-64">
         <Link
             href="/"
             className={cn(
