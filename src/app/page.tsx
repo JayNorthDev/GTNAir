@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -18,7 +19,17 @@ import { cn } from "@/lib/utils";
 
 export default function Home() {
   const { settings, isLoaded: settingsLoaded } = useSettings();
-  const { allChannels, displayChannels, categories, loading, error, filterChannels } = useChannels(settings.customPlaylistUrl);
+  const { 
+    allChannels, 
+    displayChannels, 
+    categories, 
+    loading, 
+    error, 
+    filterChannels,
+    loadMore,
+    hasMore
+  } = useChannels(settings.customPlaylistUrl);
+  
   const { favoriteUrls, toggleFavorite, isFavorite } = useFavorites();
   
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
@@ -87,7 +98,14 @@ export default function Home() {
   const renderContent = () => {
     switch (view) {
       case "home":
-        return <HomeView channels={allChannels} onChannelSelect={handleChannelClick} />;
+        return (
+          <HomeView 
+            channels={displayChannels} 
+            onChannelSelect={handleChannelClick} 
+            loadMore={loadMore} 
+            hasMore={hasMore} 
+          />
+        );
       case "favorites":
         if (favoriteChannels.length === 0) {
           return (
@@ -138,7 +156,14 @@ export default function Home() {
           </div>
         );
       default:
-        return <HomeView channels={allChannels} onChannelSelect={handleChannelClick} />;
+        return (
+          <HomeView 
+            channels={displayChannels} 
+            onChannelSelect={handleChannelClick} 
+            loadMore={loadMore} 
+            hasMore={hasMore} 
+          />
+        );
     }
   };
 

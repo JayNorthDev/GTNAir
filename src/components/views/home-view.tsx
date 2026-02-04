@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useMemo, useState, useEffect } from 'react';
 import { Channel } from '@/hooks/useChannels';
@@ -19,7 +20,14 @@ type Ad = {
 
 export type GridItem = Channel | Ad;
 
-export function HomeView({ channels, onChannelSelect }: { channels: Channel[], onChannelSelect: (channel: Channel) => void }) {
+interface HomeViewProps {
+  channels: Channel[];
+  onChannelSelect: (channel: Channel) => void;
+  loadMore?: () => void;
+  hasMore?: boolean;
+}
+
+export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeViewProps) {
   const [heroSlides, setHeroSlides] = useState<DocumentData[]>([]);
   const [services, setServices] = useState<DocumentData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,7 +161,12 @@ export function HomeView({ channels, onChannelSelect }: { channels: Channel[], o
       {/* Channel Grid */}
       <div className="p-4 md:p-8">
         <h2 className="font-headline text-2xl md:text-3xl font-bold tracking-tight mb-4">Live Channels</h2>
-        <HomeGrid items={itemsWithAds} onChannelSelect={onChannelSelect} />
+        <HomeGrid 
+          items={itemsWithAds} 
+          onChannelSelect={onChannelSelect} 
+          loadMore={loadMore} 
+          hasMore={hasMore} 
+        />
       </div>
     </div>
   );
