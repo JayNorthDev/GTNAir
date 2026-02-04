@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AdminSidebar } from "@/components/admin/sidebar";
 import { Button } from "@/components/ui/button";
-import { PanelLeftOpen } from "lucide-react";
+import { PanelLeftOpen, PanelLeftClose } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 export default function AdminLayout({
@@ -41,6 +41,17 @@ export default function AdminLayout({
           <div className="flex-1">
              <h2 className="text-lg font-semibold text-white tracking-tight">{getPageTitle()}</h2>
           </div>
+          {isSidebarOpen && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarOpen(false)}
+              className="text-gray-400 hover:text-white transition-all hover:bg-purple-500/10 ml-auto"
+            >
+              <PanelLeftClose className="w-6 h-6" />
+              <span className="sr-only">Close Sidebar</span>
+            </Button>
+          )}
         </header>
         <main className="flex-1 p-4 md:p-8 overflow-y-auto">
           {children}

@@ -1,9 +1,8 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ListVideo, Settings, Home, LayoutDashboard, PanelLeftClose } from "lucide-react";
+import { ListVideo, Settings, Home, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GtnLogo } from "../gtn-logo";
 import { Button } from "../ui/button";
@@ -34,17 +33,6 @@ export function AdminSidebar({ isOpen, setIsOpen }: AdminSidebarProps) {
             <GtnLogo className="w-8 h-8 text-purple-500 shrink-0" />
             <span className="text-xl font-bold whitespace-nowrap">GTNPlay <span className="text-sm font-normal text-gray-400">Admin</span></span>
          </Link>
-         {isOpen && (
-           <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-white shrink-0 ml-2 hover:bg-purple-500/10"
-           >
-              <PanelLeftClose className="w-5 h-5" />
-              <span className="sr-only">Close Sidebar</span>
-           </Button>
-         )}
       </div>
       <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto overflow-x-hidden">
         {navItems.map((item) => {
