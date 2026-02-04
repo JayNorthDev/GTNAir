@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -23,7 +22,11 @@ type VisibilityMap = { [key: string]: boolean };
 const CACHE_PREFIX = 'admin_playlist_cache_';
 const BATCH_SIZE = 1000;
 
-export function ChannelList() {
+interface ChannelListProps {
+    onRefreshing?: (refreshing: boolean) => void;
+}
+
+export function ChannelList({ onRefreshing }: ChannelListProps) {
     const [channels, setChannels] = useState<Channel[]>([]);
     const [visibility, setVisibility] = useState<VisibilityMap>({});
     const [loading, setLoading] = useState(true);
@@ -33,6 +36,11 @@ export function ChannelList() {
     
     const containerRef = useRef<HTMLDivElement>(null);
     const observerTarget = useRef<HTMLDivElement>(null);
+
+    // Sync isRefreshing state to parent if callback provided
+    useEffect(() => {
+        onRefreshing?.(isRefreshing);
+    }, [isRefreshing, onRefreshing]);
 
     const fetchChannelsAndVisibility = useCallback(async () => {
         setError(null);
@@ -136,7 +144,6 @@ export function ChannelList() {
             setDoc(visibilityDocRef, { visible: isVisible, channelId: channelId }, { merge: true })
                 .catch(async (error) => {
                     console.error('Failed to update visibility:', error);
-                    // Revert state on error (though we optimistic update)
                     setVisibility(prev => ({ ...prev, [channelId]: !isVisible }));
                 });
         } catch (error) {
@@ -201,12 +208,6 @@ export function ChannelList() {
     
     return (
         <div className="relative">
-            {isRefreshing && (
-                <div className="absolute top-2 right-4 z-20 flex items-center gap-2 px-3 py-1 bg-purple-600/20 border border-purple-500/30 rounded-full text-xs text-purple-300 backdrop-blur-sm animate-pulse">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Updating playlist...
-                </div>
-            )}
             <div className="rounded-lg border border-[#333] bg-[#1a1a1a]/30 overflow-hidden">
                 <div 
                     ref={containerRef}
@@ -270,7 +271,6 @@ export function ChannelList() {
                                     </TableRow>
                                 );
                             })}
-                            {/* Sentinel element for infinite scroll */}
                             <tr ref={observerTarget} className="h-10">
                                 <td colSpan={4} className="text-center py-4">
                                     {visibleCount < channels.length && (
