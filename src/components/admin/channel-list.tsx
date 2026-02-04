@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 
 type VisibilityMap = { [key: string]: boolean };
 const CACHE_PREFIX = 'admin_playlist_cache_';
-const BATCH_SIZE = 1000;
+const BATCH_SIZE = 100; // Updated to 100 for smoother initial DOM population
 
 interface ChannelListProps {
     onRefreshing?: (refreshing: boolean) => void;
@@ -142,7 +142,7 @@ export function ChannelList({ onRefreshing }: ChannelListProps) {
         try {
             const visibilityDocRef = doc(db, 'channel_visibility', channelId);
             setDoc(visibilityDocRef, { visible: isVisible, channelId: channelId }, { merge: true })
-                .catch(async (error) => {
+                .catch((error) => {
                     console.error('Failed to update visibility:', error);
                     setVisibility(prev => ({ ...prev, [channelId]: !isVisible }));
                 });
