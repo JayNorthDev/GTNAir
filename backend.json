@@ -3,16 +3,25 @@
   "entities": {
     "playlist": {
       "title": "Playlist",
-      "description": "A document containing the URL for the IPTV playlist.",
+      "description": "An IPTV playlist source with a name and URL.",
       "type": "object",
       "properties": {
+        "name": {
+          "type": "string",
+          "description": "The descriptive name of the playlist."
+        },
         "url": {
           "type": "string",
           "format": "uri",
-          "description": "The URL of the M3U playlist file."
+          "description": "The URL of the M3U/M3U8 playlist file."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp of when this entry was last modified."
         }
       },
-      "required": ["url"]
+      "required": ["name", "url", "updatedAt"]
     },
     "channelVisibility": {
       "title": "Channel Visibility",
@@ -79,9 +88,13 @@
     "providers": []
   },
   "firestore": {
-    "/settings/{settingId}": {
+    "/playlists/{playlistId}": {
       "schema": { "$ref": "#/entities/playlist" },
-      "description": "Global application settings."
+      "description": "Stores the list of available M3U playlist sources."
+    },
+    "/settings/{settingId}": {
+      "schema": { "type": "object", "properties": { "url": { "type": "string" } } },
+      "description": "Global application settings (legacy)."
     },
     "/channel_visibility/{channelId}": {
       "schema": { "$ref": "#/entities/channelVisibility" },
