@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useMemo, useState, useEffect } from 'react';
 import { Channel } from '@/hooks/useChannels';
@@ -44,7 +43,6 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
         setServices(servicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       } catch (error) {
         console.error("Failed to fetch homepage content:", error);
-        // Fallback to empty arrays on error
         setHeroSlides([]);
         setServices([]);
       } finally {
@@ -67,7 +65,8 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
     return items;
   }, [channels]);
 
-  const autoplayRef = React.useRef(Autoplay({ delay: 5000, stopOnInteraction: true }));
+  // Use useMemo for the plugin instance to ensure stability across renders
+  const autoplay = useMemo(() => Autoplay({ delay: 5000, stopOnInteraction: true }), []);
 
   return (
     <div className="w-full">
@@ -76,7 +75,7 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
          <Skeleton className="w-full h-[60vh] min-h-[450px] max-h-[550px] -mt-4 md:-mt-8" />
       ) : heroSlides.length > 0 && (
         <Carousel
-          plugins={[autoplayRef.current]}
+          plugins={[autoplay]}
           opts={{ loop: true }}
           className="w-full relative -mt-4 md:-mt-8"
         >

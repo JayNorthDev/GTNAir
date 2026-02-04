@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 type WatchPageProps = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
-export default function WatchPage({ params }: WatchPageProps) {
-  const channel = channels.find(c => c.id === params.id);
+export default async function WatchPage({ params }: WatchPageProps) {
+  const { id } = await params;
+  const channel = channels.find(c => c.id === id);
 
   if (!channel) {
     notFound();
