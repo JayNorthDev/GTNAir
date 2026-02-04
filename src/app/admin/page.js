@@ -1,4 +1,3 @@
-
 "use client";
 import { useState, useEffect } from 'react';
 import { db } from '../../firebase/config';
@@ -69,11 +68,6 @@ export default function AdminPlaylistPage() {
   
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-white tracking-tight">M3U/M3U8 Playlist Settings</h1>
-        <p className="text-gray-400 mt-1">Manage the primary IPTV playlist URL for the application.</p>
-      </header>
-
       <Card className="bg-[#1a1a1a] border-[#333]">
         <CardHeader>
           <CardTitle className="text-white">Playlist URL</CardTitle>
