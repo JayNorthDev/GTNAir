@@ -22,6 +22,16 @@ export type Channel = {
 };
 
 /**
+ * Sanitizes a string to be used as a safe Firestore document ID.
+ * Replaces slashes, spaces, and other special characters that might break Firestore paths.
+ */
+const sanitizeId = (id: string): string => {
+  if (!id) return '';
+  // Replace forward slashes, backslashes, dots, and hash/question marks which are problematic in Firestore paths or URLs
+  return id.replace(/[\/\s\?#\.\\\:]/g, '_');
+};
+
+/**
  * Enhanced manual M3U/M3U8 parser.
  * Handles standard IPTV playlist formats and is robust against missing tags.
  */
@@ -51,8 +61,10 @@ export const manualParse = (m3u: string): { items: Channel[] } => {
       const nameParts = info.split(',');
       const name = nameParts.length > 1 ? nameParts[nameParts.length - 1].trim() : '';
 
+      const rawId = tvgIdMatch ? tvgIdMatch[1] : (tvgNameMatch ? tvgNameMatch[1] : '');
+
       currentItem.tvg = {
-        id: tvgIdMatch ? tvgIdMatch[1] : (tvgNameMatch ? tvgNameMatch[1] : ''),
+        id: sanitizeId(rawId),
         name: tvgNameMatch ? tvgNameMatch[1] : '',
         logo: tvgLogoMatch ? tvgLogoMatch[1] : '',
       };
@@ -72,9 +84,9 @@ export const manualParse = (m3u: string): { items: Channel[] } => {
       // This is the URL line
       currentItem.url = trimmedLine;
       
-      // Ensure we have at least a fallback ID (use URL)
+      // Ensure we have at least a fallback ID (use sanitized URL)
       if (currentItem.tvg && !currentItem.tvg.id) {
-        currentItem.tvg.id = currentItem.url;
+        currentItem.tvg.id = sanitizeId(currentItem.url);
       }
 
       // Final validation: only push if we have a URL
