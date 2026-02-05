@@ -60,7 +60,10 @@ export function CategoriesView({ onSelectPlaylist, currentPlaylistId }: Categori
       <div className="space-y-6">
         <div className="flex items-center gap-2 border-l-4 border-primary pl-4 py-1">
           <h2 className="text-2xl font-bold tracking-tight text-white">{title}</h2>
-          <Badge variant="secondary" className="bg-primary/10 text-primary border-none">
+          <Badge 
+            variant="secondary" 
+            className="bg-primary/10 text-primary border-none rounded-none size-8 p-0 flex items-center justify-center font-bold text-lg"
+          >
             {items.length}
           </Badge>
         </div>
