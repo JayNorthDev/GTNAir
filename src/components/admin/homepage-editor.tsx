@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { db } from '@/firebase/config';
-import { collection, getDocs, doc, deleteDoc, DocumentData } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, DocumentData } from 'firebase/firestore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,8 @@ import { HeroForm } from './homepage/hero-form';
 import { ServiceForm } from './homepage/service-form';
 import Image from 'next/image';
 import { placeholderImagesList } from '@/lib/placeholder-images';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export function HomepageEditor() {
     const [heroSlides, setHeroSlides] = useState<DocumentData[]>([]);
@@ -25,33 +28,51 @@ export function HomepageEditor() {
     const [editingHero, setEditingHero] = useState<DocumentData | null>(null);
     const [editingService, setEditingService] = useState<DocumentData | null>(null);
 
-    const fetchData = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const heroSnapshot = await getDocs(collection(db, "hero_slides"));
-            setHeroSlides(heroSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-            const serviceSnapshot = await getDocs(collection(db, "services"));
-            setServices(serviceSnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-        } catch (e) {
-            console.error(e);
-            setError("Failed to load homepage content.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
-        fetchData();
+        setLoading(true);
+        
+        const unsubscribeHero = onSnapshot(collection(db, "hero_slides"), (snapshot) => {
+            setHeroSlides(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+            setLoading(false);
+        }, (err) => {
+            console.error(err);
+            const permissionError = new FirestorePermissionError({
+                path: 'hero_slides',
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            setError("Failed to load hero slides.");
+        });
+
+        const unsubscribeServices = onSnapshot(collection(db, "services"), (snapshot) => {
+            setServices(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+            setLoading(false);
+        }, (err) => {
+            console.error(err);
+            const permissionError = new FirestorePermissionError({
+                path: 'services',
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            setError("Failed to load services.");
+        });
+
+        return () => {
+            unsubscribeHero();
+            unsubscribeServices();
+        };
     }, []);
 
     const handleDelete = async (collectionName: string, id: string) => {
-        try {
-            await deleteDoc(doc(db, collectionName, id));
-            fetchData(); // Refresh data
-        } catch (error) {
-            console.error("Error deleting document: ", error);
-        }
+        const docRef = doc(db, collectionName, id);
+        deleteDoc(docRef)
+            .catch(async () => {
+                const permissionError = new FirestorePermissionError({
+                    path: docRef.path,
+                    operation: 'delete',
+                });
+                errorEmitter.emit('permission-error', permissionError);
+            });
     };
 
     const handleOpenHeroDialog = (slide: DocumentData | null = null) => {
@@ -103,10 +124,7 @@ export function HomepageEditor() {
                                 <DialogTitle>{editingHero ? 'Edit' : 'Add'} Hero Slide</DialogTitle>
                             </DialogHeader>
                             <HeroForm 
-                                onSuccess={() => {
-                                    setIsHeroDialogOpen(false);
-                                    fetchData();
-                                }} 
+                                onSuccess={() => setIsHeroDialogOpen(false)} 
                                 initialData={editingHero} 
                             />
                         </DialogContent>
@@ -170,10 +188,7 @@ export function HomepageEditor() {
                                 <DialogTitle>{editingService ? 'Edit' : 'Add'} Service</DialogTitle>
                             </DialogHeader>
                             <ServiceForm
-                                onSuccess={() => {
-                                    setIsServiceDialogOpen(false);
-                                    fetchData();
-                                }} 
+                                onSuccess={() => setIsServiceDialogOpen(false)} 
                                 initialData={editingService} 
                             />
                         </DialogContent>

@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useMemo, useState, useEffect } from 'react';
 import { Channel } from '@/hooks/useChannels';
@@ -8,9 +9,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Autoplay from "embla-carousel-autoplay"
-import { collection, getDocs, DocumentData } from 'firebase/firestore';
+import { collection, onSnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { Skeleton } from '../ui/skeleton';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 type Ad = {
   type: 'ad';
@@ -32,24 +35,36 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchHomepageContent = async () => {
-      setLoading(true);
-      try {
-        const [heroSnapshot, servicesSnapshot] = await Promise.all([
-          getDocs(collection(db, 'hero_slides')),
-          getDocs(collection(db, 'services'))
-        ]);
-        setHeroSlides(heroSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setServices(servicesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (error) {
-        console.error("Failed to fetch homepage content:", error);
-        setHeroSlides([]);
-        setServices([]);
-      } finally {
-        setLoading(false);
-      }
+    setLoading(true);
+    
+    const unsubscribeHero = onSnapshot(collection(db, 'hero_slides'), (snapshot) => {
+      setHeroSlides(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, (error) => {
+      console.error("Hero slides sync error:", error);
+      const permissionError = new FirestorePermissionError({
+        path: 'hero_slides',
+        operation: 'list',
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
+
+    const unsubscribeServices = onSnapshot(collection(db, 'services'), (snapshot) => {
+      setServices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoading(false);
+    }, (error) => {
+      console.error("Services sync error:", error);
+      const permissionError = new FirestorePermissionError({
+        path: 'services',
+        operation: 'list',
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
+
+    return () => {
+      unsubscribeHero();
+      unsubscribeServices();
     };
-    fetchHomepageContent();
   }, []);
 
   const itemsWithAds = useMemo(() => {
@@ -65,7 +80,6 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
     return items;
   }, [channels]);
 
-  // Use useMemo for the plugin instance to ensure stability across renders
   const autoplay = useMemo(() => Autoplay({ delay: 5000, stopOnInteraction: true }), []);
 
   return (

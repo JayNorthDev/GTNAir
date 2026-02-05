@@ -6,8 +6,10 @@ import { ChannelList } from "@/components/admin/channel-list";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Layers } from "lucide-react";
 import { db } from '@/firebase/config';
-import { collection, getDocs, query, orderBy, DocumentData } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, DocumentData } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function AdminChannelsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -15,21 +17,26 @@ export default function AdminChannelsPage() {
   const [selectedPlaylistUrl, setSelectedPlaylistUrl] = useState<string>("");
 
   useEffect(() => {
-    const fetchPlaylists = async () => {
-      try {
-        const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
-        const querySnapshot = await getDocs(q);
-        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setPlaylists(data);
-        if (data.length > 0) {
-          setSelectedPlaylistUrl(data[0].url);
-        }
-      } catch (error) {
-        console.error("Error fetching playlists for admin:", error);
+    const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPlaylists(data);
+      
+      // Auto-select first playlist if none selected
+      if (data.length > 0 && !selectedPlaylistUrl) {
+        setSelectedPlaylistUrl(data[0].url);
       }
-    };
-    fetchPlaylists();
-  }, []);
+    }, (error) => {
+      const permissionError = new FirestorePermissionError({
+        path: 'playlists',
+        operation: 'list',
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
+
+    return () => unsubscribe();
+  }, [selectedPlaylistUrl]);
 
   return (
     <div className="w-full space-y-6">

@@ -3,11 +3,13 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/firebase/config';
-import { collection, getDocs, query, orderBy, DocumentData } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, DocumentData } from 'firebase/firestore';
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader, MonitorPlay, Layers } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 type CategoriesViewProps = {
   onSelectPlaylist: (playlistId: string) => void;
@@ -19,19 +21,21 @@ export function CategoriesView({ onSelectPlaylist, currentPlaylistId }: Categori
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPlaylists = async () => {
-      setIsLoading(true);
-      try {
-        const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
-        const querySnapshot = await getDocs(q);
-        setPlaylists(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      } catch (error) {
-        console.error("Error fetching playlists for categories:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchPlaylists();
+    const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPlaylists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setIsLoading(false);
+    }, (error) => {
+      const permissionError = new FirestorePermissionError({
+        path: 'playlists',
+        operation: 'list',
+      });
+      errorEmitter.emit('permission-error', permissionError);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   if (isLoading) {
