@@ -20,13 +20,17 @@
           "enum": ["Main Playlists", "Sub Playlists"],
           "description": "The category the playlist belongs to."
         },
+        "order": {
+          "type": "number",
+          "description": "The display sequence of the playlist."
+        },
         "updatedAt": {
           "type": "string",
           "format": "date-time",
           "description": "ISO timestamp of when this entry was last modified."
         }
       },
-      "required": ["name", "url", "category", "updatedAt"]
+      "required": ["name", "url", "category", "updatedAt", "order"]
     },
     "channelVisibility": {
       "title": "Channel Visibility",

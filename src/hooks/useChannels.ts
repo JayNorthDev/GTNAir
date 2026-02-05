@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { doc, getDoc, getDocs, collection, query, orderBy } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, orderBy, limit } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
 import { app } from '@/firebase/config';
 const db = getFirestore(app);
@@ -41,18 +41,18 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
           console.warn('Could not fetch selected playlist URL', error);
         }
       } else {
-        // Fallback to general settings or first available playlist
+        // Fallback to the first playlist by custom order
         try {
-          const playlistDocRef = doc(db, 'settings', 'playlist');
-          const docSnap = await getDoc(playlistDocRef);
-          if (docSnap.exists() && docSnap.data().url) {
-            playlistUrl = docSnap.data().url;
+          const q = query(collection(db, 'playlists'), orderBy('order', 'asc'), limit(1));
+          const plSnap = await getDocs(q);
+          if (!plSnap.empty) {
+            playlistUrl = plSnap.docs[0].data().url;
           } else {
-             // Try to get the first one from playlists collection
-             const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
-             const plSnap = await getDocs(q);
-             if (!plSnap.empty) {
-               playlistUrl = plSnap.docs[0].data().url;
+             // Deep fallback to legacy settings
+             const settingsDocRef = doc(db, 'settings', 'playlist');
+             const docSnap = await getDoc(settingsDocRef);
+             if (docSnap.exists() && docSnap.data().url) {
+               playlistUrl = docSnap.data().url;
              }
           }
         } catch (error) {

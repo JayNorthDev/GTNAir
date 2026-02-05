@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/firebase/config';
 import { collection, doc, onSnapshot, deleteDoc, query, orderBy, addDoc, updateDoc } from 'firebase/firestore';
-import { Plus, Edit2, Trash2, Loader, Save, Layers } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader, Save, Layers, ChevronUp, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ interface Playlist {
   name: string;
   url: string;
   category: 'Main Playlists' | 'Sub Playlists';
+  order: number;
   updatedAt: string;
 }
 
@@ -34,7 +35,8 @@ export default function AdminPlaylistsPage() {
   const [formData, setFormData] = useState({ id: '', name: '', url: '', category: 'Main Playlists' as 'Main Playlists' | 'Sub Playlists' });
 
   useEffect(() => {
-    const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
+    // Sort by order ASC to maintain manual hierarchy
+    const q = query(collection(db, 'playlists'), orderBy('order', 'asc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => {
@@ -42,14 +44,14 @@ export default function AdminPlaylistsPage() {
         return { 
           id: doc.id, 
           ...docData,
-          category: docData.category || 'Main Playlists' 
+          category: docData.category || 'Main Playlists',
+          order: typeof docData.order === 'number' ? docData.order : 0
         } as Playlist;
       });
       
       setPlaylists(data);
       setIsLoading(false);
     }, (error) => {
-      console.error("Playlists listener error:", error);
       const permissionError = new FirestorePermissionError({
         path: 'playlists',
         operation: 'list',
@@ -89,7 +91,12 @@ export default function AdminPlaylistsPage() {
     }
 
     setIsSaving(true);
-    const payload = {
+    
+    // If it's a new playlist, place it at the end of the global list
+    const maxOrder = playlists.length > 0 ? Math.max(...playlists.map(p => p.order)) : -1;
+    const newOrder = maxOrder + 1;
+
+    const payload: any = {
       name,
       url,
       category: formData.category,
@@ -108,6 +115,7 @@ export default function AdminPlaylistsPage() {
           errorEmitter.emit('permission-error', permissionError);
         });
     } else {
+      payload.order = newOrder;
       const colRef = collection(db, 'playlists');
       addDoc(colRef, payload)
         .catch(async () => {
@@ -139,6 +147,22 @@ export default function AdminPlaylistsPage() {
     toast({ title: 'Deleted', description: 'Playlist removed successfully.' });
   };
 
+  const moveItem = (index: number, direction: 'up' | 'down', list: Playlist[]) => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= list.length) return;
+
+    const item1 = list[index];
+    const item2 = list[newIndex];
+
+    // Swap order values
+    const tempOrder = item1.order;
+    
+    updateDoc(doc(db, 'playlists', item1.id), { order: item2.order });
+    updateDoc(doc(db, 'playlists', item2.id), { order: tempOrder });
+    
+    toast({ title: 'Reordered', description: `Moved ${item1.name} ${direction}.` });
+  };
+
   const renderPlaylistTable = (title: string, items: Playlist[]) => (
     <Card className="bg-[#1a1a1a] border-[#333]">
       <CardHeader className="border-b border-[#333]/50 pb-4">
@@ -151,27 +175,47 @@ export default function AdminPlaylistsPage() {
         <Table>
           <TableHeader className="border-b border-[#333]">
             <TableRow className="hover:bg-transparent">
+              <TableHead className="text-gray-400 w-[60px]">#</TableHead>
               <TableHead className="text-gray-400">Name</TableHead>
               <TableHead className="text-gray-400">URL</TableHead>
-              <TableHead className="text-gray-400 w-[150px] text-right">Actions</TableHead>
+              <TableHead className="text-gray-400 w-[180px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-12 text-gray-500">
+                <TableCell colSpan={4} className="text-center py-12 text-gray-500">
                   No playlists in this category.
                 </TableCell>
               </TableRow>
             ) : (
-              items.map((pl) => (
+              items.map((pl, idx) => (
                 <TableRow key={pl.id} className="border-b border-[#333]/50 hover:bg-[#222]">
+                  <TableCell className="font-medium text-gray-500">{idx + 1}</TableCell>
                   <TableCell className="font-medium text-white">{pl.name}</TableCell>
                   <TableCell className="text-gray-400 font-mono text-xs max-w-md truncate">
                     {pl.url}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        disabled={idx === 0}
+                        onClick={() => moveItem(idx, 'up', items)}
+                        className="hover:bg-white/5 text-gray-400 hover:text-white"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        disabled={idx === items.length - 1}
+                        onClick={() => moveItem(idx, 'down', items)}
+                        className="hover:bg-white/5 text-gray-400 hover:text-white"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(pl)} className="hover:bg-purple-500/10 text-gray-400 hover:text-purple-400">
                         <Edit2 className="w-4 h-4" />
                       </Button>

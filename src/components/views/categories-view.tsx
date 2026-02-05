@@ -22,7 +22,8 @@ export function CategoriesView({ onSelectPlaylist, currentPlaylistId }: Categori
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
+    // Sort by order ASC to match Admin hierarchy
+    const q = query(collection(db, 'playlists'), orderBy('order', 'asc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
