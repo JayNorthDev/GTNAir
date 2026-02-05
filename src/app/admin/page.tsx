@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/firebase/config';
-import { collection, doc, onSnapshot, setDoc, deleteDoc, query, orderBy, addDoc, updateDoc, getDoc } from 'firebase/firestore';
-import { Plus, Edit2, Trash2, Loader, Save, FolderOpen } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { collection, doc, onSnapshot, deleteDoc, query, orderBy, addDoc, updateDoc } from 'firebase/firestore';
+import { Plus, Edit2, Trash2, Loader, Save, Layers } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { Badge } from '@/components/ui/badge';
 
 interface Playlist {
   id: string;
@@ -32,7 +31,7 @@ export default function AdminPlaylistsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState({ id: '', name: '', url: '', category: 'Main Playlists' });
+  const [formData, setFormData] = useState({ id: '', name: '', url: '', category: 'Main Playlists' as 'Main Playlists' | 'Sub Playlists' });
 
   useEffect(() => {
     const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
@@ -43,25 +42,9 @@ export default function AdminPlaylistsPage() {
         return { 
           id: doc.id, 
           ...docData,
-          category: docData.category || 'Main Playlists' // Default for legacy data
+          category: docData.category || 'Main Playlists' 
         } as Playlist;
       });
-      
-      // Migration logic: only runs once if no playlists exist
-      if (data.length === 0 && isLoading) {
-        const settingsRef = doc(db, 'settings', 'playlist');
-        getDoc(settingsRef).then(settingsSnap => {
-          if (settingsSnap.exists() && settingsSnap.data().url) {
-            const newPlaylist = {
-              name: 'General',
-              url: settingsSnap.data().url,
-              category: 'Main Playlists',
-              updatedAt: new Date().toISOString()
-            };
-            addDoc(collection(db, 'playlists'), newPlaylist);
-          }
-        });
-      }
       
       setPlaylists(data);
       setIsLoading(false);
@@ -76,7 +59,10 @@ export default function AdminPlaylistsPage() {
     });
 
     return () => unsubscribe();
-  }, [isLoading]);
+  }, []);
+
+  const mainPlaylists = useMemo(() => playlists.filter(p => p.category === 'Main Playlists'), [playlists]);
+  const subPlaylists = useMemo(() => playlists.filter(p => p.category === 'Sub Playlists'), [playlists]);
 
   const handleOpenDialog = (playlist?: Playlist) => {
     if (playlist) {
@@ -84,7 +70,7 @@ export default function AdminPlaylistsPage() {
         id: playlist.id, 
         name: playlist.name, 
         url: playlist.url, 
-        category: playlist.category || 'Main Playlists' 
+        category: (playlist.category as any) || 'Main Playlists' 
       });
     } else {
       setFormData({ id: '', name: '', url: '', category: 'Main Playlists' });
@@ -153,8 +139,58 @@ export default function AdminPlaylistsPage() {
     toast({ title: 'Deleted', description: 'Playlist removed successfully.' });
   };
 
+  const renderPlaylistTable = (title: string, items: Playlist[]) => (
+    <Card className="bg-[#1a1a1a] border-[#333]">
+      <CardHeader className="border-b border-[#333]/50 pb-4">
+        <CardTitle className="text-white text-lg flex items-center gap-2">
+           <Layers className="w-5 h-5 text-purple-500" />
+           {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader className="border-b border-[#333]">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="text-gray-400">Name</TableHead>
+              <TableHead className="text-gray-400">URL</TableHead>
+              <TableHead className="text-gray-400 w-[150px] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center py-12 text-gray-500">
+                  No playlists in this category.
+                </TableCell>
+              </TableRow>
+            ) : (
+              items.map((pl) => (
+                <TableRow key={pl.id} className="border-b border-[#333]/50 hover:bg-[#222]">
+                  <TableCell className="font-medium text-white">{pl.name}</TableCell>
+                  <TableCell className="text-gray-400 font-mono text-xs max-w-md truncate">
+                    {pl.url}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(pl)} className="hover:bg-purple-500/10 text-gray-400 hover:text-purple-400">
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(pl.id)} className="hover:bg-red-500/10 text-gray-400 hover:text-red-400">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-6">
+    <div className="w-full max-w-6xl mx-auto space-y-12">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-white">Playlist Settings</h2>
@@ -165,59 +201,16 @@ export default function AdminPlaylistsPage() {
         </Button>
       </div>
 
-      <Card className="bg-[#1a1a1a] border-[#333]">
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <Loader className="w-8 h-8 animate-spin text-purple-500" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader className="border-b border-[#333]">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="text-gray-400">Name</TableHead>
-                  <TableHead className="text-gray-400">Category</TableHead>
-                  <TableHead className="text-gray-400">URL</TableHead>
-                  <TableHead className="text-gray-400 w-[150px] text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {playlists.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-12 text-gray-500">
-                      No playlists added yet. Click "+ Add New Playlist" to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  playlists.map((pl) => (
-                    <TableRow key={pl.id} className="border-b border-[#333]/50 hover:bg-[#222]">
-                      <TableCell className="font-medium text-white">{pl.name}</TableCell>
-                      <TableCell>
-                         <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20">
-                            {pl.category}
-                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-gray-400 font-mono text-xs max-w-md truncate">
-                        {pl.url}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(pl)} className="hover:bg-purple-500/10 text-gray-400 hover:text-purple-400">
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(pl.id)} className="hover:bg-red-500/10 text-gray-400 hover:text-red-400">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader className="w-8 h-8 animate-spin text-purple-500" />
+        </div>
+      ) : (
+        <div className="grid gap-12">
+           {renderPlaylistTable("Main Playlists", mainPlaylists)}
+           {renderPlaylistTable("Sub Playlists", subPlaylists)}
+        </div>
+      )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="bg-[#1a1a1a] border-[#333] text-white">
