@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/firebase/config';
 import { collection, doc, onSnapshot, deleteDoc, query, orderBy, addDoc, updateDoc } from 'firebase/firestore';
-import { Plus, Edit2, Trash2, Loader, Save, Layers, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader, Save, Layers, ChevronUp, ChevronDown, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { cn } from '@/lib/utils';
 
 interface Playlist {
   id: string;
@@ -24,6 +25,12 @@ interface Playlist {
   updatedAt: string;
 }
 
+interface FormErrors {
+  name?: string;
+  category?: string;
+  url?: string;
+}
+
 export default function AdminPlaylistsPage() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,6 +39,7 @@ export default function AdminPlaylistsPage() {
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({ id: '', name: '', url: '', category: '' as any });
+  const [errors, setErrors] = useState<FormErrors>({});
 
   useEffect(() => {
     const q = query(collection(db, 'playlists'), orderBy('order', 'asc'));
@@ -65,6 +73,7 @@ export default function AdminPlaylistsPage() {
   const subPlaylists = useMemo(() => playlists.filter(p => p.category === 'Sub Playlists'), [playlists]);
 
   const handleOpenDialog = (playlist?: Playlist) => {
+    setErrors({});
     if (playlist) {
       setFormData({ 
         id: playlist.id, 
@@ -80,28 +89,26 @@ export default function AdminPlaylistsPage() {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const newErrors: FormErrors = {};
     const name = formData.name.trim();
     const url = formData.url.trim();
     const category = formData.category;
 
     // 1. Mandatory Field Validation
-    if (!name || !url || !category) {
-      toast({ 
-        variant: 'destructive', 
-        title: 'Validation Error', 
-        description: 'All fields (Name, Category, and URL) are mandatory.' 
-      });
-      return;
+    if (!name) newErrors.name = 'Playlist Name is required.';
+    if (!category) newErrors.category = 'Please select a category.';
+    if (!url) {
+      newErrors.url = 'Playlist URL is required.';
+    } else {
+      // 2. URL Format Validation (Regex)
+      const urlRegex = /^https:\/\/.*\.m3u8?$/;
+      if (!urlRegex.test(url)) {
+        newErrors.url = 'Must be an HTTPS URL ending in .m3u or .m3u8';
+      }
     }
 
-    // 2. URL Format Validation (Regex)
-    const urlRegex = /^https:\/\/.*\.m3u8?$/;
-    if (!urlRegex.test(url)) {
-      toast({ 
-        variant: 'destructive', 
-        title: 'Invalid URL Format', 
-        description: 'Playlist URL must start with "https://" and end with ".m3u" or ".m3u8".' 
-      });
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
@@ -278,23 +285,35 @@ export default function AdminPlaylistsPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Playlist Name</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="name" className={cn(errors.name && "text-red-400")}>Playlist Name</Label>
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  if (errors.name) setErrors({ ...errors, name: undefined });
+                }}
                 placeholder="e.g. Sports Pack"
-                className="bg-black border-[#333]"
+                className={cn("bg-black border-[#333]", errors.name && "border-red-500/50 focus:border-red-500")}
               />
+              {errors.name && (
+                <div className="flex items-center gap-1.5 text-xs text-red-400 mt-1">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  {errors.name}
+                </div>
+              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="category" className={cn(errors.category && "text-red-400")}>Category</Label>
               <Select 
                 value={formData.category} 
-                onValueChange={(val: any) => setFormData({ ...formData, category: val })}
+                onValueChange={(val: any) => {
+                  setFormData({ ...formData, category: val });
+                  if (errors.category) setErrors({ ...errors, category: undefined });
+                }}
               >
-                <SelectTrigger className="bg-black border-[#333]">
+                <SelectTrigger className={cn("bg-black border-[#333]", errors.category && "border-red-500/50 focus:border-red-500")}>
                   <SelectValue placeholder="Select Category..." />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1a1a1a] border-[#333] text-white">
@@ -302,16 +321,31 @@ export default function AdminPlaylistsPage() {
                   <SelectItem value="Sub Playlists">Sub Playlists</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.category && (
+                <div className="flex items-center gap-1.5 text-xs text-red-400 mt-1">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  {errors.category}
+                </div>
+              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="url">Playlist URL</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="url" className={cn(errors.url && "text-red-400")}>Playlist URL</Label>
               <Input
                 id="url"
                 value={formData.url}
-                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, url: e.target.value });
+                  if (errors.url) setErrors({ ...errors, url: undefined });
+                }}
                 placeholder="https://example.com/playlist.m3u8"
-                className="bg-black border-[#333]"
+                className={cn("bg-black border-[#333]", errors.url && "border-red-500/50 focus:border-red-500")}
               />
+              {errors.url && (
+                <div className="flex items-center gap-1.5 text-xs text-red-400 mt-1">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  {errors.url}
+                </div>
+              )}
             </div>
             <DialogFooter className="pt-4">
               <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
