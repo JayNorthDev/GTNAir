@@ -5,11 +5,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/firebase/config';
 import { collection, onSnapshot, query, orderBy, DocumentData } from 'firebase/firestore';
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader, MonitorPlay, Layers, ChevronRight } from 'lucide-react';
+import { MonitorPlay, Layers, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type CategoriesViewProps = {
   onSelectPlaylist: (playlistId: string) => void;
@@ -24,7 +25,8 @@ export function CategoriesView({ onSelectPlaylist, currentPlaylistId }: Categori
     const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setPlaylists(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPlaylists(data);
       setIsLoading(false);
     }, (error) => {
       const permissionError = new FirestorePermissionError({
@@ -45,13 +47,30 @@ export function CategoriesView({ onSelectPlaylist, currentPlaylistId }: Categori
     };
   }, [playlists]);
 
-  if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader className="w-12 h-12 animate-spin text-primary" />
+  const renderSkeleton = () => (
+    <div className="p-4 md:p-8 space-y-12 animate-in fade-in duration-500">
+      <header className="space-y-4 border-b border-white/5 pb-8">
+        <Skeleton className="h-12 w-1/3" />
+        <Skeleton className="h-6 w-1/2" />
+      </header>
+      <div className="space-y-12">
+        {[...Array(2)].map((_, i) => (
+          <div key={i} className="space-y-6">
+            <div className="flex items-center gap-2 border-l-4 border-slate-800 pl-4 py-1">
+              <Skeleton className="h-8 w-40" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, j) => (
+                <Skeleton key={j} className="aspect-[16/13] rounded-lg" />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
-    );
-  }
+    </div>
+  );
+
+  if (isLoading) return renderSkeleton();
 
   const renderSection = (title: string, items: DocumentData[]) => {
     if (items.length === 0) return null;
@@ -108,7 +127,7 @@ export function CategoriesView({ onSelectPlaylist, currentPlaylistId }: Categori
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="p-4 md:p-8 space-y-12 animate-in fade-in duration-700">
       <header className="space-y-2 border-b border-white/5 pb-8">
         <h1 className="text-4xl md:text-5xl font-bold tracking-tighter text-white">Content Categories</h1>
         <p className="text-muted-foreground text-lg max-w-2xl">
