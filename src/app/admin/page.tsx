@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -32,10 +31,9 @@ export default function AdminPlaylistsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState({ id: '', name: '', url: '', category: 'Main Playlists' as 'Main Playlists' | 'Sub Playlists' });
+  const [formData, setFormData] = useState({ id: '', name: '', url: '', category: '' as any });
 
   useEffect(() => {
-    // Sort by order ASC to maintain manual hierarchy
     const q = query(collection(db, 'playlists'), orderBy('order', 'asc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -72,10 +70,10 @@ export default function AdminPlaylistsPage() {
         id: playlist.id, 
         name: playlist.name, 
         url: playlist.url, 
-        category: (playlist.category as any) || 'Main Playlists' 
+        category: playlist.category 
       });
     } else {
-      setFormData({ id: '', name: '', url: '', category: 'Main Playlists' });
+      setFormData({ id: '', name: '', url: '', category: '' });
     }
     setIsDialogOpen(true);
   };
@@ -84,22 +82,38 @@ export default function AdminPlaylistsPage() {
     e.preventDefault();
     const name = formData.name.trim();
     const url = formData.url.trim();
+    const category = formData.category;
 
-    if (!name || !url) {
-      toast({ variant: 'destructive', title: 'Required', description: 'Name and URL are required.' });
+    // 1. Mandatory Field Validation
+    if (!name || !url || !category) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Validation Error', 
+        description: 'All fields (Name, Category, and URL) are mandatory.' 
+      });
+      return;
+    }
+
+    // 2. URL Format Validation (Regex)
+    const urlRegex = /^https:\/\/.*\.m3u8?$/;
+    if (!urlRegex.test(url)) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Invalid URL Format', 
+        description: 'Playlist URL must start with "https://" and end with ".m3u" or ".m3u8".' 
+      });
       return;
     }
 
     setIsSaving(true);
     
-    // If it's a new playlist, place it at the end of the global list
     const maxOrder = playlists.length > 0 ? Math.max(...playlists.map(p => p.order)) : -1;
     const newOrder = maxOrder + 1;
 
     const payload: any = {
       name,
       url,
-      category: formData.category,
+      category,
       updatedAt: new Date().toISOString()
     };
 
@@ -154,7 +168,6 @@ export default function AdminPlaylistsPage() {
     const item1 = list[index];
     const item2 = list[newIndex];
 
-    // Swap order values
     const tempOrder = item1.order;
     
     updateDoc(doc(db, 'playlists', item1.id), { order: item2.order });
@@ -273,7 +286,6 @@ export default function AdminPlaylistsPage() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g. Sports Pack"
                 className="bg-black border-[#333]"
-                required
               />
             </div>
             <div className="space-y-2">
@@ -283,7 +295,7 @@ export default function AdminPlaylistsPage() {
                 onValueChange={(val: any) => setFormData({ ...formData, category: val })}
               >
                 <SelectTrigger className="bg-black border-[#333]">
-                  <SelectValue placeholder="Select Category" />
+                  <SelectValue placeholder="Select Category..." />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1a1a1a] border-[#333] text-white">
                   <SelectItem value="Main Playlists">Main Playlists</SelectItem>
@@ -299,7 +311,6 @@ export default function AdminPlaylistsPage() {
                 onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                 placeholder="https://example.com/playlist.m3u8"
                 className="bg-black border-[#333]"
-                required
               />
             </div>
             <DialogFooter className="pt-4">

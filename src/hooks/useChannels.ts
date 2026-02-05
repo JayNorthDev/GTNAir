@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { doc, getDoc, getDocs, collection, query, orderBy, limit } from 'firebase/firestore';
 import { getFirestore } from 'firebase/firestore';
@@ -26,7 +25,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
     try {
       // 1. Get Playlist URL
       const defaultUrl = 'https://iptv-org.github.io/iptv/index.m3u';
-      let playlistUrl = defaultUrl;
+      let playlistUrl = '';
 
       if (customPlaylistUrl) {
           playlistUrl = customPlaylistUrl;
@@ -41,26 +40,39 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
           console.warn('Could not fetch selected playlist URL', error);
         }
       } else {
-        // Fallback to the first playlist by custom order
         try {
           const q = query(collection(db, 'playlists'), orderBy('order', 'asc'), limit(1));
           const plSnap = await getDocs(q);
           if (!plSnap.empty) {
             playlistUrl = plSnap.docs[0].data().url;
           } else {
-             // Deep fallback to legacy settings
              const settingsDocRef = doc(db, 'settings', 'playlist');
              const docSnap = await getDoc(settingsDocRef);
              if (docSnap.exists() && docSnap.data().url) {
                playlistUrl = docSnap.data().url;
+             } else {
+               playlistUrl = defaultUrl;
              }
           }
         } catch (error) {
           console.warn('Could not fetch default playlist URL', error);
+          playlistUrl = defaultUrl;
         }
       }
 
-      // 2. Check Cache for "Instant" Load
+      // 2. Validate URL format before proceeding
+      const urlRegex = /^https:\/\/.*\.m3u8?$/;
+      if (!playlistUrl || !urlRegex.test(playlistUrl)) {
+        // If the derived URL is empty or invalid, we do NOT fall back to cache.
+        // We present a "No Channels Found" state.
+        setAllChannels([]);
+        setFilteredChannels([]);
+        setCategories(['All']);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Check Cache (Only if URL is valid)
       const cacheKey = `${CACHE_PREFIX}${playlistUrl}`;
       const cachedContent = localStorage.getItem(cacheKey);
       
@@ -81,7 +93,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
           setLoading(true);
       }
       
-      // 3. Fetch Visibility Settings (Always fresh)
+      // 4. Fetch Visibility Settings
       const visibilityCollection = collection(db, 'channel_visibility');
       const visibilitySnapshot = await getDocs(visibilityCollection);
       const visibilityMap: VisibilityMap = {};
@@ -91,7 +103,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
           }
       });
 
-      // 4. Fetch and Parse Playlist (Background refresh)
+      // 5. Fetch and Parse Playlist
       const response = await fetch(playlistUrl);
       if (!response.ok) {
         throw new Error(`Failed to fetch playlist: ${response.statusText}`);
@@ -99,20 +111,17 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
       const text = await response.text();
       const playlist = manualParse(text);
 
-      // 5. Filter channels based on visibility
       const validAndVisibleChannels = playlist.items.filter(item => {
           const isVisible = visibilityMap[item.tvg.id] !== false; 
           return item.url && isVisible;
       });
 
-      // 6. Update State and Cache
       setAllChannels(validAndVisibleChannels);
       setFilteredChannels(validAndVisibleChannels);
 
       const uniqueCategories = ['All', ...new Set(validAndVisibleChannels.map(item => item.group.title || 'Other').filter(Boolean))];
       setCategories(uniqueCategories.sort());
 
-      // Update cache for next time
       try {
           localStorage.setItem(cacheKey, JSON.stringify({ items: validAndVisibleChannels, timestamp: Date.now() }));
       } catch (e) {
@@ -142,7 +151,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
       channels = channels.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     setFilteredChannels(channels);
-    setVisibleCount(INITIAL_PAGE_SIZE); // Reset pagination on filter
+    setVisibleCount(INITIAL_PAGE_SIZE); 
   }, [allChannels]);
 
   const displayChannels = useMemo(() => {
