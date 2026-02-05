@@ -1,23 +1,27 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { db } from '@/firebase/config';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, query, orderBy, addDoc, updateDoc, getDoc } from 'firebase/firestore';
-import { Plus, Edit2, Trash2, Loader, Save } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader, Save, FolderOpen } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Badge } from '@/components/ui/badge';
 
 interface Playlist {
   id: string;
   name: string;
   url: string;
+  category: 'Main Playlists' | 'Sub Playlists';
   updatedAt: string;
 }
 
@@ -28,13 +32,20 @@ export default function AdminPlaylistsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState({ id: '', name: '', url: '' });
+  const [formData, setFormData] = useState({ id: '', name: '', url: '', category: 'Main Playlists' });
 
   useEffect(() => {
     const q = query(collection(db, 'playlists'), orderBy('updatedAt', 'desc'));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Playlist));
+      const data = snapshot.docs.map(doc => {
+        const docData = doc.data();
+        return { 
+          id: doc.id, 
+          ...docData,
+          category: docData.category || 'Main Playlists' // Default for legacy data
+        } as Playlist;
+      });
       
       // Migration logic: only runs once if no playlists exist
       if (data.length === 0 && isLoading) {
@@ -44,6 +55,7 @@ export default function AdminPlaylistsPage() {
             const newPlaylist = {
               name: 'General',
               url: settingsSnap.data().url,
+              category: 'Main Playlists',
               updatedAt: new Date().toISOString()
             };
             addDoc(collection(db, 'playlists'), newPlaylist);
@@ -68,9 +80,14 @@ export default function AdminPlaylistsPage() {
 
   const handleOpenDialog = (playlist?: Playlist) => {
     if (playlist) {
-      setFormData({ id: playlist.id, name: playlist.name, url: playlist.url });
+      setFormData({ 
+        id: playlist.id, 
+        name: playlist.name, 
+        url: playlist.url, 
+        category: playlist.category || 'Main Playlists' 
+      });
     } else {
-      setFormData({ id: '', name: '', url: '' });
+      setFormData({ id: '', name: '', url: '', category: 'Main Playlists' });
     }
     setIsDialogOpen(true);
   };
@@ -89,6 +106,7 @@ export default function AdminPlaylistsPage() {
     const payload = {
       name,
       url,
+      category: formData.category,
       updatedAt: new Date().toISOString()
     };
 
@@ -140,7 +158,7 @@ export default function AdminPlaylistsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-white">Playlist Settings</h2>
-          <p className="text-gray-400 text-sm">Manage multiple M3U/M3U8 sources for your player.</p>
+          <p className="text-gray-400 text-sm">Manage multiple M3U/M3U8 sources and organize them into categories.</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="bg-purple-600 hover:bg-purple-700">
           <Plus className="w-4 h-4 mr-2" /> Add New Playlist
@@ -158,6 +176,7 @@ export default function AdminPlaylistsPage() {
               <TableHeader className="border-b border-[#333]">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="text-gray-400">Name</TableHead>
+                  <TableHead className="text-gray-400">Category</TableHead>
                   <TableHead className="text-gray-400">URL</TableHead>
                   <TableHead className="text-gray-400 w-[150px] text-right">Actions</TableHead>
                 </TableRow>
@@ -165,7 +184,7 @@ export default function AdminPlaylistsPage() {
               <TableBody>
                 {playlists.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-12 text-gray-500">
+                    <TableCell colSpan={4} className="text-center py-12 text-gray-500">
                       No playlists added yet. Click "+ Add New Playlist" to get started.
                     </TableCell>
                   </TableRow>
@@ -173,6 +192,11 @@ export default function AdminPlaylistsPage() {
                   playlists.map((pl) => (
                     <TableRow key={pl.id} className="border-b border-[#333]/50 hover:bg-[#222]">
                       <TableCell className="font-medium text-white">{pl.name}</TableCell>
+                      <TableCell>
+                         <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20">
+                            {pl.category}
+                         </Badge>
+                      </TableCell>
                       <TableCell className="text-gray-400 font-mono text-xs max-w-md truncate">
                         {pl.url}
                       </TableCell>
@@ -214,6 +238,21 @@ export default function AdminPlaylistsPage() {
                 className="bg-black border-[#333]"
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select 
+                value={formData.category} 
+                onValueChange={(val: any) => setFormData({ ...formData, category: val })}
+              >
+                <SelectTrigger className="bg-black border-[#333]">
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1a1a1a] border-[#333] text-white">
+                  <SelectItem value="Main Playlists">Main Playlists</SelectItem>
+                  <SelectItem value="Sub Playlists">Sub Playlists</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="url">Playlist URL</Label>
