@@ -58,7 +58,7 @@ export function CategoriesView({ onSelectPlaylist, currentPlaylistId }: Categori
           <h2 className="text-2xl font-bold tracking-tight text-white">{title}</h2>
           <Badge 
             variant="secondary" 
-            className="bg-primary/10 text-primary border-none size-8 p-0 flex items-center justify-center font-bold text-lg"
+            className="bg-primary/10 text-primary border-none size-8 p-0 flex items-center justify-center font-bold text-lg rounded-none"
           >
             {items.length}
           </Badge>
