@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/firebase/config';
-import { collection, doc, onSnapshot, deleteDoc, query, orderBy, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, deleteDoc, query, orderBy, addDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { Plus, Edit2, Trash2, Loader, Save, Layers, ChevronUp, ChevronDown, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -90,7 +90,7 @@ export default function AdminPlaylistsPage() {
     setIsDialogOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: FormErrors = {};
     const name = formData.name.trim();
@@ -130,6 +130,15 @@ export default function AdminPlaylistsPage() {
 
     if (formData.id) {
       const docRef = doc(db, 'playlists', formData.id);
+      
+      // Check if category changed to handle independent ordering
+      const existing = playlists.find(p => p.id === formData.id);
+      if (existing && existing.category !== category) {
+        const categoryItems = playlists.filter(p => p.category === category);
+        const maxOrder = categoryItems.length > 0 ? Math.max(...categoryItems.map(p => p.order)) : -1;
+        payload.order = maxOrder + 1;
+      }
+
       updateDoc(docRef, payload)
         .catch(async () => {
           const permissionError = new FirestorePermissionError({
@@ -140,7 +149,9 @@ export default function AdminPlaylistsPage() {
           errorEmitter.emit('permission-error', permissionError);
         });
     } else {
-      const maxOrder = playlists.length > 0 ? Math.max(...playlists.map(p => p.order)) : -1;
+      // Calculate independent order for new items
+      const categoryItems = playlists.filter(p => p.category === category);
+      const maxOrder = categoryItems.length > 0 ? Math.max(...categoryItems.map(p => p.order)) : -1;
       payload.order = maxOrder + 1;
       
       const colRef = collection(db, 'playlists');
@@ -171,7 +182,6 @@ export default function AdminPlaylistsPage() {
         setDeleteTarget(null);
       })
       .catch(async (error) => {
-        console.error("Firestore deletion failed:", error);
         const permissionError = new FirestorePermissionError({
           path: docRef.path,
           operation: 'delete',
