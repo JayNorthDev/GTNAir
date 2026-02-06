@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -11,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -36,6 +38,7 @@ export default function AdminPlaylistsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({ id: '', name: '', url: '', category: '' as any });
@@ -104,7 +107,6 @@ export default function AdminPlaylistsPage() {
       if (!urlRegex.test(url)) {
         newErrors.url = 'Must be an HTTPS URL ending in .m3u or .m3u8';
       } else {
-        // Duplicate detection logic
         const isDuplicate = playlists.some(p => p.url.toLowerCase() === url.toLowerCase() && p.id !== formData.id);
         if (isDuplicate) {
           newErrors.url = 'This playlist URL already exists in your collection.';
@@ -158,15 +160,15 @@ export default function AdminPlaylistsPage() {
     toast({ title: 'Playlist Saved', description: 'Your changes have been committed.' });
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Are you sure you want to delete this playlist? This action is permanent.')) return;
+  const executeDelete = () => {
+    if (!deleteTarget) return;
     
-    const docRef = doc(db, 'playlists', id);
+    const docRef = doc(db, 'playlists', deleteTarget);
     
-    // Explicit deleteDoc call with non-blocking error handling
     deleteDoc(docRef)
       .then(() => {
         toast({ title: 'Deleted', description: 'Playlist removed successfully.' });
+        setDeleteTarget(null);
       })
       .catch(async (error) => {
         console.error("Firestore deletion failed:", error);
@@ -180,6 +182,7 @@ export default function AdminPlaylistsPage() {
           title: 'Delete Failed', 
           description: 'Could not remove playlist. Check permissions.' 
         });
+        setDeleteTarget(null);
       });
   };
 
@@ -254,7 +257,12 @@ export default function AdminPlaylistsPage() {
                       <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(pl)} className="hover:bg-purple-500/10 text-gray-400 hover:text-purple-400">
                         <Edit2 className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(pl.id)} className="hover:bg-red-500/10 text-gray-400 hover:text-red-400">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setDeleteTarget(pl.id)} 
+                        className="hover:bg-red-500/10 text-gray-400 hover:text-red-400"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
@@ -291,6 +299,7 @@ export default function AdminPlaylistsPage() {
         </div>
       )}
 
+      {/* Edit/Add Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="bg-[#1a1a1a] border-[#333] text-white">
           <DialogHeader>
@@ -374,6 +383,29 @@ export default function AdminPlaylistsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent className="bg-[#1a1a1a] border-[#333] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              This action cannot be undone. This will permanently delete the playlist and its URL from our records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-[#333] text-white hover:bg-[#222]">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={executeDelete} 
+              className="bg-red-600 hover:bg-red-700 text-white border-none"
+            >
+              Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
