@@ -2,19 +2,19 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 import { manualParse, Channel } from '@/lib/m3u-parser';
 import { usePlaylists } from './usePlaylists';
 
 export type VisibilityMap = { [key: string]: boolean };
 
-const CACHE_PREFIX = 'playlist_cache_';
+const CHANNELS_CACHE_PREFIX = 'playlist_channels_cache_';
 const INITIAL_PAGE_SIZE = 100;
 const PAGE_INCREMENT = 100;
 
 export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: string) {
-  const { playlists, isLoading: playlistsLoading } = usePlaylists();
+  const { playlists, isLoading: playlistsLoading, refresh: refreshPlaylists } = usePlaylists();
   const [allChannels, setAllChannels] = useState<Channel[]>([]);
   const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
   const [visibleCount, setVisibleCount] = useState(INITIAL_PAGE_SIZE);
@@ -22,7 +22,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchChannels = useCallback(async () => {
+  const fetchChannels = useCallback(async (isRetry = false) => {
     if (playlistsLoading && !customPlaylistUrl) return;
 
     setError(null);
@@ -37,7 +37,6 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
           const selected = playlists.find(p => p.id === selectedPlaylistId);
           playlistUrl = selected?.url || defaultUrl;
       } else {
-          // Use the first available playlist as default
           playlistUrl = playlists.length > 0 ? playlists[0].url : defaultUrl;
       }
 
@@ -50,10 +49,11 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
         return;
       }
 
-      const cacheKey = `${CACHE_PREFIX}${playlistUrl}`;
-      const cachedContent = localStorage.getItem(cacheKey);
+      // 1. Try Content Cache (Individual Playlist Content)
+      const contentCacheKey = `${CHANNELS_CACHE_PREFIX}${playlistUrl}`;
+      const cachedContent = localStorage.getItem(contentCacheKey);
       
-      if (cachedContent) {
+      if (cachedContent && !isRetry) {
           try {
               const cachedData = JSON.parse(cachedContent);
               if (cachedData && Array.isArray(cachedData.items)) {
@@ -64,12 +64,33 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
                   setLoading(false);
               }
           } catch (e) {
-              console.warn('Failed to parse cached playlist data', e);
+              console.warn('Failed to parse cached channels');
           }
       } else {
           setLoading(true);
       }
       
+      // 2. Fetch M3U Content
+      let response;
+      try {
+        response = await fetch(playlistUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      } catch (fetchErr) {
+        // FAIL-SAFE / AUTO-RECOVERY
+        // If fetch fails and we haven't retried yet, refresh playlist definitions from Firestore
+        if (!isRetry && !customPlaylistUrl) {
+          console.warn('Cached URL fetch failed, forcing Firestore re-sync for auto-recovery...');
+          await refreshPlaylists(true); // Force hit Firestore
+          fetchChannels(true); // Retry once with fresh data
+          return;
+        }
+        throw fetchErr;
+      }
+      
+      const text = await response.text();
+      const playlist = manualParse(text);
+
+      // Fetch Visibility Settings (always fresh from DB)
       const visibilityCollection = collection(db, 'channel_visibility');
       const visibilitySnapshot = await getDocs(visibilityCollection);
       const visibilityMap: VisibilityMap = {};
@@ -78,12 +99,6 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
               visibilityMap[doc.id] = false;
           }
       });
-
-      const response = await fetch(playlistUrl);
-      if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
-      
-      const text = await response.text();
-      const playlist = manualParse(text);
 
       const validAndVisibleChannels = playlist.items.filter(item => {
           const isVisible = visibilityMap[item.tvg.id] !== false; 
@@ -96,21 +111,22 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
       const uniqueCategories = ['All', ...new Set(validAndVisibleChannels.map(item => item.group.title || 'Other').filter(Boolean))];
       setCategories(uniqueCategories.sort());
 
+      // Update Content Cache
       try {
-          localStorage.setItem(cacheKey, JSON.stringify({ items: validAndVisibleChannels, timestamp: Date.now() }));
+          localStorage.setItem(contentCacheKey, JSON.stringify({ items: validAndVisibleChannels, timestamp: Date.now() }));
       } catch (e) {
-          console.warn('LocalStorage quota exceeded.');
+          console.warn('LocalStorage quota exceeded for channel content');
       }
 
     } catch (e: any) {
-      console.error('Error loading playlist:', e);
+      console.error('Error loading channels:', e);
       if (allChannels.length === 0) {
-          setError(e.message || 'Failed to load playlist.');
+          setError(e.message || 'Failed to load channels.');
       }
     } finally {
       setLoading(false);
     }
-  }, [customPlaylistUrl, selectedPlaylistId, playlists, playlistsLoading]);
+  }, [customPlaylistUrl, selectedPlaylistId, playlists, playlistsLoading, refreshPlaylists, allChannels.length]);
 
   useEffect(() => {
     fetchChannels();
