@@ -1,15 +1,12 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { db } from '@/firebase/config';
-import { collection, onSnapshot, query, orderBy, DocumentData } from 'firebase/firestore';
+import { useMemo } from 'react';
+import { usePlaylists, Playlist } from '@/hooks/usePlaylists';
 import { Card, CardContent } from "@/components/ui/card";
 import { MonitorPlay, Layers, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type CategoriesViewProps = {
@@ -18,28 +15,7 @@ type CategoriesViewProps = {
 };
 
 export function CategoriesView({ onSelectPlaylist, currentPlaylistId }: CategoriesViewProps) {
-  const [playlists, setPlaylists] = useState<DocumentData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Sort by order ASC to match Admin hierarchy
-    const q = query(collection(db, 'playlists'), orderBy('order', 'asc'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPlaylists(data);
-      setIsLoading(false);
-    }, (error) => {
-      const permissionError = new FirestorePermissionError({
-        path: 'playlists',
-        operation: 'list',
-      });
-      errorEmitter.emit('permission-error', permissionError);
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const { playlists, isLoading } = usePlaylists();
 
   const groupedPlaylists = useMemo(() => {
     return {
@@ -73,7 +49,7 @@ export function CategoriesView({ onSelectPlaylist, currentPlaylistId }: Categori
 
   if (isLoading) return renderSkeleton();
 
-  const renderSection = (title: string, items: DocumentData[]) => {
+  const renderSection = (title: string, items: Playlist[]) => {
     if (items.length === 0) return null;
     
     return (
@@ -82,7 +58,7 @@ export function CategoriesView({ onSelectPlaylist, currentPlaylistId }: Categori
           <h2 className="text-2xl font-bold tracking-tight text-white">{title}</h2>
           <Badge 
             variant="secondary" 
-            className="bg-primary/10 text-primary border-none rounded-none size-8 p-0 flex items-center justify-center font-bold text-lg"
+            className="bg-primary/10 text-primary border-none size-8 p-0 flex items-center justify-center font-bold text-lg"
           >
             {items.length}
           </Badge>
@@ -132,7 +108,7 @@ export function CategoriesView({ onSelectPlaylist, currentPlaylistId }: Categori
       <header className="space-y-2 border-b border-white/5 pb-8">
         <h1 className="text-4xl md:text-5xl font-bold tracking-tighter text-white">Content Categories</h1>
         <p className="text-muted-foreground text-lg max-w-2xl">
-          Choose a playlist source below to explore our vast library of premium channels. Select a source to activate it in the player.
+          Choose a playlist source below. Optimized fetching ensures high performance.
         </p>
       </header>
 
@@ -140,9 +116,6 @@ export function CategoriesView({ onSelectPlaylist, currentPlaylistId }: Categori
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-white/5 rounded-3xl border border-white/10 backdrop-blur-md">
           <MonitorPlay className="w-20 h-20 text-slate-700" />
           <h2 className="text-2xl font-semibold text-slate-300">No Playlists Available</h2>
-          <p className="text-slate-500 max-w-sm">
-            Contact your administrator to add M3U playlist sources to your account.
-          </p>
         </div>
       ) : (
         <div className="space-y-16">

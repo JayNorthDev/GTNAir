@@ -6,6 +6,10 @@
       "description": "An IPTV playlist source with a name and URL.",
       "type": "object",
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the playlist (client-side generated)."
+        },
         "name": {
           "type": "string",
           "description": "The descriptive name of the playlist."
@@ -30,7 +34,20 @@
           "description": "ISO timestamp of when this entry was last modified."
         }
       },
-      "required": ["name", "url", "category", "updatedAt", "order"]
+      "required": ["id", "name", "url", "category", "updatedAt", "order"]
+    },
+    "playlistSettings": {
+      "title": "Playlist Settings",
+      "description": "A container for all playlists to optimize Firestore read costs.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "description": "List of all playlist sources.",
+          "items": { "$ref": "#/entities/playlist" }
+        }
+      },
+      "required": ["items"]
     },
     "channelVisibility": {
       "title": "Channel Visibility",
@@ -97,13 +114,9 @@
     "providers": []
   },
   "firestore": {
-    "/playlists/{playlistId}": {
-      "schema": { "$ref": "#/entities/playlist" },
-      "description": "Stores the list of available M3U playlist sources."
-    },
-    "/settings/{settingId}": {
-      "schema": { "type": "object", "properties": { "url": { "type": "string" } } },
-      "description": "Global application settings (legacy)."
+    "/settings/playlists": {
+      "schema": { "$ref": "#/entities/playlistSettings" },
+      "description": "Global application settings for playlists (Single doc for efficiency)."
     },
     "/channel_visibility/{channelId}": {
       "schema": { "$ref": "#/entities/channelVisibility" },

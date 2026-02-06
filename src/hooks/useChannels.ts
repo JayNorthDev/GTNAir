@@ -1,9 +1,11 @@
+
+"use client";
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { doc, getDoc, getDocs, collection, query, orderBy, limit } from 'firebase/firestore';
-import { getFirestore } from 'firebase/firestore';
-import { app } from '@/firebase/config';
-const db = getFirestore(app);
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { db } from '@/firebase/config';
 import { manualParse, Channel } from '@/lib/m3u-parser';
+import { usePlaylists } from './usePlaylists';
 
 export type VisibilityMap = { [key: string]: boolean };
 
@@ -12,6 +14,7 @@ const INITIAL_PAGE_SIZE = 100;
 const PAGE_INCREMENT = 100;
 
 export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: string) {
+  const { playlists, isLoading: playlistsLoading } = usePlaylists();
   const [allChannels, setAllChannels] = useState<Channel[]>([]);
   const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
   const [visibleCount, setVisibleCount] = useState(INITIAL_PAGE_SIZE);
@@ -20,51 +23,26 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
   const [error, setError] = useState<string | null>(null);
 
   const fetchChannels = useCallback(async () => {
+    if (playlistsLoading && !customPlaylistUrl) return;
+
     setError(null);
     
     try {
-      // 1. Get Playlist URL
       const defaultUrl = 'https://iptv-org.github.io/iptv/index.m3u';
       let playlistUrl = '';
 
       if (customPlaylistUrl) {
           playlistUrl = customPlaylistUrl;
       } else if (selectedPlaylistId) {
-        try {
-          const playlistDocRef = doc(db, 'playlists', selectedPlaylistId);
-          const docSnap = await getDoc(playlistDocRef);
-          if (docSnap.exists() && docSnap.data().url) {
-            playlistUrl = docSnap.data().url;
-          }
-        } catch (error) {
-          console.warn('Could not fetch selected playlist URL', error);
-        }
+          const selected = playlists.find(p => p.id === selectedPlaylistId);
+          playlistUrl = selected?.url || defaultUrl;
       } else {
-        try {
-          const q = query(collection(db, 'playlists'), orderBy('order', 'asc'), limit(1));
-          const plSnap = await getDocs(q);
-          if (!plSnap.empty) {
-            playlistUrl = plSnap.docs[0].data().url;
-          } else {
-             const settingsDocRef = doc(db, 'settings', 'playlist');
-             const docSnap = await getDoc(settingsDocRef);
-             if (docSnap.exists() && docSnap.data().url) {
-               playlistUrl = docSnap.data().url;
-             } else {
-               playlistUrl = defaultUrl;
-             }
-          }
-        } catch (error) {
-          console.warn('Could not fetch default playlist URL', error);
-          playlistUrl = defaultUrl;
-        }
+          // Use the first available playlist as default
+          playlistUrl = playlists.length > 0 ? playlists[0].url : defaultUrl;
       }
 
-      // 2. Validate URL format before proceeding
       const urlRegex = /^https:\/\/.*\.m3u8?$/;
       if (!playlistUrl || !urlRegex.test(playlistUrl)) {
-        // If the derived URL is empty or invalid, we do NOT fall back to cache.
-        // We present a "No Channels Found" state.
         setAllChannels([]);
         setFilteredChannels([]);
         setCategories(['All']);
@@ -72,7 +50,6 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
         return;
       }
 
-      // 3. Check Cache (Only if URL is valid)
       const cacheKey = `${CACHE_PREFIX}${playlistUrl}`;
       const cachedContent = localStorage.getItem(cacheKey);
       
@@ -93,7 +70,6 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
           setLoading(true);
       }
       
-      // 4. Fetch Visibility Settings
       const visibilityCollection = collection(db, 'channel_visibility');
       const visibilitySnapshot = await getDocs(visibilityCollection);
       const visibilityMap: VisibilityMap = {};
@@ -103,11 +79,9 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
           }
       });
 
-      // 5. Fetch and Parse Playlist
       const response = await fetch(playlistUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch playlist: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(`Failed to fetch: ${response.statusText}`);
+      
       const text = await response.text();
       const playlist = manualParse(text);
 
@@ -125,7 +99,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
       try {
           localStorage.setItem(cacheKey, JSON.stringify({ items: validAndVisibleChannels, timestamp: Date.now() }));
       } catch (e) {
-          console.warn('LocalStorage quota exceeded, could not cache playlist.');
+          console.warn('LocalStorage quota exceeded.');
       }
 
     } catch (e: any) {
@@ -136,7 +110,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
     } finally {
       setLoading(false);
     }
-  }, [customPlaylistUrl, selectedPlaylistId, allChannels.length]);
+  }, [customPlaylistUrl, selectedPlaylistId, playlists, playlistsLoading]);
 
   useEffect(() => {
     fetchChannels();

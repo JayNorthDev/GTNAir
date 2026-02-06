@@ -1,9 +1,8 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { db } from '@/firebase/config';
-import { collection, doc, onSnapshot, deleteDoc, query, orderBy, addDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { useState, useMemo } from 'react';
+import { usePlaylists, Playlist, updateAllPlaylists } from '@/hooks/usePlaylists';
 import { Plus, Edit2, Trash2, Loader, Save, Layers, ChevronUp, ChevronDown, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,18 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
-
-interface Playlist {
-  id: string;
-  name: string;
-  url: string;
-  category: 'Main Playlists' | 'Sub Playlists';
-  order: number;
-  updatedAt: string;
-}
 
 interface FormErrors {
   name?: string;
@@ -34,8 +22,7 @@ interface FormErrors {
 }
 
 export default function AdminPlaylistsPage() {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { playlists, isLoading } = usePlaylists();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -43,34 +30,6 @@ export default function AdminPlaylistsPage() {
 
   const [formData, setFormData] = useState({ id: '', name: '', url: '', category: '' as any });
   const [errors, setErrors] = useState<FormErrors>({});
-
-  useEffect(() => {
-    const q = query(collection(db, 'playlists'), orderBy('order', 'asc'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => {
-        const docData = doc.data();
-        return { 
-          id: doc.id, 
-          ...docData,
-          category: docData.category || 'Main Playlists',
-          order: typeof docData.order === 'number' ? docData.order : 0
-        } as Playlist;
-      });
-      
-      setPlaylists(data);
-      setIsLoading(false);
-    }, (error) => {
-      const permissionError = new FirestorePermissionError({
-        path: 'playlists',
-        operation: 'list',
-      });
-      errorEmitter.emit('permission-error', permissionError);
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   const mainPlaylists = useMemo(() => playlists.filter(p => p.category === 'Main Playlists'), [playlists]);
   const subPlaylists = useMemo(() => playlists.filter(p => p.category === 'Sub Playlists'), [playlists]);
@@ -100,18 +59,13 @@ export default function AdminPlaylistsPage() {
     if (!name) newErrors.name = 'Playlist Name is required.';
     if (!category) newErrors.category = 'Please select a category.';
     
+    const urlRegex = /^https:\/\/.*\.m3u8?$/;
     if (!url) {
       newErrors.url = 'Playlist URL is required.';
-    } else {
-      const urlRegex = /^https:\/\/.*\.m3u8?$/;
-      if (!urlRegex.test(url)) {
-        newErrors.url = 'Must be an HTTPS URL ending in .m3u or .m3u8';
-      } else {
-        const isDuplicate = playlists.some(p => p.url.toLowerCase() === url.toLowerCase() && p.id !== formData.id);
-        if (isDuplicate) {
-          newErrors.url = 'This playlist URL already exists in your collection.';
-        }
-      }
+    } else if (!urlRegex.test(url)) {
+      newErrors.url = 'Must be an HTTPS URL ending in .m3u or .m3u8';
+    } else if (playlists.some(p => p.url.toLowerCase() === url.toLowerCase() && p.id !== formData.id)) {
+      newErrors.url = 'This playlist URL already exists.';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -121,94 +75,91 @@ export default function AdminPlaylistsPage() {
 
     setIsSaving(true);
     
-    const payload: any = {
-      name,
-      url,
-      category,
-      updatedAt: new Date().toISOString()
-    };
-
+    let updatedItems = [...playlists];
+    
     if (formData.id) {
-      const docRef = doc(db, 'playlists', formData.id);
-      
-      // Check if category changed to handle independent ordering
-      const existing = playlists.find(p => p.id === formData.id);
-      if (existing && existing.category !== category) {
-        const categoryItems = playlists.filter(p => p.category === category);
-        const maxOrder = categoryItems.length > 0 ? Math.max(...categoryItems.map(p => p.order)) : -1;
-        payload.order = maxOrder + 1;
-      }
-
-      updateDoc(docRef, payload)
-        .catch(async () => {
-          const permissionError = new FirestorePermissionError({
-            path: docRef.path,
-            operation: 'update',
-            requestResourceData: payload,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-        });
+      // Edit
+      updatedItems = updatedItems.map(p => {
+        if (p.id === formData.id) {
+          const catChanged = p.category !== category;
+          const nextOrder = catChanged 
+            ? updatedItems.filter(item => item.category === category).length 
+            : p.order;
+            
+          return {
+            ...p,
+            name,
+            url,
+            category,
+            order: nextOrder,
+            updatedAt: new Date().toISOString()
+          };
+        }
+        return p;
+      });
     } else {
-      // Calculate independent order for new items
+      // Add
+      const newId = Math.random().toString(36).substring(7);
       const categoryItems = playlists.filter(p => p.category === category);
-      const maxOrder = categoryItems.length > 0 ? Math.max(...categoryItems.map(p => p.order)) : -1;
-      payload.order = maxOrder + 1;
+      const nextOrder = categoryItems.length;
       
-      const colRef = collection(db, 'playlists');
-      addDoc(colRef, payload)
-        .catch(async () => {
-          const permissionError = new FirestorePermissionError({
-            path: colRef.path,
-            operation: 'create',
-            requestResourceData: payload,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-        });
+      updatedItems.push({
+        id: newId,
+        name,
+        url,
+        category,
+        order: nextOrder,
+        updatedAt: new Date().toISOString()
+      });
     }
 
-    setIsDialogOpen(false);
-    setIsSaving(false);
-    toast({ title: 'Playlist Saved', description: 'Your changes have been committed.' });
+    try {
+      await updateAllPlaylists(updatedItems);
+      setIsDialogOpen(false);
+      toast({ title: 'Playlist Saved', description: 'Settings updated successfully.' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save playlist.' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const executeDelete = () => {
+  const executeDelete = async () => {
     if (!deleteTarget) return;
     
-    const docRef = doc(db, 'playlists', deleteTarget);
+    const updatedItems = playlists.filter(p => p.id !== deleteTarget);
     
-    deleteDoc(docRef)
-      .then(() => {
-        toast({ title: 'Deleted', description: 'Playlist removed successfully.' });
-        setDeleteTarget(null);
-      })
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        toast({ 
-          variant: 'destructive', 
-          title: 'Delete Failed', 
-          description: 'Could not remove playlist. Check permissions.' 
-        });
-        setDeleteTarget(null);
-      });
+    try {
+      await updateAllPlaylists(updatedItems);
+      toast({ title: 'Deleted', description: 'Playlist removed.' });
+      setDeleteTarget(null);
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete.' });
+    }
   };
 
-  const moveItem = (index: number, direction: 'up' | 'down', list: Playlist[]) => {
+  const moveItem = async (index: number, direction: 'up' | 'down', list: Playlist[]) => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= list.length) return;
 
+    const items = [...playlists];
     const item1 = list[index];
     const item2 = list[newIndex];
 
-    const tempOrder = item1.order;
-    
-    updateDoc(doc(db, 'playlists', item1.id), { order: item2.order });
-    updateDoc(doc(db, 'playlists', item2.id), { order: tempOrder });
-    
-    toast({ title: 'Reordered', description: `Moved ${item1.name} ${direction}.` });
+    const idx1 = items.findIndex(p => p.id === item1.id);
+    const idx2 = items.findIndex(p => p.id === item2.id);
+
+    // Swap orders
+    const tempOrder = items[idx1].order;
+    items[idx1].order = items[idx2].order;
+    items[idx2].order = tempOrder;
+
+    try {
+      await updateAllPlaylists(items);
+      toast({ title: 'Reordered', description: `Moved ${item1.name} ${direction}.` });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to reorder.' });
+    }
   };
 
   const renderPlaylistTable = (title: string, items: Playlist[]) => (
@@ -291,7 +242,7 @@ export default function AdminPlaylistsPage() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-white">Playlist Settings</h2>
-          <p className="text-gray-400 text-sm">Manage multiple M3U/M3U8 sources and organize them into categories.</p>
+          <p className="text-gray-400 text-sm">Manage all sources from a single document for optimized read costs.</p>
         </div>
         <Button onClick={() => handleOpenDialog()} className="bg-purple-600 hover:bg-purple-700">
           <Plus className="w-4 h-4 mr-2" /> Add New Playlist
@@ -314,40 +265,22 @@ export default function AdminPlaylistsPage() {
         <DialogContent className="bg-[#1a1a1a] border-[#333] text-white">
           <DialogHeader>
             <DialogTitle>{formData.id ? 'Edit Playlist' : 'Add New Playlist'}</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Enter a descriptive name and the M3U/M3U8 URL.
-            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="name" className={cn(errors.name && "text-red-400")}>Playlist Name</Label>
+              <Label htmlFor="name">Playlist Name</Label>
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => {
-                  setFormData({ ...formData, name: e.target.value });
-                  if (errors.name) setErrors({ ...errors, name: undefined });
-                }}
-                placeholder="e.g. Sports Pack"
-                className={cn("bg-black border-[#333]", errors.name && "border-red-500/50 focus:border-red-500")}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="bg-black border-[#333]"
               />
-              {errors.name && (
-                <div className="flex items-center gap-1.5 text-xs text-red-400 mt-1">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  {errors.name}
-                </div>
-              )}
+              {errors.name && <p className="text-xs text-red-400">{errors.name}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="category" className={cn(errors.category && "text-red-400")}>Category</Label>
-              <Select 
-                value={formData.category} 
-                onValueChange={(val: any) => {
-                  setFormData({ ...formData, category: val });
-                  if (errors.category) setErrors({ ...errors, category: undefined });
-                }}
-              >
-                <SelectTrigger className={cn("bg-black border-[#333]", errors.category && "border-red-500/50 focus:border-red-500")}>
+              <Label htmlFor="category">Category</Label>
+              <Select value={formData.category} onValueChange={(val: any) => setFormData({ ...formData, category: val })}>
+                <SelectTrigger className="bg-black border-[#333]">
                   <SelectValue placeholder="Select Category..." />
                 </SelectTrigger>
                 <SelectContent className="bg-[#1a1a1a] border-[#333] text-white">
@@ -355,63 +288,41 @@ export default function AdminPlaylistsPage() {
                   <SelectItem value="Sub Playlists">Sub Playlists</SelectItem>
                 </SelectContent>
               </Select>
-              {errors.category && (
-                <div className="flex items-center gap-1.5 text-xs text-red-400 mt-1">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  {errors.category}
-                </div>
-              )}
+              {errors.category && <p className="text-xs text-red-400">{errors.category}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="url" className={cn(errors.url && "text-red-400")}>Playlist URL</Label>
+              <Label htmlFor="url">Playlist URL</Label>
               <Input
                 id="url"
                 value={formData.url}
-                onChange={(e) => {
-                  setFormData({ ...formData, url: e.target.value });
-                  if (errors.url) setErrors({ ...errors, url: undefined });
-                }}
-                placeholder="https://example.com/playlist.m3u8"
-                className={cn("bg-black border-[#333]", errors.url && "border-red-500/50 focus:border-red-500")}
+                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                className="bg-black border-[#333]"
               />
-              {errors.url && (
-                <div className="flex items-center gap-1.5 text-xs text-red-400 mt-1">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  {errors.url}
-                </div>
-              )}
+              {errors.url && <p className="text-xs text-red-400">{errors.url}</p>}
             </div>
             <DialogFooter className="pt-4">
-              <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
-                Cancel
-              </Button>
+              <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isSaving} className="bg-purple-600 hover:bg-purple-700">
                 {isSaving ? <Loader className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                {formData.id ? 'Update' : 'Save'}
+                Save
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Modal */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent className="bg-[#1a1a1a] border-[#333] text-white">
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-400">
-              This action cannot be undone. This will permanently delete the playlist and its URL from our records.
+              This will remove the playlist from the central settings document.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-transparent border-[#333] text-white hover:bg-[#222]">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={executeDelete} 
-              className="bg-red-600 hover:bg-red-700 text-white border-none"
-            >
-              Delete Permanently
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDelete} className="bg-red-600 hover:bg-red-700 text-white border-none">
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
