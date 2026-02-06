@@ -94,16 +94,21 @@ export default function AdminPlaylistsPage() {
     const url = formData.url.trim();
     const category = formData.category;
 
-    // 1. Mandatory Field Validation
     if (!name) newErrors.name = 'Playlist Name is required.';
     if (!category) newErrors.category = 'Please select a category.';
+    
     if (!url) {
       newErrors.url = 'Playlist URL is required.';
     } else {
-      // 2. URL Format Validation (Regex)
       const urlRegex = /^https:\/\/.*\.m3u8?$/;
       if (!urlRegex.test(url)) {
         newErrors.url = 'Must be an HTTPS URL ending in .m3u or .m3u8';
+      } else {
+        // Duplicate detection logic
+        const isDuplicate = playlists.some(p => p.url.toLowerCase() === url.toLowerCase() && p.id !== formData.id);
+        if (isDuplicate) {
+          newErrors.url = 'This playlist URL already exists in your collection.';
+        }
       }
     }
 
@@ -114,9 +119,6 @@ export default function AdminPlaylistsPage() {
 
     setIsSaving(true);
     
-    const maxOrder = playlists.length > 0 ? Math.max(...playlists.map(p => p.order)) : -1;
-    const newOrder = maxOrder + 1;
-
     const payload: any = {
       name,
       url,
@@ -136,7 +138,9 @@ export default function AdminPlaylistsPage() {
           errorEmitter.emit('permission-error', permissionError);
         });
     } else {
-      payload.order = newOrder;
+      const maxOrder = playlists.length > 0 ? Math.max(...playlists.map(p => p.order)) : -1;
+      payload.order = maxOrder + 1;
+      
       const colRef = collection(db, 'playlists');
       addDoc(colRef, payload)
         .catch(async () => {
@@ -155,17 +159,28 @@ export default function AdminPlaylistsPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('Are you sure you want to delete this playlist?')) return;
+    if (!confirm('Are you sure you want to delete this playlist? This action is permanent.')) return;
+    
     const docRef = doc(db, 'playlists', id);
+    
+    // Explicit deleteDoc call with non-blocking error handling
     deleteDoc(docRef)
-      .catch(async () => {
+      .then(() => {
+        toast({ title: 'Deleted', description: 'Playlist removed successfully.' });
+      })
+      .catch(async (error) => {
+        console.error("Firestore deletion failed:", error);
         const permissionError = new FirestorePermissionError({
           path: docRef.path,
           operation: 'delete',
         });
         errorEmitter.emit('permission-error', permissionError);
+        toast({ 
+          variant: 'destructive', 
+          title: 'Delete Failed', 
+          description: 'Could not remove playlist. Check permissions.' 
+        });
       });
-    toast({ title: 'Deleted', description: 'Playlist removed successfully.' });
   };
 
   const moveItem = (index: number, direction: 'up' | 'down', list: Playlist[]) => {
