@@ -9,7 +9,6 @@ import { usePlaylists } from './usePlaylists';
 
 export type VisibilityMap = { [key: string]: boolean };
 
-const CHANNELS_CACHE_PREFIX = 'playlist_channels_cache_';
 const INITIAL_PAGE_SIZE = 100;
 const PAGE_INCREMENT = 100;
 
@@ -49,28 +48,9 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
         return;
       }
 
-      // 1. Try Content Cache (Individual Playlist Content)
-      const contentCacheKey = `${CHANNELS_CACHE_PREFIX}${playlistUrl}`;
-      const cachedContent = localStorage.getItem(contentCacheKey);
+      setLoading(true);
       
-      if (cachedContent && !isRetry) {
-          try {
-              const cachedData = JSON.parse(cachedContent);
-              if (cachedData && Array.isArray(cachedData.items)) {
-                  setAllChannels(cachedData.items);
-                  setFilteredChannels(cachedData.items);
-                  const uniqueCategories = ['All', ...new Set(cachedData.items.map((item: any) => item.group.title || 'Other').filter(Boolean) as string[])];
-                  setCategories(uniqueCategories.sort());
-                  setLoading(false);
-              }
-          } catch (e) {
-              console.warn('Failed to parse cached channels');
-          }
-      } else {
-          setLoading(true);
-      }
-      
-      // 2. Fetch M3U Content
+      // Fetch M3U Content
       let response;
       try {
         response = await fetch(playlistUrl);
@@ -79,7 +59,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
         // FAIL-SAFE / AUTO-RECOVERY
         // If fetch fails and we haven't retried yet, refresh playlist definitions from Firestore
         if (!isRetry && !customPlaylistUrl) {
-          console.warn('Cached URL fetch failed, forcing Firestore re-sync for auto-recovery...');
+          console.warn('Playlist URL fetch failed, forcing Firestore re-sync for auto-recovery...');
           await refreshPlaylists(true); // Force hit Firestore
           fetchChannels(true); // Retry once with fresh data
           return;
@@ -110,13 +90,6 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
 
       const uniqueCategories = ['All', ...new Set(validAndVisibleChannels.map(item => item.group.title || 'Other').filter(Boolean))];
       setCategories(uniqueCategories.sort());
-
-      // Update Content Cache
-      try {
-          localStorage.setItem(contentCacheKey, JSON.stringify({ items: validAndVisibleChannels, timestamp: Date.now() }));
-      } catch (e) {
-          console.warn('LocalStorage quota exceeded for channel content');
-      }
 
     } catch (e: any) {
       console.error('Error loading channels:', e);

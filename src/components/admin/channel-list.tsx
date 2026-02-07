@@ -22,7 +22,6 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 
 type VisibilityMap = { [key: string]: boolean };
-const CACHE_PREFIX = 'admin_playlist_cache_';
 const BATCH_SIZE = 100;
 
 interface ChannelListProps {
@@ -63,22 +62,7 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
                 }
             }
 
-            const cacheKey = `${CACHE_PREFIX}${playlistUrl}`;
-            const cachedContent = localStorage.getItem(cacheKey);
-            if (cachedContent) {
-                try {
-                    const cachedData = JSON.parse(cachedContent);
-                    if (cachedData && Array.isArray(cachedData.items)) {
-                        setChannels(cachedData.items);
-                        setLoading(false);
-                        setIsRefreshing(true);
-                    }
-                } catch (e) {
-                    console.warn('Admin cache parse failed', e);
-                }
-            } else {
-                setLoading(true);
-            }
+            setLoading(true);
 
             const visibilityCollection = collection(db, 'channel_visibility');
             const visibilitySnapshot = await getDocs(visibilityCollection);
@@ -95,12 +79,6 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
             const validChannels = parsedPlaylist.items.filter(c => c.url && c.tvg?.id);
             
             setChannels(validChannels);
-
-            try {
-                localStorage.setItem(cacheKey, JSON.stringify({ items: validChannels, timestamp: Date.now() }));
-            } catch (e) {
-                console.warn('Admin LocalStorage quota exceeded');
-            }
 
         } catch (e: any) {
             if (channels.length === 0) {
