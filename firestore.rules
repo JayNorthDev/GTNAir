@@ -3,28 +3,27 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow public read and write access to settings for playlist URL
-    match /settings/{settingId} {
+    // Allow public read and write access to settings (including the playlists document)
+    match /settings/{document=**} {
       allow read, write: if true;
     }
 
     // Allow public read and write for channel visibility
-    match /channel_visibility/{channelId} {
+    match /channel_visibility/{document=**} {
       allow read, write: if true;
     }
 
-    // Allow public read and write for homepage content
-    match /hero_slides/{slideId} {
+    // Allow public read and write for homepage content (hero slides and services)
+    match /hero_slides/{document=**} {
       allow read, write: if true;
     }
 
-    // Allow public read and write for services content
-    match /services/{serviceId} {
+    match /services/{document=**} {
       allow read, write: if true;
     }
 
-    // Allow public read and write for the new playlists collection
-    match /playlists/{playlistId} {
+    // Maintain backward compatibility for the playlists collection if still in use during transition
+    match /playlists/{document=**} {
       allow read, write: if true;
     }
 
