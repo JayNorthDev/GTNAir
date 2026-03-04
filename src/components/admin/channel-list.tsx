@@ -19,6 +19,8 @@ import {
 import { cn } from '@/lib/utils';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type VisibilityMap = { [key: string]: boolean };
 const BATCH_SIZE = 100;
@@ -65,15 +67,16 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
 
             setLoading(true);
 
+            // Using 'id' as per migration schema
             const { data: visibilityData, error: visibilityError } = await supabase
                 .from('channel_visibility')
-                .select('channelId, visible');
+                .select('id, visible');
             
             if (visibilityError) throw visibilityError;
 
             const visibilityMap: VisibilityMap = {};
             visibilityData?.forEach(row => {
-                visibilityMap[row.channelId] = row.visible;
+                visibilityMap[row.id] = row.visible;
             });
             setVisibility(visibilityMap);
 
@@ -86,10 +89,15 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
             setChannels(validChannels);
 
         } catch (e: any) {
+            const permissionError = new FirestorePermissionError({
+                path: 'channel_visibility',
+                operation: 'list',
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+
             if (channels.length === 0) {
                 setError(e.message || 'An unknown error occurred.');
             }
-            console.error(e);
         } finally {
             setLoading(false);
             setIsRefreshing(false);
@@ -150,13 +158,20 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
         setVisibility(prev => ({ ...prev, [channelId]: isVisible }));
 
         try {
+            // Using 'id' as per migration schema
             const { error } = await supabase
                 .from('channel_visibility')
-                .upsert({ channelId, visible: isVisible }, { onConflict: 'channelId' });
+                .upsert({ id: channelId, visible: isVisible }, { onConflict: 'id' });
             
             if (error) throw error;
-        } catch (error) {
-            console.error('Failed to update visibility:', error);
+        } catch (error: any) {
+            const permissionError = new FirestorePermissionError({
+                path: `channel_visibility/${channelId}`,
+                operation: 'write',
+                requestResourceData: { id: channelId, visible: isVisible },
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+
             setVisibility(prev => ({ ...prev, [channelId]: !isVisible }));
         }
     };

@@ -5,6 +5,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { manualParse, Channel } from '@/lib/m3u-parser';
 import { usePlaylists } from './usePlaylists';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 export type VisibilityMap = { [key: string]: boolean };
 
@@ -38,7 +40,8 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
           playlistUrl = playlists.length > 0 ? playlists[0].url : defaultUrl;
       }
 
-      const urlRegex = /^https:\/\/.*\.m3u8?$/;
+      // Relaxed regex to allow query parameters and handle case-insensitivity
+      const urlRegex = /^https:\/\/.*\.m3u8?(\?.*)?$/i;
       if (!playlistUrl || !urlRegex.test(playlistUrl)) {
         setAllChannels([]);
         setFilteredChannels([]);
@@ -56,7 +59,6 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
       } catch (fetchErr) {
         if (!isRetry && !customPlaylistUrl) {
-          console.warn('Playlist URL fetch failed, forcing Supabase re-sync for auto-recovery...');
           await refreshPlaylists(true); 
           fetchChannels(true); 
           return;
@@ -67,17 +69,17 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
       const text = await response.text();
       const playlist = manualParse(text);
 
-      // Fetch Visibility Settings from Supabase
+      // Fetch Visibility Settings from Supabase - using 'id' as per migration schema
       const { data: visibilityData, error: visibilityError } = await supabase
         .from('channel_visibility')
-        .select('channelId, visible');
+        .select('id, visible');
 
       if (visibilityError) throw visibilityError;
 
       const visibilityMap: VisibilityMap = {};
-      visibilityData.forEach(row => {
+      visibilityData?.forEach(row => {
           if (row.visible === false) { 
-              visibilityMap[row.channelId] = false;
+              visibilityMap[row.id] = false;
           }
       });
 
@@ -93,7 +95,15 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
       setCategories(uniqueCategories.sort());
 
     } catch (e: any) {
-      console.error('Error loading channels:', e);
+      // Create rich contextual error for agentive recovery
+      const permissionError = new FirestorePermissionError({
+        path: 'channel_visibility',
+        operation: 'list',
+      } satisfies SecurityRuleContext);
+
+      // Emit error centrally instead of using console.error to avoid UI-blocking overlays
+      errorEmitter.emit('permission-error', permissionError);
+
       if (allChannels.length === 0) {
           setError(e.message || 'Failed to load channels.');
       }
