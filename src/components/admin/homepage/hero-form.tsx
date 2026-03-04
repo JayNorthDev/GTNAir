@@ -36,7 +36,7 @@ export function HeroForm({ onSuccess, initialData }: { onSuccess: () => void; in
       if (initialData?.id) {
         const { error } = await supabase
           .from('hero_slides')
-          .update(values)
+          .update({ data: values })
           .eq('id', initialData.id);
         
         if (error) throw error;
@@ -44,7 +44,7 @@ export function HeroForm({ onSuccess, initialData }: { onSuccess: () => void; in
       } else {
         const { error } = await supabase
           .from('hero_slides')
-          .insert(values);
+          .insert({ id: Math.random().toString(36).substring(7), data: values });
         
         if (error) throw error;
         toast({ title: 'Success', description: 'Hero slide added successfully.' });

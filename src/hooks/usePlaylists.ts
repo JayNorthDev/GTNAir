@@ -3,8 +3,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 export interface Playlist {
   id: string;
@@ -18,13 +16,9 @@ export interface Playlist {
 const PLAYLISTS_DOC_CACHE_KEY = 'gtnplay_playlists_definitions_v1';
 const CACHE_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 Days
 
-// Global in-memory cache
 let globalPlaylistsCache: Playlist[] | null = null;
 let subscribers: ((playlists: Playlist[]) => void)[] = [];
 
-/**
- * Internal helper to get cached data from localStorage
- */
 function getLocalCache(): { items: Playlist[]; timestamp: number } | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -36,9 +30,6 @@ function getLocalCache(): { items: Playlist[]; timestamp: number } | null {
   }
 }
 
-/**
- * Internal helper to set local cache
- */
 function setLocalCache(items: Playlist[]) {
   if (typeof window === 'undefined') return;
   try {
@@ -51,34 +42,25 @@ function setLocalCache(items: Playlist[]) {
   }
 }
 
-/**
- * Fetches the playlist definitions from Supabase
- */
 async function fetchPlaylistsFromSupabase(): Promise<Playlist[]> {
   try {
     const { data, error } = await supabase
       .from('settings')
-      .select('items')
+      .select('data')
       .eq('id', 'playlists')
       .single();
 
     if (error) throw error;
     
-    const items = (data?.items || []) as Playlist[];
+    const items = (data?.data?.items || []) as Playlist[];
     const sorted = [...items].sort((a, b) => a.order - b.order);
     
-    // Update caches
     setLocalCache(sorted);
     globalPlaylistsCache = sorted;
     
     return sorted;
   } catch (error: any) {
     console.error('Supabase fetch error:', error);
-    const permissionError = new FirestorePermissionError({
-      path: 'settings/playlists',
-      operation: 'get',
-    });
-    errorEmitter.emit('permission-error', permissionError);
     return [];
   }
 }
@@ -101,7 +83,6 @@ export function usePlaylists() {
       }
     }
 
-    // If no valid cache or forced, hit Supabase
     if (items.length === 0) {
       items = await fetchPlaylistsFromSupabase();
     }
@@ -110,7 +91,6 @@ export function usePlaylists() {
     setPlaylists(items);
     setIsLoading(false);
     
-    // Notify other hook instances
     subscribers.forEach(sub => sub(items));
   }, []);
 
@@ -130,30 +110,20 @@ export function usePlaylists() {
   return { playlists, isLoading, refresh };
 }
 
-/**
- * Administrative helper to update playlists
- */
 export async function updateAllPlaylists(items: Playlist[]) {
   try {
     const { error } = await supabase
       .from('settings')
-      .upsert({ id: 'playlists', items }, { onConflict: 'id' });
+      .upsert({ id: 'playlists', data: { items } }, { onConflict: 'id' });
 
     if (error) throw error;
     
-    // Update local cache immediately after successful write
     setLocalCache(items);
     globalPlaylistsCache = items;
     subscribers.forEach(sub => sub(items));
     
   } catch (error: any) {
     console.error('Supabase update error:', error);
-    const permissionError = new FirestorePermissionError({
-      path: 'settings/playlists',
-      operation: 'write',
-      requestResourceData: { items },
-    });
-    errorEmitter.emit('permission-error', permissionError);
     throw error;
   }
 }

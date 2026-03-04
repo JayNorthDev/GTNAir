@@ -11,8 +11,6 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Autoplay from "embla-carousel-autoplay"
 import { supabase } from '@/lib/supabase';
 import { Skeleton } from '../ui/skeleton';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 type Ad = {
   type: 'ad';
@@ -36,21 +34,16 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
   const fetchData = async () => {
     setLoading(true);
     try {
-      const { data: heroData, error: heroError } = await supabase.from('hero_slides').select('*');
+      const { data: heroData, error: heroError } = await supabase.from('hero_slides').select('id, data');
       if (heroError) throw heroError;
-      setHeroSlides(heroData || []);
+      setHeroSlides(heroData?.map(row => ({ id: row.id, ...row.data })) || []);
 
-      const { data: serviceData, error: serviceError } = await supabase.from('services').select('*');
+      const { data: serviceData, error: serviceError } = await supabase.from('services').select('id, data');
       if (serviceError) throw serviceError;
-      setServices(serviceData || []);
+      setServices(serviceData?.map(row => ({ id: row.id, ...row.data })) || []);
 
     } catch (error: any) {
       console.error("Supabase sync error:", error);
-      const permissionError = new FirestorePermissionError({
-        path: 'hero_slides/services',
-        operation: 'list',
-      });
-      errorEmitter.emit('permission-error', permissionError);
     } finally {
       setLoading(false);
     }
@@ -59,7 +52,6 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
   useEffect(() => {
     fetchData();
 
-    // Listen for changes
     const heroChannel = supabase.channel('hero_slides_public')
         .on('postgres_changes', { event: '*', table: 'hero_slides' }, () => fetchData())
         .subscribe();
@@ -91,7 +83,6 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
 
   return (
     <div className="w-full">
-      {/* Hero Carousel */}
       {loading && heroSlides.length === 0 ? (
          <Skeleton className="w-full h-[60vh] min-h-[450px] max-h-[550px] -mt-4 md:-mt-8" />
       ) : heroSlides.length > 0 && (
@@ -139,7 +130,6 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
         </Carousel>
       )}
 
-      {/* Service Catalog Section */}
       <div className="p-4 md:p-8 my-8">
         <h2 className="font-headline text-2xl md:text-3xl font-bold tracking-tight mb-4">Boost Your Business with Our Media Services</h2>
         {loading && services.length === 0 ? (
@@ -178,7 +168,6 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
         )}
       </div>
       
-      {/* Channel Grid */}
       <div className="p-4 md:p-8">
         <div className="mb-6">
           <h2 className="font-headline text-2xl md:text-3xl font-bold tracking-tight">Live Channels</h2>

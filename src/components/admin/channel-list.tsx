@@ -19,8 +19,6 @@ import {
 import { cn } from '@/lib/utils';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 type VisibilityMap = { [key: string]: boolean };
 const BATCH_SIZE = 100;
@@ -38,7 +36,6 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
     const [error, setError] = useState<string | null>(null);
     const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
     
-    // Search and Filter State
     const [searchTerm, setSearchTerm] = useState("");
     const [activeFilters, setActiveFilters] = useState<string[]>([]);
     
@@ -57,17 +54,16 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
             if (!playlistUrl) {
                 const { data: settingsData } = await supabase
                     .from('settings')
-                    .select('items')
+                    .select('data')
                     .eq('id', 'playlists')
                     .single();
                 
-                const playlists = (settingsData?.items || []) as any[];
+                const playlists = (settingsData?.data?.items || []) as any[];
                 playlistUrl = playlists.length > 0 ? playlists[0].url : 'https://iptv-org.github.io/iptv/index.m3u';
             }
 
             setLoading(true);
 
-            // Using 'id' as per migration schema
             const { data: visibilityData, error: visibilityError } = await supabase
                 .from('channel_visibility')
                 .select('id, visible');
@@ -80,7 +76,7 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
             });
             setVisibility(visibilityMap);
 
-            const response = await fetch(playlistUrl);
+            const response = await fetch(playlistUrl!);
             if (!response.ok) throw new Error(`Failed to fetch playlist: ${response.statusText}`);
             const m3uText = await response.text();
             const parsedPlaylist = manualParse(m3uText);
@@ -89,12 +85,7 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
             setChannels(validChannels);
 
         } catch (e: any) {
-            const permissionError = new FirestorePermissionError({
-                path: 'channel_visibility',
-                operation: 'list',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-
+            console.error('Channel management error:', e);
             if (channels.length === 0) {
                 setError(e.message || 'An unknown error occurred.');
             }
@@ -158,20 +149,13 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
         setVisibility(prev => ({ ...prev, [channelId]: isVisible }));
 
         try {
-            // Using 'id' as per migration schema
             const { error } = await supabase
                 .from('channel_visibility')
                 .upsert({ id: channelId, visible: isVisible }, { onConflict: 'id' });
             
             if (error) throw error;
         } catch (error: any) {
-            const permissionError = new FirestorePermissionError({
-                path: `channel_visibility/${channelId}`,
-                operation: 'write',
-                requestResourceData: { id: channelId, visible: isVisible },
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-
+            console.error('Visibility update error:', error);
             setVisibility(prev => ({ ...prev, [channelId]: !isVisible }));
         }
     };
@@ -239,7 +223,6 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
     
     return (
         <div className="relative space-y-4">
-            {/* Search and Filters Bar */}
             <div className="flex flex-col md:flex-row gap-4 items-center">
                 <div className="relative flex-1 w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -292,7 +275,6 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
                 </div>
             </div>
 
-            {/* Table Content */}
             <div className="rounded-lg border border-[#333] bg-[#1a1a1a]/30 overflow-hidden">
                 <div 
                     ref={containerRef}

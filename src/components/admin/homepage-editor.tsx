@@ -13,8 +13,6 @@ import { HeroForm } from './homepage/hero-form';
 import { ServiceForm } from './homepage/service-form';
 import Image from 'next/image';
 import { placeholderImagesList } from '@/lib/placeholder-images';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 export function HomepageEditor() {
     const [heroSlides, setHeroSlides] = useState<any[]>([]);
@@ -30,23 +28,18 @@ export function HomepageEditor() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const { data: heroData, error: heroError } = await supabase.from('hero_slides').select('*');
+            const { data: heroData, error: heroError } = await supabase.from('hero_slides').select('id, data');
             if (heroError) throw heroError;
-            setHeroSlides(heroData || []);
+            setHeroSlides(heroData?.map(row => ({ id: row.id, ...row.data })) || []);
 
-            const { data: serviceData, error: serviceError } = await supabase.from('services').select('*');
+            const { data: serviceData, error: serviceError } = await supabase.from('services').select('id, data');
             if (serviceError) throw serviceError;
-            setServices(serviceData || []);
+            setServices(serviceData?.map(row => ({ id: row.id, ...row.data })) || []);
 
             setError(null);
         } catch (err: any) {
             console.error(err);
             setError("Failed to load content.");
-            const permissionError = new FirestorePermissionError({
-                path: 'hero_slides/services',
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
         } finally {
             setLoading(false);
         }
@@ -55,7 +48,6 @@ export function HomepageEditor() {
     useEffect(() => {
         fetchData();
 
-        // Real-time subscriptions
         const heroChannel = supabase.channel('hero_slides_changes')
             .on('postgres_changes', { event: '*', table: 'hero_slides' }, () => fetchData())
             .subscribe();
@@ -76,11 +68,6 @@ export function HomepageEditor() {
             if (error) throw error;
         } catch (err: any) {
             console.error('Delete error:', err);
-            const permissionError = new FirestorePermissionError({
-                path: `${table}/${id}`,
-                operation: 'delete',
-            });
-            errorEmitter.emit('permission-error', permissionError);
         }
     };
 
