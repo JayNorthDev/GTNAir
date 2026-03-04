@@ -9,8 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Autoplay from "embla-carousel-autoplay"
-import { collection, onSnapshot, DocumentData } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { supabase } from '@/lib/supabase';
 import { Skeleton } from '../ui/skeleton';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -30,40 +29,48 @@ interface HomeViewProps {
 }
 
 export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeViewProps) {
-  const [heroSlides, setHeroSlides] = useState<DocumentData[]>([]);
-  const [services, setServices] = useState<DocumentData[]>([]);
+  const [heroSlides, setHeroSlides] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchData = async () => {
     setLoading(true);
-    
-    const unsubscribeHero = onSnapshot(collection(db, 'hero_slides'), (snapshot) => {
-      setHeroSlides(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-    }, (error) => {
-      console.error("Hero slides sync error:", error);
-      const permissionError = new FirestorePermissionError({
-        path: 'hero_slides',
-        operation: 'list',
-      });
-      errorEmitter.emit('permission-error', permissionError);
-    });
+    try {
+      const { data: heroData, error: heroError } = await supabase.from('hero_slides').select('*');
+      if (heroError) throw heroError;
+      setHeroSlides(heroData || []);
 
-    const unsubscribeServices = onSnapshot(collection(db, 'services'), (snapshot) => {
-      setServices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoading(false);
-    }, (error) => {
-      console.error("Services sync error:", error);
+      const { data: serviceData, error: serviceError } = await supabase.from('services').select('*');
+      if (serviceError) throw serviceError;
+      setServices(serviceData || []);
+
+    } catch (error: any) {
+      console.error("Supabase sync error:", error);
       const permissionError = new FirestorePermissionError({
-        path: 'services',
+        path: 'hero_slides/services',
         operation: 'list',
       });
       errorEmitter.emit('permission-error', permissionError);
-    });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+
+    // Listen for changes
+    const heroChannel = supabase.channel('hero_slides_public')
+        .on('postgres_changes', { event: '*', table: 'hero_slides' }, () => fetchData())
+        .subscribe();
+    
+    const serviceChannel = supabase.channel('services_public')
+        .on('postgres_changes', { event: '*', table: 'services' }, () => fetchData())
+        .subscribe();
 
     return () => {
-      unsubscribeHero();
-      unsubscribeServices();
+        supabase.removeChannel(heroChannel);
+        supabase.removeChannel(serviceChannel);
     };
   }, []);
 
@@ -85,7 +92,7 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
   return (
     <div className="w-full">
       {/* Hero Carousel */}
-      {loading ? (
+      {loading && heroSlides.length === 0 ? (
          <Skeleton className="w-full h-[60vh] min-h-[450px] max-h-[550px] -mt-4 md:-mt-8" />
       ) : heroSlides.length > 0 && (
         <Carousel
@@ -135,7 +142,7 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
       {/* Service Catalog Section */}
       <div className="p-4 md:p-8 my-8">
         <h2 className="font-headline text-2xl md:text-3xl font-bold tracking-tight mb-4">Boost Your Business with Our Media Services</h2>
-        {loading ? (
+        {loading && services.length === 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => <Skeleton key={i} className="w-full aspect-video" />)}
           </div>

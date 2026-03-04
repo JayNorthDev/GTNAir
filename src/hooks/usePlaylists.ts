@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { supabase } from '@/lib/supabase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -27,6 +26,7 @@ let subscribers: ((playlists: Playlist[]) => void)[] = [];
  * Internal helper to get cached data from localStorage
  */
 function getLocalCache(): { items: Playlist[]; timestamp: number } | null {
+  if (typeof window === 'undefined') return null;
   try {
     const cached = localStorage.getItem(PLAYLISTS_DOC_CACHE_KEY);
     if (!cached) return null;
@@ -40,6 +40,7 @@ function getLocalCache(): { items: Playlist[]; timestamp: number } | null {
  * Internal helper to set local cache
  */
 function setLocalCache(items: Playlist[]) {
+  if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(PLAYLISTS_DOC_CACHE_KEY, JSON.stringify({
       items,
@@ -51,14 +52,19 @@ function setLocalCache(items: Playlist[]) {
 }
 
 /**
- * Fetches the playlist definitions document from Firestore
+ * Fetches the playlist definitions from Supabase
  */
-async function fetchPlaylistsFromFirestore(): Promise<Playlist[]> {
-  const docRef = doc(db, 'settings', 'playlists');
+async function fetchPlaylistsFromSupabase(): Promise<Playlist[]> {
   try {
-    const snap = await getDoc(docRef);
-    if (!snap.exists()) return [];
-    const items = (snap.data()?.items || []) as Playlist[];
+    const { data, error } = await supabase
+      .from('settings')
+      .select('items')
+      .eq('id', 'playlists')
+      .single();
+
+    if (error) throw error;
+    
+    const items = (data?.items || []) as Playlist[];
     const sorted = [...items].sort((a, b) => a.order - b.order);
     
     // Update caches
@@ -66,9 +72,10 @@ async function fetchPlaylistsFromFirestore(): Promise<Playlist[]> {
     globalPlaylistsCache = sorted;
     
     return sorted;
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Supabase fetch error:', error);
     const permissionError = new FirestorePermissionError({
-      path: docRef.path,
+      path: 'settings/playlists',
       operation: 'get',
     });
     errorEmitter.emit('permission-error', permissionError);
@@ -80,12 +87,12 @@ export function usePlaylists() {
   const [playlists, setPlaylists] = useState<Playlist[]>(globalPlaylistsCache || []);
   const [isLoading, setIsLoading] = useState(!globalPlaylistsCache);
 
-  const refresh = useCallback(async (forceFirestore = false) => {
+  const refresh = useCallback(async (forceSupabase = false) => {
     setIsLoading(true);
     
     let items: Playlist[] = [];
     
-    if (!forceFirestore) {
+    if (!forceSupabase) {
       const cached = getLocalCache();
       const isExpired = cached ? (Date.now() - cached.timestamp > CACHE_EXPIRY_MS) : true;
       
@@ -94,9 +101,9 @@ export function usePlaylists() {
       }
     }
 
-    // If no valid cache or forced, hit Firestore
+    // If no valid cache or forced, hit Supabase
     if (items.length === 0) {
-      items = await fetchPlaylistsFromFirestore();
+      items = await fetchPlaylistsFromSupabase();
     }
 
     globalPlaylistsCache = items;
@@ -127,23 +134,22 @@ export function usePlaylists() {
  * Administrative helper to update playlists
  */
 export async function updateAllPlaylists(items: Playlist[]) {
-  const docRef = doc(db, 'settings', 'playlists');
   try {
-    const snap = await getDoc(docRef);
-    if (!snap.exists()) {
-      await setDoc(docRef, { items });
-    } else {
-      await updateDoc(docRef, { items });
-    }
+    const { error } = await supabase
+      .from('settings')
+      .upsert({ id: 'playlists', items }, { onConflict: 'id' });
+
+    if (error) throw error;
     
     // Update local cache immediately after successful write
     setLocalCache(items);
     globalPlaylistsCache = items;
     subscribers.forEach(sub => sub(items));
     
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Supabase update error:', error);
     const permissionError = new FirestorePermissionError({
-      path: docRef.path,
+      path: 'settings/playlists',
       operation: 'write',
       requestResourceData: { items },
     });

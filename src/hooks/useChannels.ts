@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/firebase/config';
+import { supabase } from '@/lib/supabase';
 import { manualParse, Channel } from '@/lib/m3u-parser';
 import { usePlaylists } from './usePlaylists';
 
@@ -56,12 +55,10 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
         response = await fetch(playlistUrl);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
       } catch (fetchErr) {
-        // FAIL-SAFE / AUTO-RECOVERY
-        // If fetch fails and we haven't retried yet, refresh playlist definitions from Firestore
         if (!isRetry && !customPlaylistUrl) {
-          console.warn('Playlist URL fetch failed, forcing Firestore re-sync for auto-recovery...');
-          await refreshPlaylists(true); // Force hit Firestore
-          fetchChannels(true); // Retry once with fresh data
+          console.warn('Playlist URL fetch failed, forcing Supabase re-sync for auto-recovery...');
+          await refreshPlaylists(true); 
+          fetchChannels(true); 
           return;
         }
         throw fetchErr;
@@ -70,13 +67,17 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
       const text = await response.text();
       const playlist = manualParse(text);
 
-      // Fetch Visibility Settings (always fresh from DB)
-      const visibilityCollection = collection(db, 'channel_visibility');
-      const visibilitySnapshot = await getDocs(visibilityCollection);
+      // Fetch Visibility Settings from Supabase
+      const { data: visibilityData, error: visibilityError } = await supabase
+        .from('channel_visibility')
+        .select('channelId, visible');
+
+      if (visibilityError) throw visibilityError;
+
       const visibilityMap: VisibilityMap = {};
-      visibilitySnapshot.forEach(doc => {
-          if (doc.data().visible === false) { 
-              visibilityMap[doc.id] = false;
+      visibilityData.forEach(row => {
+          if (row.visible === false) { 
+              visibilityMap[row.channelId] = false;
           }
       });
 

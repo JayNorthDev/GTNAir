@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { db } from '@/firebase/config';
-import { collection, onSnapshot, doc, deleteDoc, DocumentData } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,69 +17,79 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 export function HomepageEditor() {
-    const [heroSlides, setHeroSlides] = useState<DocumentData[]>([]);
-    const [services, setServices] = useState<DocumentData[]>([]);
+    const [heroSlides, setHeroSlides] = useState<any[]>([]);
+    const [services, setServices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const [isHeroDialogOpen, setIsHeroDialogOpen] = useState(false);
     const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
-    const [editingHero, setEditingHero] = useState<DocumentData | null>(null);
-    const [editingService, setEditingService] = useState<DocumentData | null>(null);
+    const [editingHero, setEditingHero] = useState<any | null>(null);
+    const [editingService, setEditingService] = useState<any | null>(null);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const { data: heroData, error: heroError } = await supabase.from('hero_slides').select('*');
+            if (heroError) throw heroError;
+            setHeroSlides(heroData || []);
+
+            const { data: serviceData, error: serviceError } = await supabase.from('services').select('*');
+            if (serviceError) throw serviceError;
+            setServices(serviceData || []);
+
+            setError(null);
+        } catch (err: any) {
+            console.error(err);
+            setError("Failed to load content.");
+            const permissionError = new FirestorePermissionError({
+                path: 'hero_slides/services',
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        setLoading(true);
-        
-        const unsubscribeHero = onSnapshot(collection(db, "hero_slides"), (snapshot) => {
-            setHeroSlides(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-            setLoading(false);
-        }, (err) => {
-            console.error(err);
-            const permissionError = new FirestorePermissionError({
-                path: 'hero_slides',
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            setError("Failed to load hero slides.");
-        });
+        fetchData();
 
-        const unsubscribeServices = onSnapshot(collection(db, "services"), (snapshot) => {
-            setServices(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-            setLoading(false);
-        }, (err) => {
-            console.error(err);
-            const permissionError = new FirestorePermissionError({
-                path: 'services',
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            setError("Failed to load services.");
-        });
+        // Real-time subscriptions
+        const heroChannel = supabase.channel('hero_slides_changes')
+            .on('postgres_changes', { event: '*', table: 'hero_slides' }, () => fetchData())
+            .subscribe();
+
+        const serviceChannel = supabase.channel('services_changes')
+            .on('postgres_changes', { event: '*', table: 'services' }, () => fetchData())
+            .subscribe();
 
         return () => {
-            unsubscribeHero();
-            unsubscribeServices();
+            supabase.removeChannel(heroChannel);
+            supabase.removeChannel(serviceChannel);
         };
     }, []);
 
-    const handleDelete = async (collectionName: string, id: string) => {
-        const docRef = doc(db, collectionName, id);
-        deleteDoc(docRef)
-            .catch(async () => {
-                const permissionError = new FirestorePermissionError({
-                    path: docRef.path,
-                    operation: 'delete',
-                });
-                errorEmitter.emit('permission-error', permissionError);
+    const handleDelete = async (table: string, id: string) => {
+        try {
+            const { error } = await supabase.from(table).delete().eq('id', id);
+            if (error) throw error;
+        } catch (err: any) {
+            console.error('Delete error:', err);
+            const permissionError = new FirestorePermissionError({
+                path: `${table}/${id}`,
+                operation: 'delete',
             });
+            errorEmitter.emit('permission-error', permissionError);
+        }
     };
 
-    const handleOpenHeroDialog = (slide: DocumentData | null = null) => {
+    const handleOpenHeroDialog = (slide: any | null = null) => {
         setEditingHero(slide);
         setIsHeroDialogOpen(true);
     }
     
-    const handleOpenServiceDialog = (service: DocumentData | null = null) => {
+    const handleOpenServiceDialog = (service: any | null = null) => {
         setEditingService(service);
         setIsServiceDialogOpen(true);
     }
@@ -89,7 +98,7 @@ export function HomepageEditor() {
         return placeholderImagesList.find(img => img.id === imageId);
     }
 
-    if (loading) {
+    if (loading && heroSlides.length === 0 && services.length === 0) {
         return <div className="flex items-center justify-center p-8"><Loader className="animate-spin" /></div>;
     }
 
@@ -110,7 +119,6 @@ export function HomepageEditor() {
                 <TabsTrigger value="services">Services</TabsTrigger>
             </TabsList>
 
-            {/* Hero Slides Tab */}
             <TabsContent value="hero" className="mt-4">
                 <div className="flex justify-end mb-4">
                     <Dialog open={isHeroDialogOpen} onOpenChange={setIsHeroDialogOpen}>
@@ -174,7 +182,6 @@ export function HomepageEditor() {
                 </div>
             </TabsContent>
 
-            {/* Services Tab */}
             <TabsContent value="services" className="mt-4">
                  <div className="flex justify-end mb-4">
                     <Dialog open={isServiceDialogOpen} onOpenChange={setIsServiceDialogOpen}>

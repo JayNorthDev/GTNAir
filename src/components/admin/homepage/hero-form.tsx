@@ -1,10 +1,10 @@
+
 "use client";
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { db } from '@/firebase/config';
-import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -34,14 +34,23 @@ export function HeroForm({ onSuccess, initialData }: { onSuccess: () => void; in
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       if (initialData?.id) {
-        await setDoc(doc(db, 'hero_slides', initialData.id), values);
+        const { error } = await supabase
+          .from('hero_slides')
+          .update(values)
+          .eq('id', initialData.id);
+        
+        if (error) throw error;
         toast({ title: 'Success', description: 'Hero slide updated successfully.' });
       } else {
-        await addDoc(collection(db, 'hero_slides'), values);
+        const { error } = await supabase
+          .from('hero_slides')
+          .insert(values);
+        
+        if (error) throw error;
         toast({ title: 'Success', description: 'Hero slide added successfully.' });
       }
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to save hero slide.' });
     }

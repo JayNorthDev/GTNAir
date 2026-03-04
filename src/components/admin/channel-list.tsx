@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { db } from '@/firebase/config';
-import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { manualParse, Channel } from '@/lib/m3u-parser';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -54,21 +53,27 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
             let playlistUrl = forcedPlaylistUrl;
             
             if (!playlistUrl) {
-                const playlistDocRef = doc(db, 'settings', 'playlist');
-                const docSnap = await getDoc(playlistDocRef);
-                playlistUrl = 'https://iptv-org.github.io/iptv/index.m3u'; 
-                if (docSnap.exists() && docSnap.data().url) {
-                    playlistUrl = docSnap.data().url;
-                }
+                const { data: settingsData } = await supabase
+                    .from('settings')
+                    .select('items')
+                    .eq('id', 'playlists')
+                    .single();
+                
+                const playlists = (settingsData?.items || []) as any[];
+                playlistUrl = playlists.length > 0 ? playlists[0].url : 'https://iptv-org.github.io/iptv/index.m3u';
             }
 
             setLoading(true);
 
-            const visibilityCollection = collection(db, 'channel_visibility');
-            const visibilitySnapshot = await getDocs(visibilityCollection);
+            const { data: visibilityData, error: visibilityError } = await supabase
+                .from('channel_visibility')
+                .select('channelId, visible');
+            
+            if (visibilityError) throw visibilityError;
+
             const visibilityMap: VisibilityMap = {};
-            visibilitySnapshot.forEach(doc => {
-                visibilityMap[doc.id] = doc.data().visible;
+            visibilityData?.forEach(row => {
+                visibilityMap[row.channelId] = row.visible;
             });
             setVisibility(visibilityMap);
 
@@ -145,14 +150,14 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
         setVisibility(prev => ({ ...prev, [channelId]: isVisible }));
 
         try {
-            const visibilityDocRef = doc(db, 'channel_visibility', channelId);
-            setDoc(visibilityDocRef, { visible: isVisible, channelId: channelId }, { merge: true })
-                .catch((error) => {
-                    console.error('Failed to update visibility:', error);
-                    setVisibility(prev => ({ ...prev, [channelId]: !isVisible }));
-                });
+            const { error } = await supabase
+                .from('channel_visibility')
+                .upsert({ channelId, visible: isVisible }, { onConflict: 'channelId' });
+            
+            if (error) throw error;
         } catch (error) {
-            console.error('Failed to initiate visibility update:', error);
+            console.error('Failed to update visibility:', error);
+            setVisibility(prev => ({ ...prev, [channelId]: !isVisible }));
         }
     };
 
