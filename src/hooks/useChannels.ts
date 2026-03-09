@@ -21,6 +21,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
   const [error, setError] = useState<string | null>(null);
 
   const fetchChannels = useCallback(async (isRetry = false) => {
+    // If playlists are still loading and we don't have a custom URL, wait.
     if (playlistsLoading && !customPlaylistUrl) return;
 
     setError(null);
@@ -28,16 +29,22 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
     try {
       let playlistUrl = '';
 
+      // Priority 1: User-provided custom URL in settings
       if (customPlaylistUrl) {
           playlistUrl = customPlaylistUrl;
-      } else if (selectedPlaylistId) {
+      } 
+      // Priority 2: Specifically selected playlist from the categories/sidebar
+      else if (selectedPlaylistId) {
           const selected = playlists.find(p => p.id === selectedPlaylistId);
           playlistUrl = selected?.url || '';
-      } else if (playlists.length > 0) {
+      } 
+      // Priority 3: Default to the first playlist in the global list
+      else if (playlists.length > 0) {
           playlistUrl = playlists[0].url;
       }
 
-      // If no URL is available after checking all sources, reset to empty state
+      // STRICT REQUIREMENT: If no URL is available (database is empty and no custom URL), 
+      // do not use a fallback. Just show 0 channels.
       if (!playlistUrl) {
         setAllChannels([]);
         setFilteredChannels([]);
@@ -46,6 +53,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
         return;
       }
 
+      // Basic validation: ensure it looks like an M3U/M3U8 link (allowing query params)
       const urlRegex = /^https:\/\/.*\.m3u8?(\?.*)?$/i;
       if (!urlRegex.test(playlistUrl)) {
         setAllChannels([]);
@@ -62,6 +70,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
         response = await fetch(playlistUrl);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
       } catch (fetchErr) {
+        // If fetch fails, try to refresh playlist definitions once as a fail-safe
         if (!isRetry && !customPlaylistUrl) {
           await refreshPlaylists(true); 
           fetchChannels(true); 
@@ -73,6 +82,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
       const text = await response.text();
       const playlist = manualParse(text);
 
+      // Fetch visibility overrides from Supabase
       const { data: visibilityData, error: visibilityError } = await supabase
         .from('channel_visibility')
         .select('id, visible');
@@ -86,6 +96,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
           }
       });
 
+      // Filter out hidden channels and entries without URLs
       const validAndVisibleChannels = playlist.items.filter(item => {
           const isVisible = visibilityMap[item.tvg.id] !== false; 
           return item.url && isVisible;
@@ -99,6 +110,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
 
     } catch (e: any) {
       console.error('Channel fetch error:', e);
+      // Only set error if we have no channels at all to show
       if (allChannels.length === 0) {
           setError(e.message || 'Failed to load channels.');
       }

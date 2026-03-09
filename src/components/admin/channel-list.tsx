@@ -51,6 +51,7 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
         try {
             let playlistUrl = forcedPlaylistUrl;
             
+            // If no URL is provided, try to fetch the first one from global settings
             if (!playlistUrl) {
                 const { data: settingsData } = await supabase
                     .from('settings')
@@ -59,11 +60,17 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
                     .single();
                 
                 const playlists = (settingsData?.data?.items || []) as any[];
-                playlistUrl = playlists.length > 0 ? playlists[0].url : 'https://iptv-org.github.io/iptv/index.m3u';
+                playlistUrl = playlists.length > 0 ? playlists[0].url : '';
+            }
+
+            if (!playlistUrl) {
+                setLoading(false);
+                return;
             }
 
             setLoading(true);
 
+            // Fetch current visibility status from Supabase
             const { data: visibilityData, error: visibilityError } = await supabase
                 .from('channel_visibility')
                 .select('id, visible');
@@ -76,10 +83,13 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
             });
             setVisibility(visibilityMap);
 
-            const response = await fetch(playlistUrl!);
+            // Fetch and parse M3U content
+            const response = await fetch(playlistUrl);
             if (!response.ok) throw new Error(`Failed to fetch playlist: ${response.statusText}`);
             const m3uText = await response.text();
             const parsedPlaylist = manualParse(m3uText);
+            
+            // Filter out empty entries
             const validChannels = parsedPlaylist.items.filter(c => c.url && c.tvg?.id);
             
             setChannels(validChannels);
@@ -107,6 +117,7 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
             
             const matchesSearch = name.includes(search) || id.includes(search);
             
+            // Basic quality filters
             const isGeoBlocked = channel.name.includes('[Geo-blocked]');
             const isNot247 = channel.name.includes('[Not 24/7]');
             
@@ -117,10 +128,12 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
         });
     }, [channels, searchTerm, activeFilters]);
 
+    // Reset pagination when search or filters change
     useEffect(() => {
         setVisibleCount(BATCH_SIZE);
     }, [searchTerm, activeFilters]);
 
+    // Virtualized loading logic
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
@@ -146,6 +159,7 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
     const handleVisibilityChange = async (channelId: string, isVisible: boolean) => {
         if (!channelId) return;
         
+        // Optimistic UI update
         setVisibility(prev => ({ ...prev, [channelId]: isVisible }));
 
         try {
@@ -156,6 +170,7 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
             if (error) throw error;
         } catch (error: any) {
             console.error('Visibility update error:', error);
+            // Rollback on failure
             setVisibility(prev => ({ ...prev, [channelId]: !isVisible }));
         }
     };

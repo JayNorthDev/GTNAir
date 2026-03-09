@@ -91,6 +91,7 @@ export function usePlaylists() {
     setPlaylists(items);
     setIsLoading(false);
     
+    // Notify all instances of the hook to update
     subscribers.forEach(sub => sub(items));
   }, []);
 
@@ -112,12 +113,14 @@ export function usePlaylists() {
 
 export async function updateAllPlaylists(items: Playlist[]) {
   try {
+    // Single Document Strategy: overwrite the 'items' array in the 'playlists' settings record
     const { error } = await supabase
       .from('settings')
       .upsert({ id: 'playlists', data: { items } }, { onConflict: 'id' });
 
     if (error) throw error;
     
+    // Update local cache and notify subscribers
     setLocalCache(items);
     globalPlaylistsCache = items;
     subscribers.forEach(sub => sub(items));
