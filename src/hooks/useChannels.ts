@@ -26,20 +26,28 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
     setError(null);
     
     try {
-      const defaultUrl = 'https://iptv-org.github.io/iptv/index.m3u';
       let playlistUrl = '';
 
       if (customPlaylistUrl) {
           playlistUrl = customPlaylistUrl;
       } else if (selectedPlaylistId) {
           const selected = playlists.find(p => p.id === selectedPlaylistId);
-          playlistUrl = selected?.url || defaultUrl;
-      } else {
-          playlistUrl = playlists.length > 0 ? playlists[0].url : defaultUrl;
+          playlistUrl = selected?.url || '';
+      } else if (playlists.length > 0) {
+          playlistUrl = playlists[0].url;
+      }
+
+      // If no URL is available after checking all sources, reset to empty state
+      if (!playlistUrl) {
+        setAllChannels([]);
+        setFilteredChannels([]);
+        setCategories(['All']);
+        setLoading(false);
+        return;
       }
 
       const urlRegex = /^https:\/\/.*\.m3u8?(\?.*)?$/i;
-      if (!playlistUrl || !urlRegex.test(playlistUrl)) {
+      if (!urlRegex.test(playlistUrl)) {
         setAllChannels([]);
         setFilteredChannels([]);
         setCategories(['All']);
@@ -90,7 +98,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
       setCategories(uniqueCategories.sort());
 
     } catch (e: any) {
-      console.error('Supabase fetch error:', e);
+      console.error('Channel fetch error:', e);
       if (allChannels.length === 0) {
           setError(e.message || 'Failed to load channels.');
       }
