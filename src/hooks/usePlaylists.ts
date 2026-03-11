@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -53,7 +52,8 @@ async function fetchPlaylistsFromSupabase(): Promise<Playlist[]> {
     if (error) throw error;
     
     const items = (data?.data?.items || []) as Playlist[];
-    const sorted = [...items].sort((a, b) => a.order - b.order);
+    // Ensure items are always sorted by order for consistency
+    const sorted = [...items].sort((a, b) => (a.order || 0) - (b.order || 0));
     
     setLocalCache(sorted);
     globalPlaylistsCache = sorted;
@@ -87,12 +87,13 @@ export function usePlaylists() {
       items = await fetchPlaylistsFromSupabase();
     }
 
-    globalPlaylistsCache = items;
-    setPlaylists(items);
+    const sortedItems = [...items].sort((a, b) => (a.order || 0) - (b.order || 0));
+    globalPlaylistsCache = sortedItems;
+    setPlaylists(sortedItems);
     setIsLoading(false);
     
     // Notify all instances of the hook to update
-    subscribers.forEach(sub => sub(items));
+    subscribers.forEach(sub => sub(sortedItems));
   }, []);
 
   useEffect(() => {
@@ -113,17 +114,20 @@ export function usePlaylists() {
 
 export async function updateAllPlaylists(items: Playlist[]) {
   try {
+    // Ensure we sort before saving to maintain predictable array structure
+    const sortedItems = [...items].sort((a, b) => (a.order || 0) - (b.order || 0));
+
     // Single Document Strategy: overwrite the 'items' array in the 'playlists' settings record
     const { error } = await supabase
       .from('settings')
-      .upsert({ id: 'playlists', data: { items } }, { onConflict: 'id' });
+      .upsert({ id: 'playlists', data: { items: sortedItems } }, { onConflict: 'id' });
 
     if (error) throw error;
     
-    // Update local cache and notify subscribers
-    setLocalCache(items);
-    globalPlaylistsCache = items;
-    subscribers.forEach(sub => sub(items));
+    // Update local cache and notify subscribers immediately
+    setLocalCache(sortedItems);
+    globalPlaylistsCache = sortedItems;
+    subscribers.forEach(sub => sub(sortedItems));
     
   } catch (error: any) {
     console.error('Supabase update error:', error);

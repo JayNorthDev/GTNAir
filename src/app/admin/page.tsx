@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -31,8 +30,14 @@ export default function AdminPlaylistsPage() {
   const [formData, setFormData] = useState({ id: '', name: '', url: '', category: '' as any });
   const [errors, setErrors] = useState<FormErrors>({});
 
-  const mainPlaylists = useMemo(() => playlists.filter(p => p.category === 'Main Playlists'), [playlists]);
-  const subPlaylists = useMemo(() => playlists.filter(p => p.category === 'Sub Playlists'), [playlists]);
+  const mainPlaylists = useMemo(() => 
+    playlists.filter(p => p.category === 'Main Playlists').sort((a, b) => a.order - b.order), 
+    [playlists]
+  );
+  const subPlaylists = useMemo(() => 
+    playlists.filter(p => p.category === 'Sub Playlists').sort((a, b) => a.order - b.order), 
+    [playlists]
+  );
 
   const handleOpenDialog = (playlist?: Playlist) => {
     setErrors({});
@@ -59,7 +64,7 @@ export default function AdminPlaylistsPage() {
     if (!name) newErrors.name = 'Playlist Name is required.';
     if (!category) newErrors.category = 'Please select a category.';
     
-    const urlRegex = /^https:\/\/.*\.m3u8?$/;
+    const urlRegex = /^https:\/\/.*\.m3u8?(\?.*)?$/i;
     if (!url) {
       newErrors.url = 'Playlist URL is required.';
     } else if (!urlRegex.test(url)) {
@@ -142,23 +147,26 @@ export default function AdminPlaylistsPage() {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= list.length) return;
 
-    const items = [...playlists];
-    const item1 = list[index];
-    const item2 = list[newIndex];
+    // 1. Create a copy of the specific category list and reorder
+    const categoryList = [...list];
+    const [movedItem] = categoryList.splice(index, 1);
+    categoryList.splice(newIndex, 0, movedItem);
 
-    const idx1 = items.findIndex(p => p.id === item1.id);
-    const idx2 = items.findIndex(p => p.id === item2.id);
+    // 2. Update order values for the entire category
+    const reorderedCategory = categoryList.map((item, idx) => ({
+      ...item,
+      order: idx
+    }));
 
-    // Swap orders
-    const tempOrder = items[idx1].order;
-    items[idx1].order = items[idx2].order;
-    items[idx2].order = tempOrder;
+    // 3. Merge with the rest of the global playlists
+    const otherPlaylists = playlists.filter(p => p.category !== list[0].category);
+    const finalItems = [...otherPlaylists, ...reorderedCategory];
 
     try {
-      await updateAllPlaylists(items);
-      toast({ title: 'Reordered', description: `Moved ${item1.name} ${direction}.` });
+      await updateAllPlaylists(finalItems);
+      toast({ title: 'Reordered', description: `Moved ${movedItem.name} ${direction}.` });
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to reorder.' });
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to update reordering.' });
     }
   };
 
