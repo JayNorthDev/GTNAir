@@ -22,6 +22,15 @@ const navItems = [
 ];
 
 export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: NavRailProps) {
+  const handleNavClick = (viewId: string) => {
+    setView(viewId as View);
+    setIsSettingsOpen(false);
+  };
+
+  const handleSettingsToggle = () => {
+    setIsSettingsOpen(!isSettingsOpen);
+  };
+
   return (
     <>
       {/* Desktop Nav Rail */}
@@ -36,7 +45,7 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
               return (
                 <button
                   key={item.id}
-                  onClick={() => setView(item.id as View)}
+                  onClick={() => handleNavClick(item.id)}
                   title={item.label}
                   className={cn(
                     "relative flex flex-col items-center justify-center w-16 h-16 rounded-full transition-all duration-300 group",
@@ -61,7 +70,7 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
         </div>
         <div>
           <button
-            onClick={() => setIsSettingsOpen(true)}
+            onClick={handleSettingsToggle}
             title="Settings"
             className={cn(
               "relative flex items-center justify-center w-16 h-16 rounded-full transition-all duration-300 group",
@@ -87,7 +96,7 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
           return (
             <button
               key={item.id}
-              onClick={() => setView(item.id as View)}
+              onClick={() => handleNavClick(item.id)}
               className="flex flex-col items-center justify-center h-full w-full rounded-full"
             >
                <div className={cn("flex items-center justify-center w-10 h-10 rounded-full transition-colors", isActive ? 'bg-primary/20' : '')}>
@@ -100,7 +109,7 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
           );
         })}
         <button
-          onClick={() => setIsSettingsOpen(true)}
+          onClick={handleSettingsToggle}
           className="flex flex-col items-center justify-center h-full w-full rounded-full"
         >
           <div className={cn("flex items-center justify-center w-10 h-10 rounded-full transition-colors", isSettingsOpen ? 'bg-primary/20' : '')}>
