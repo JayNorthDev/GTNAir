@@ -6,8 +6,6 @@ import { HomeGrid } from './home-grid';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import Image from 'next/image';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Autoplay from "embla-carousel-autoplay"
 import { supabase } from '@/lib/supabase';
 import { Skeleton } from '../ui/skeleton';
@@ -93,30 +91,37 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
         >
           <CarouselContent>
             {heroSlides.map((slide, index) => {
-              const image = PlaceHolderImages.find(p => p.id === slide.imageId);
               return (
                 <CarouselItem key={slide.id}>
                   <div className="w-full h-[60vh] min-h-[450px] max-h-[550px] relative text-white flex items-center">
-                    {image && (
-                      <Image
-                        src={image.imageUrl}
-                        alt={slide.title}
-                        fill
-                        priority={index === 0}
-                        className="object-cover"
-                        data-ai-hint={image.imageHint}
-                        loading={index === 0 ? "eager" : "lazy"}
-                      />
+                    {slide.mediaUrl && (
+                      slide.mediaType === 'video' ? (
+                        <video 
+                          src={slide.mediaUrl} 
+                          className="absolute inset-0 w-full h-full object-cover" 
+                          autoPlay 
+                          muted 
+                          loop 
+                          playsInline
+                        />
+                      ) : (
+                        <img
+                          src={slide.mediaUrl}
+                          alt={slide.title}
+                          className="absolute inset-0 w-full h-full object-cover"
+                          loading={index === 0 ? "eager" : "lazy"}
+                        />
+                      )
                     )}
                     <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
                     <div className="relative z-10 p-4 md:p-8 max-w-2xl">
-                      <h1 className="font-headline text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-shadow-lg">
+                      <h1 className="font-headline text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
                           {slide.title}
                       </h1>
-                      <p className="mt-4 text-lg md:text-xl text-foreground/80 max-w-prose text-shadow">
+                      <p className="mt-4 text-lg md:text-xl text-foreground/80 max-w-prose">
                           {slide.subtitle}
                       </p>
-                      <Button size="lg" className="mt-8 font-bold shadow-lg">
+                      <Button size="lg" className="mt-8 font-bold shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground">
                           {slide.cta}
                       </Button>
                     </div>
@@ -138,32 +143,38 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
           </div>
         ) : services.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {services.map(service => {
-              const image = PlaceHolderImages.find(p => p.id === service.imageId);
-              return (
-                <Card key={service.id} className="group overflow-hidden bg-card/80 hover:bg-card transition-all cursor-pointer border border-transparent hover:border-primary/20 hover:shadow-xl hover:-translate-y-1">
-                  <CardContent className="p-0">
-                    <div className="relative aspect-video">
-                      {image && (
-                        <Image
-                          src={image.imageUrl}
+            {services.map(service => (
+              <Card key={service.id} className="group overflow-hidden bg-card/80 hover:bg-card transition-all cursor-pointer border border-transparent hover:border-primary/20 hover:shadow-xl hover:-translate-y-1">
+                <CardContent className="p-0">
+                  <div className="relative aspect-video bg-black/20">
+                    {service.mediaUrl && (
+                      service.mediaType === 'video' ? (
+                        <video 
+                          src={service.mediaUrl} 
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                          muted 
+                          loop 
+                          onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
+                          onMouseLeave={(e) => (e.target as HTMLVideoElement).pause()}
+                        />
+                      ) : (
+                        <img
+                          src={service.mediaUrl}
                           alt={service.title}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-105"
-                          data-ai-hint={image.imageHint}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                           loading="lazy"
                         />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-headline text-xl font-bold">{service.title}</h3>
-                      <p className="mt-1 text-muted-foreground">{service.description}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                      )
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-headline text-xl font-bold">{service.title}</h3>
+                    <p className="mt-1 text-muted-foreground">{service.description}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
       </div>

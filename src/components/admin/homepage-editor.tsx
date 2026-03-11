@@ -5,14 +5,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit, Trash2, Loader, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { PlusCircle, Edit, Trash2, Loader, AlertCircle, Film, Image as ImageIcon } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { HeroForm } from './homepage/hero-form';
 import { ServiceForm } from './homepage/service-form';
-import Image from 'next/image';
-import { placeholderImagesList } from '@/lib/placeholder-images';
 
 export function HomepageEditor() {
     const [heroSlides, setHeroSlides] = useState<any[]>([]);
@@ -81,24 +79,23 @@ export function HomepageEditor() {
         setIsServiceDialogOpen(true);
     }
 
-    const getImage = (imageId: string) => {
-        return placeholderImagesList.find(img => img.id === imageId);
-    }
-
     if (loading && heroSlides.length === 0 && services.length === 0) {
-        return <div className="flex items-center justify-center p-8"><Loader className="animate-spin" /></div>;
+        return <div className="flex items-center justify-center p-8"><Loader className="animate-spin text-purple-500" /></div>;
     }
 
-    if (error) {
-        return (
-            <div className="flex flex-col items-center justify-center p-8 text-red-400 bg-red-900/20 rounded-lg">
-                <AlertCircle className="w-10 h-10 mb-4" />
-                <h3 className="text-xl font-semibold">Error Loading Content</h3>
-                <p className="mt-2 text-center">{error}</p>
-            </div>
-        );
-    }
-    
+    const MediaPreview = ({ url, type }: { url: string; type: 'image' | 'video' }) => (
+      <div className="w-20 h-[45px] bg-black/20 rounded-md overflow-hidden shrink-0 border border-[#333] flex items-center justify-center relative group">
+        {type === 'image' ? (
+          <img src={url} alt="" className="w-full h-full object-cover" />
+        ) : (
+          <>
+            <video src={url} className="w-full h-full object-cover" />
+            <Film className="w-4 h-4 text-white absolute" />
+          </>
+        )}
+      </div>
+    );
+
     return (
         <Tabs defaultValue="hero">
             <TabsList className="grid w-full grid-cols-2">
@@ -126,15 +123,10 @@ export function HomepageEditor() {
                     </Dialog>
                 </div>
                 <div className="space-y-4">
-                    {heroSlides.map((slide) => {
-                         const image = getImage(slide.imageId);
-                        return (
+                    {heroSlides.map((slide) => (
                         <Card key={slide.id} className="bg-[#0f0f0f] border-[#333] flex items-center justify-between p-4">
                             <div className="flex items-center gap-4 overflow-hidden">
-                                {image ? 
-                                    <Image src={image.imageUrl} alt={slide.title} width={80} height={45} className="rounded-md object-cover aspect-video" />
-                                    : <div className="w-20 h-[45px] flex items-center justify-center bg-card rounded-md shrink-0"><ImageIcon className="w-5 h-5 text-muted-foreground" /></div>
-                                }
+                                <MediaPreview url={slide.mediaUrl} type={slide.mediaType || 'image'} />
                                 <div className='overflow-hidden'>
                                     <p className="font-medium text-white truncate">{slide.title}</p>
                                     <p className="text-sm text-gray-400 truncate">{slide.subtitle}</p>
@@ -165,7 +157,7 @@ export function HomepageEditor() {
                                 </AlertDialog>
                             </div>
                         </Card>
-                    )})}
+                    ))}
                 </div>
             </TabsContent>
 
@@ -189,15 +181,10 @@ export function HomepageEditor() {
                     </Dialog>
                 </div>
                 <div className="space-y-4">
-                    {services.map((service) => {
-                         const image = getImage(service.imageId);
-                        return (
+                    {services.map((service) => (
                         <Card key={service.id} className="bg-[#0f0f0f] border-[#333] flex items-center justify-between p-4">
                              <div className="flex items-center gap-4 overflow-hidden">
-                                {image ? 
-                                    <Image src={image.imageUrl} alt={service.title} width={80} height={45} className="rounded-md object-cover aspect-video" />
-                                    : <div className="w-20 h-[45px] flex items-center justify-center bg-card rounded-md shrink-0"><ImageIcon className="w-5 h-5 text-muted-foreground" /></div>
-                                }
+                                <MediaPreview url={service.mediaUrl} type={service.mediaType || 'image'} />
                                 <div className='overflow-hidden'>
                                     <p className="font-medium text-white truncate">{service.title}</p>
                                     <p className="text-sm text-gray-400 truncate">{service.description}</p>
@@ -228,7 +215,7 @@ export function HomepageEditor() {
                                 </AlertDialog>
                             </div>
                         </Card>
-                    )})}
+                    ))}
                 </div>
             </TabsContent>
         </Tabs>
