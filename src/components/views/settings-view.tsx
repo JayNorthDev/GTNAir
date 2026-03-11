@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -167,7 +166,7 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
                       </Label>
                       <Select
                         value={settings.defaultView}
-                        onValueChange={(value) => updateSettings({ defaultView: value as 'home' | 'player' | 'favorites' })}
+                        onValueChange={(value) => updateSettings({ defaultView: value as 'home' | 'player' | 'favorites' | 'categories' })}
                       >
                         <SelectTrigger className="w-[180px]">
                           <SelectValue placeholder="Select a view" />
@@ -224,9 +223,6 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
                             </AlertDialogContent>
                         </AlertDialog>
                     </div>
-                     <p className="text-xs text-muted-foreground pt-4">
-                      For advanced playlist management for all users, developers can use the <Link href="/admin" className="underline hover:text-primary">Admin Dashboard</Link>.
-                    </p>
                   </CardContent>
                 </Card>
             </TabsContent>
