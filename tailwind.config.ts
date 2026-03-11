@@ -11,8 +11,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Outfit', 'sans-serif'],
+        body: ['"Stack Sans Notch"', 'sans-serif'],
+        headline: ['"Stack Sans Notch"', 'sans-serif'],
         code: ['monospace'],
       },
       colors: {
