@@ -8,14 +8,15 @@ import * as z from 'zod';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, X, Film, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Upload, X } from 'lucide-react';
 
 const formSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
   subtitle: z.string().min(5, 'Subtitle must be at least 5 characters'),
-  cta: z.string().min(3, 'CTA text must be at least 3 characters'),
+  cta: z.string().min(2, 'CTA text must be at least 2 characters'),
+  contactNumber: z.string().min(5, 'Please enter a valid phone number (e.g. 1234567890)'),
   mediaUrl: z.string().min(1, 'Please upload a media file'),
   mediaType: z.enum(['image', 'video']),
 });
@@ -31,7 +32,8 @@ export function HeroForm({ onSuccess, initialData }: { onSuccess: () => void; in
     defaultValues: initialData || {
       title: '',
       subtitle: '',
-      cta: '',
+      cta: 'Contact Us',
+      contactNumber: '',
       mediaUrl: '',
       mediaType: 'image',
     },
@@ -55,7 +57,7 @@ export function HeroForm({ onSuccess, initialData }: { onSuccess: () => void; in
       const fileName = `${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `hero/${fileName}`;
 
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('media')
         .upload(filePath, file);
 
@@ -134,19 +136,35 @@ export function HeroForm({ onSuccess, initialData }: { onSuccess: () => void; in
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="cta"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>CTA Button Text</FormLabel>
-              <FormControl>
-                <Input placeholder="Get a Quote" {...field} className="bg-transparent" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="cta"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>CTA Button Text</FormLabel>
+                <FormControl>
+                  <Input placeholder="Get a Quote" {...field} className="bg-transparent" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="contactNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="1234567890" {...field} className="bg-transparent" />
+                </FormControl>
+                <FormDescription className="text-[10px]">For WhatsApp/Viber</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         
         <div className="space-y-2">
           <FormLabel>Media (Image or Video)</FormLabel>
