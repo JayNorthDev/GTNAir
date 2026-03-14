@@ -71,12 +71,20 @@ export default function Home() {
     setSelectedChannel(null); // Reset player state
   };
 
+  const handleChannelSelect = (channel: Channel) => {
+    setSelectedChannel(channel);
+    setView("player");
+    if (window.innerWidth < 768) { // md breakpoint
+      setIsSidebarOpen(false);
+    }
+  };
+
   const handleNextChannel = () => {
     if (!selectedChannel) return;
     const currentIndex = displayChannels.findIndex(c => c.url === selectedChannel.url);
     if (currentIndex !== -1) {
       const nextIndex = (currentIndex + 1) % displayChannels.length;
-      handleChannelClick(displayChannels[nextIndex]);
+      handleChannelSelect(displayChannels[nextIndex]);
     }
   };
   
@@ -98,7 +106,7 @@ export default function Home() {
         return (
           <HomeView 
             channels={displayChannels} 
-            onChannelSelect={handleChannelClick} 
+            onChannelSelect={handleChannelSelect} 
             loadMore={loadMore} 
             hasMore={hasMore} 
           />
@@ -125,10 +133,10 @@ export default function Home() {
             <header className="space-y-2 border-b border-white/5 pb-8">
               <h1 className="text-4xl md:text-5xl font-bold tracking-tighter text-white">Your Favorites</h1>
               <p className="text-muted-foreground text-lg max-w-2xl">
-                Quickly access your most-watched channels. Your personal collection for instant entertainment.
+                Quickly access your most-watched channels. Your personal collection for instant play.
               </p>
             </header>
-            <HomeGrid items={favoriteChannels} onChannelSelect={handleChannelClick} />
+            <HomeGrid items={favoriteChannels} onChannelSelect={handleChannelSelect} />
           </div>
         );
       case "player":
@@ -139,7 +147,7 @@ export default function Home() {
               setIsSidebarOpen={setIsSidebarOpen}
               displayChannels={displayChannels}
               selectedChannel={selectedChannel}
-              handleChannelClick={handleChannelClick}
+              handleChannelClick={handleChannelSelect}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
               selectedCategory={selectedCategory}
@@ -168,7 +176,7 @@ export default function Home() {
         return (
           <HomeView 
             channels={displayChannels} 
-            onChannelSelect={handleChannelClick} 
+            onChannelSelect={handleChannelSelect} 
             loadMore={loadMore} 
             hasMore={hasMore} 
           />
