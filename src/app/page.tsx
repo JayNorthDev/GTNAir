@@ -113,7 +113,7 @@ export default function Home() {
       case "favorites":
         if (favoriteChannels.length === 0) {
           return (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400">
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 animate-in fade-in duration-700">
               <Heart className="w-24 h-24 mb-4 text-slate-600" />
               <h2 className="text-2xl font-semibold">No Favorites Yet</h2>
               <p>Click the heart on a channel in the player to add it here.</p>
@@ -121,8 +121,13 @@ export default function Home() {
           );
         }
         return (
-          <div className="p-4 md:p-8">
-            <h2 className="font-headline text-2xl md:text-3xl font-bold tracking-tight mb-4">Your Favorite Channels</h2>
+          <div className="p-4 md:p-8 space-y-12 animate-in fade-in duration-700">
+            <header className="space-y-2 border-b border-white/5 pb-8">
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tighter text-white">Your Favorites</h1>
+              <p className="text-muted-foreground text-lg max-w-2xl">
+                Quickly access your most-watched channels. Your personal collection for instant entertainment.
+              </p>
+            </header>
             <HomeGrid items={favoriteChannels} onChannelSelect={handleChannelClick} />
           </div>
         );
