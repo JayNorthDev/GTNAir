@@ -133,7 +133,7 @@ export default function Home() {
             <header className="space-y-2 border-b border-white/5 pb-8">
               <h1 className="text-4xl md:text-5xl font-bold tracking-tighter text-white">Your Favorites</h1>
               <p className="text-muted-foreground text-lg max-w-2xl">
-                Quickly access your most-watched channels. Your personal collection for instant play.
+                Quickly access your most-watched channels.
               </p>
             </header>
             <HomeGrid items={favoriteChannels} onChannelSelect={handleChannelSelect} />
