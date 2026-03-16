@@ -146,9 +146,12 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
     >
       <div 
         className="absolute inset-0 bg-slate-950/50 backdrop-blur-xl"
-        onClick={onClose} 
+        // Backdrop click no longer closes the modal per strict instructions
       />
-      <div className="relative h-full w-full max-w-4xl mx-auto flex flex-col">
+      <div 
+        className="relative h-full w-full max-w-4xl mx-auto flex flex-col"
+        onClick={(e) => e.stopPropagation()} // Prevent bubbles from inside the content area
+      >
         <div className="absolute top-4 right-4 md:top-6 md:right-6 z-10">
           <button onClick={onClose} className="p-2 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 transition-colors">
             <X className="w-6 h-6" />
