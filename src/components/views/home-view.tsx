@@ -73,7 +73,8 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
     return items;
   }, [channels]);
 
-  const autoplay = useMemo(() => Autoplay({ delay: 5000, stopOnInteraction: true }), []);
+  // Updated stopOnInteraction to false to ensure autoplay resumes after interaction
+  const autoplay = useMemo(() => Autoplay({ delay: 5000, stopOnInteraction: false }), []);
 
   const handleContactAction = (platform: 'whatsapp' | 'viber') => {
     if (!activeContactNumber) return;
