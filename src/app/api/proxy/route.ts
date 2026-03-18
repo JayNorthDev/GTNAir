@@ -9,13 +9,19 @@ export async function GET(req: NextRequest) {
   if (ping) return new NextResponse("PONG", { status: 200 });
   if (!url) return new NextResponse("Missing URL parameter", { status: 400 });
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 Seconds Timeout
+
   try {
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18',
         'Accept': '*/*',
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId); // Clear timeout if successful
 
     if (!response.ok) {
       return new NextResponse(`Upstream Error: ${response.status}`, { status: response.status });
@@ -36,7 +42,13 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error("Proxy Error:", error);
+    clearTimeout(timeoutId);
+    console.error("Proxy Error:", error.name, error.message);
+    
+    if (error.name === 'AbortError') {
+      return new NextResponse("Gateway Timeout: Upstream server is dead.", { status: 504 });
+    }
+    
     return new NextResponse(`Proxy Failed: ${error.message}`, { status: 500 });
   }
 }
