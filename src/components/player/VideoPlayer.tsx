@@ -97,10 +97,22 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         failCountRef.current = 0; // Reset fails on success
-        video.play().catch(() => {
-          video.muted = true;
-          video.play().catch(console.error);
-        });
+        const playPromise = video.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.catch((error) => {
+            if (error.name === 'AbortError') {
+              // Safely ignore: The user switched channels or component re-rendered before playback started
+              // console.log('Playback interrupted by a new request. Safely ignored.');
+            } else {
+              // Autoplay was likely blocked, try playing muted
+              video.muted = true;
+              video.play().catch((e) => {
+                 if (e.name !== 'AbortError') console.error("Muted playback failed:", e);
+              });
+            }
+          });
+        }
       });
 
       hls.on(Hls.Events.ERROR, (event, data) => {
