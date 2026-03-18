@@ -70,6 +70,7 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
             stats.tload = performance.now();
             stats.loaded = xhr.response?.byteLength || xhr.response?.length || 0;
             stats.total = stats.loaded;
+            // CRITICAL: Ensure originalUrl is passed back so relative TS chunks resolve correctly
             callbacks.onSuccess({ url: originalUrl, data: xhr.response }, stats, context, xhr);
           } else {
             callbacks.onError({ code: xhr.status, text: xhr.statusText }, context, xhr);
