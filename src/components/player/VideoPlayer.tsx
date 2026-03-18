@@ -1,3 +1,4 @@
+
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
@@ -38,23 +39,18 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
     class SmartLoader extends Hls.DefaultConfig.loader {
       load(context: any, config: any, callbacks: any) {
         const originalUrl = context.url;
-        const proxyUrl = originalUrl.includes('/api/proxy')
-          ? originalUrl
-          : `/api/proxy?url=${encodeURIComponent(originalUrl)}`;
+        
+        // CRITICAL FIX: Only proxy the manifest to bypass CORS. Let video chunks load directly from the browser's residential IP!
+        const isManifest = originalUrl.toLowerCase().includes('.m3u') || context.type === 'manifest';
+        const proxyUrl = isManifest
+          ? `/api/proxy?url=${encodeURIComponent(originalUrl)}`
+          : originalUrl;
 
         if (!context.stats) {
           context.stats = {
-            trequest: performance.now(),
-            retry: 0,
-            tfirst: 0,
-            tload: 0,
-            parsed: 0,
-            loader: { start: 0, end: 0 },
-            parsing: { start: 0, end: 0 },
-            buffering: { start: 0, end: 0 },
-            bwEstimate: 0,
-            total: 0,
-            loaded: 0
+            trequest: performance.now(), retry: 0, tfirst: 0, tload: 0, parsed: 0,
+            loader: { start: 0, end: 0 }, parsing: { start: 0, end: 0 }, buffering: { start: 0, end: 0 },
+            bwEstimate: 0, total: 0, loaded: 0
           };
         }
         const stats = context.stats;
@@ -70,7 +66,7 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
             stats.tload = performance.now();
             stats.loaded = xhr.response?.byteLength || xhr.response?.length || 0;
             stats.total = stats.loaded;
-            // CRITICAL: Ensure originalUrl is passed back so relative TS chunks resolve correctly
+            // CRITICAL: originalUrl MUST be passed back so relative TS paths resolve to the upstream server, not the local proxy.
             callbacks.onSuccess({ url: originalUrl, data: xhr.response }, stats, context, xhr);
           } else {
             callbacks.onError({ code: xhr.status, text: xhr.statusText }, context, xhr);
@@ -96,11 +92,15 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        failCountRef.current = 0; 
+        failCountRef.current = 0; // Reset fails on success
         const playPromise = video.play();
+        
         if (playPromise !== undefined) {
           playPromise.catch((error) => {
-            if (error.name !== 'AbortError') {
+            if (error.name === 'AbortError') {
+              // Safely ignore: The user switched channels or component re-rendered before playback started
+            } else {
+              // Autoplay was likely blocked, try playing muted
               video.muted = true;
               video.play().catch((e) => {
                  if (e.name !== 'AbortError') console.error("Muted playback failed:", e);
