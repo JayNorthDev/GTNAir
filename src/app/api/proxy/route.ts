@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
-// SSL Bypass for unstable/free IPTV servers
+// Globally bypass SSL certificate validation for this route to support IPTV servers with expired certs
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 export async function GET(req: NextRequest) {
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   if (!url) return new NextResponse("Missing URL parameter", { status: 400 });
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
 
   try {
     const response = await fetch(url, {
