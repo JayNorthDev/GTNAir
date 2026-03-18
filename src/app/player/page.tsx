@@ -1,10 +1,16 @@
+
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
 export default function PlayerPage() {
-  return (
-    <div className="flex flex-col items-center justify-center h-full">
-      <h1 className="text-4xl font-bold">Player Page</h1>
-      <p className="text-lg text-muted-foreground mt-2">
-        Welcome to the player page!
-      </p>
-    </div>
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    // Redirect to home as this route is deprecated
+    router.replace('/');
+  }, [router]);
+
+  return null;
 }
