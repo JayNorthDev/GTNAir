@@ -70,7 +70,6 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
             stats.tload = performance.now();
             stats.loaded = xhr.response?.byteLength || xhr.response?.length || 0;
             stats.total = stats.loaded;
-            // CRITICAL: Ensure originalUrl is passed back so relative TS chunks resolve correctly
             callbacks.onSuccess({ url: originalUrl, data: xhr.response }, stats, context, xhr);
           } else {
             callbacks.onError({ code: xhr.status, text: xhr.statusText }, context, xhr);
@@ -96,16 +95,11 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        failCountRef.current = 0; // Reset fails on success
+        failCountRef.current = 0; 
         const playPromise = video.play();
-        
         if (playPromise !== undefined) {
           playPromise.catch((error) => {
-            if (error.name === 'AbortError') {
-              // Safely ignore: The user switched channels or component re-rendered before playback started
-              // console.log('Playback interrupted by a new request. Safely ignored.');
-            } else {
-              // Autoplay was likely blocked, try playing muted
+            if (error.name !== 'AbortError') {
               video.muted = true;
               video.play().catch((e) => {
                  if (e.name !== 'AbortError') console.error("Muted playback failed:", e);
@@ -117,20 +111,16 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
 
       hls.on(Hls.Events.ERROR, (event, data) => {
         if (data.fatal) {
-          console.error('Fatal HLS error:', data.type, data.details);
-          
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
             failCountRef.current += 1;
-            
             if (failCountRef.current > 10) {
                setErrorMsg("Too many dead channels. Auto-skip paused.");
                hls.destroy();
                return;
             }
-
             if (autoSkip && onStreamError) {
               setErrorMsg(`Stream offline. Skipping in 2s...`);
-              setTimeout(() => onStreamError(), 2000); // 2-second safe delay
+              setTimeout(() => onStreamError(), 2000); 
             } else {
               setErrorMsg(`Network Error: Stream offline`);
             }
@@ -143,7 +133,9 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = `/api/proxy?url=${encodeURIComponent(channel.url)}`;
-      video.play().catch(console.error);
+      video.play().catch((e) => {
+         if (e.name !== 'AbortError') console.error(e);
+      });
     }
 
     return () => {
@@ -160,7 +152,6 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
       {channel ? (
         <div className="w-full h-full relative">
           <video ref={videoRef} controls muted={isMuted} className="w-full h-full object-contain bg-black" />
-          
           {errorMsg && (
              <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
                 <p className="text-white text-lg font-semibold bg-red-600/90 px-6 py-3 rounded-lg shadow-lg">
@@ -168,7 +159,6 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
                 </p>
              </div>
           )}
-
           {showAdOverlay && !errorMsg && (
               <div className="absolute bottom-16 right-4 z-10 bg-black/50 backdrop-blur-sm p-3 rounded-lg flex items-center gap-3 animate-in fade-in duration-500">
                   <GtnLogo className="w-8 h-8 text-primary" />

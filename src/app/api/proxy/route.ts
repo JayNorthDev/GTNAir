@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
-// Bypass SSL certificate validation for IPTV streams with expired or untrusted certs
+// SSL Bypass for unstable/free IPTV servers
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 export async function GET(req: NextRequest) {
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   if (!url) return new NextResponse("Missing URL parameter", { status: 400 });
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // Increased to 10 Seconds Timeout for slow servers
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds
 
   try {
     const response = await fetch(url, {
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       signal: controller.signal,
     });
 
-    clearTimeout(timeoutId); // Clear timeout if successful
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       return new NextResponse(`Upstream Error: ${response.status}`, { status: response.status });
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     console.error("Proxy Error:", error.name, error.message);
     
     if (error.name === 'AbortError') {
-      return new NextResponse("Gateway Timeout: Upstream server is dead or too slow.", { status: 504 });
+      return new NextResponse("Gateway Timeout: Upstream server is too slow or dead.", { status: 504 });
     }
     
     return new NextResponse(`Proxy Failed: ${error.message}`, { status: 500 });
