@@ -1,10 +1,10 @@
 
 "use client";
-import { useEffect, useRef, useState } from 'react';
-import Hls from 'hls.js';
+import { useEffect, useRef } from 'react';
+import videojs from 'video.js';
+import 'video.js/dist/video-js.css';
 import { Channel } from '@/lib/m3u-parser';
 import { MonitorPlay } from 'lucide-react';
-import { GtnLogo } from '@/components/gtn-logo';
 import { cn } from '@/lib/utils';
 
 type VideoPlayerProps = {
@@ -25,147 +25,61 @@ export default function VideoPlayer({
   onExpand 
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const hlsRef = useRef<Hls | null>(null);
-  const failCountRef = useRef(0);
-  const [showAdOverlay, setShowAdOverlay] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const playerRef = useRef<any>(null);
 
   useEffect(() => {
-    let adTimer: NodeJS.Timeout;
-    if (channel) {
-      setShowAdOverlay(true);
-      setErrorMsg(null);
-      adTimer = setTimeout(() => setShowAdOverlay(false), 10000);
-    }
-
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
-
-    const video = videoRef.current;
-    if (!channel || !video) return;
-
-    class SmartLoader extends Hls.DefaultConfig.loader {
-      load(context: any, config: any, callbacks: any) {
-        const originalUrl = context.url;
-        
-        // Proxy only the manifest to bypass CORS. Let video chunks load directly for performance.
-        const isManifest = originalUrl.toLowerCase().includes('.m3u') || context.type === 'manifest';
-        const proxyUrl = isManifest
-          ? `/api/proxy?url=${encodeURIComponent(originalUrl)}`
-          : originalUrl;
-
-        if (!context.stats) {
-          context.stats = {
-            trequest: performance.now(),
-            retry: 0,
-            tfirst: 0,
-            tload: 0,
-            parsed: 0,
-            loader: { start: 0, end: 0 },
-            parsing: { start: 0, end: 0 },
-            buffering: { start: 0, end: 0 },
-            bwEstimate: 0,
-            total: 0,
-            loaded: 0
-          };
-        }
-        const stats = context.stats;
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', proxyUrl, true);
-        xhr.responseType = context.responseType || 'text';
-        stats.trequest = performance.now();
-
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            stats.tfirst = Math.max(stats.trequest, performance.now());
-            stats.tload = performance.now();
-            stats.loaded = xhr.response?.byteLength || xhr.response?.length || 0;
-            stats.total = stats.loaded;
-            // CRITICAL: Ensure originalUrl is passed back so relative TS paths resolve correctly
-            callbacks.onSuccess({ url: originalUrl, data: xhr.response }, stats, context, xhr);
-          } else {
-            callbacks.onError({ code: xhr.status, text: xhr.statusText }, context, xhr);
-          }
-        };
-        xhr.onerror = () => callbacks.onError({ code: xhr.status, text: xhr.statusText }, context, xhr);
-        xhr.ontimeout = () => callbacks.onTimeout({}, context, xhr);
-        xhr.send();
+    // If there's no channel or no video element, cleanup and return
+    if (!channel || !videoRef.current) {
+      if (playerRef.current && !playerRef.current.isDisposed()) {
+        playerRef.current.dispose();
+        playerRef.current = null;
       }
+      return;
     }
 
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        loader: SmartLoader,
-        enableWorker: true,
-        lowLatencyMode: true,
-        fragLoadingTimeOut: 20000,
-        manifestLoadingTimeOut: 20000,
-      });
-
-      hlsRef.current = hls;
-      hls.loadSource(channel.url);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        failCountRef.current = 0;
-        const playPromise = video.play();
-        
-        if (playPromise !== undefined) {
-          playPromise.catch((error) => {
-            if (error.name === 'AbortError') {
-              // Safely ignore interruption
-            } else {
-              video.muted = true;
-              video.play().catch((e) => {
-                 if (e.name !== 'AbortError') console.error("Muted playback failed:", e);
-              });
-            }
-          });
-        }
-      });
-
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            failCountRef.current += 1;
-            if (failCountRef.current > 10) {
-               setErrorMsg("Too many dead channels. Auto-skip paused.");
-               hls.destroy();
-               return;
-            }
-            if (autoSkip && onStreamError) {
-              setErrorMsg(`Stream offline. Skipping in 2s...`);
-              setTimeout(() => onStreamError(), 2000); 
-            } else {
-              setErrorMsg(`Network Error: Stream offline`);
-            }
-          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            hls.recoverMediaError();
-          } else {
-            hls.destroy();
-          }
-        }
-      });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Fallback for Safari/Native HLS
-      video.src = `/api/proxy?url=${encodeURIComponent(channel.url)}`;
-      video.play().catch((e) => {
-         if (e.name !== 'AbortError') console.error(e);
-      });
+    // Dispose existing player before re-initializing for a new channel
+    if (playerRef.current && !playerRef.current.isDisposed()) {
+      playerRef.current.dispose();
+      playerRef.current = null;
     }
 
+    // Initialize Video.js player with direct URL
+    const player = playerRef.current = videojs(videoRef.current, {
+      autoplay: true,
+      controls: !isPip,
+      fluid: true,
+      muted: isMuted,
+      responsive: true,
+      sources: [{
+        src: channel.url,
+        type: 'application/x-mpegURL'
+      }]
+    });
+
+    // Handle stream errors for auto-skip logic
+    player.on('error', () => {
+      const error = player.error();
+      if (error) {
+        console.error('Video.js Playback Error:', error.code, error.message);
+        if (autoSkip && onStreamError) {
+          // Delay to prevent rapid skip loops if multiple channels are down
+          setTimeout(() => {
+            onStreamError();
+          }, 2000);
+        }
+      }
+    });
+
+    // Cleanup on unmount or channel change
     return () => {
-      clearTimeout(adTimer);
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
+      if (player && !player.isDisposed()) {
+        player.dispose();
+        playerRef.current = null;
       }
     };
-  }, [channel, autoSkip, onStreamError, isMuted]);
+  }, [channel, isMuted, isPip, autoSkip, onStreamError]);
 
+  // If PIP mode and no channel is selected, don't render anything
   if (isPip && !channel) return null;
 
   return (
@@ -178,29 +92,12 @@ export default function VideoPlayer({
       )}
     >
       {channel ? (
-        <div className="w-full h-full relative">
+        <div data-vjs-player className="w-full h-full">
           <video 
             ref={videoRef} 
-            controls={!isPip} 
-            muted={isMuted} 
-            className="w-full h-full object-contain bg-black" 
+            className="video-js vjs-big-play-centered w-full h-full object-contain" 
+            playsInline
           />
-          {errorMsg && !isPip && (
-             <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                <p className="text-white text-lg font-semibold bg-red-600/90 px-6 py-3 rounded-lg shadow-lg">
-                  {errorMsg}
-                </p>
-             </div>
-          )}
-          {showAdOverlay && !errorMsg && !isPip && (
-              <div className="absolute bottom-16 right-4 z-10 bg-black/50 backdrop-blur-sm p-3 rounded-lg flex items-center gap-3 animate-in fade-in duration-500">
-                  <GtnLogo className="w-8 h-8 text-primary" />
-                  <div className="flex flex-col">
-                      <span className="text-xs text-muted-foreground">Powered by</span>
-                      <span className="text-base font-semibold text-white">GTNPlay Media</span>
-                  </div>
-              </div>
-          )}
         </div>
       ) : (
         !isPip && (
