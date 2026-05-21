@@ -9,7 +9,6 @@ import VideoPlayer from "@/components/player/VideoPlayer";
 import { Channel } from "@/lib/m3u-parser";
 import { AlertTriangle, Heart, AlertCircle } from "lucide-react";
 import { NavRail } from "@/components/layout/nav-rail";
-import { HomeGrid } from "@/components/views/home-grid";
 import { HomeView } from "@/components/views/home-view";
 import { CategoriesView } from "@/components/views/categories-view";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -62,7 +61,7 @@ export default function Home() {
 
   const handleChannelSelect = useCallback((channel: Channel) => {
     setSelectedChannel(channel);
-    setFailCount(0); // Reset failures on manual select
+    setFailCount(0); 
     setSkipError(false);
     setView("player");
     if (window.innerWidth < 768) {
@@ -78,7 +77,6 @@ export default function Home() {
       return;
     }
 
-    // Mandatory 2s delay before skipping to prevent browser freeze
     setTimeout(() => {
       const currentIndex = displayChannels.findIndex(c => c.url === selectedChannel.url);
       if (currentIndex !== -1) {
@@ -143,64 +141,43 @@ export default function Home() {
                 Quickly access your most-watched channels.
               </p>
             </header>
-            <HomeGrid items={favoriteChannels} onChannelSelect={handleChannelSelect} />
-          </div>
-        );
-      case "player":
-        return (
-          <div className="flex h-full relative">
-            <Sidebar
-              isSidebarOpen={isSidebarOpen}
-              setIsSidebarOpen={setIsSidebarOpen}
-              displayChannels={displayChannels}
-              selectedChannel={selectedChannel}
-              handleChannelClick={handleChannelSelect}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              selectedCategory={selectedCategory}
-              setSelectedCategory={setSelectedCategory}
-              categories={categories}
-              loading={loading}
-            />
-            <div className="flex flex-col flex-1 overflow-hidden">
-              <Header
-                selectedChannel={selectedChannel}
-                isSidebarOpen={isSidebarOpen}
-                setIsSidebarOpen={setIsSidebarOpen}
-                isFavorite={isFavorite(selectedChannel)}
-                onToggleFavorite={() => toggleFavorite(selectedChannel)}
-              />
-              <VideoPlayer 
-                channel={selectedChannel}
-                onStreamError={handleNextChannel}
-                autoSkip={settings.autoSkip}
-                isMuted={settings.muteOnStartup}
-              />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {favoriteChannels.map((channel, index) => (
+                    <div
+                        key={`${channel.url}-${index}`}
+                        onClick={() => handleChannelSelect(channel)}
+                        className={cn(
+                            "group relative aspect-[16/10] cursor-pointer overflow-hidden rounded-md bg-slate-900/50 border border-transparent",
+                            "transition-all duration-300 ease-in-out hover:z-10 hover:scale-105 hover:shadow-2xl hover:shadow-black/50 hover:ring-2 hover:ring-primary focus:z-10 focus:scale-105 focus:shadow-2xl focus:ring-2 focus:ring-primary"
+                        )}
+                    >
+                        <img
+                            src={channel.tvg.logo || "https://placehold.co/300x170/020617/334155?text=No+Logo"}
+                            alt={channel.name}
+                            loading="lazy"
+                            className="absolute inset-0 h-full w-full object-contain p-4 bg-black/20"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                    "https://placehold.co/300x170/020617/334155?text=No+Logo";
+                                (e.target as HTMLImageElement).classList.add("object-scale-down");
+                            }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                            <h3 className="truncate font-semibold text-white">
+                                {channel.name}
+                            </h3>
+                            <p className="truncate text-xs text-slate-400">
+                                {channel.group.title}
+                            </p>
+                        </div>
+                    </div>
+                ))}
             </div>
-            
-            {skipError && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md">
-                <div className="flex flex-col items-center gap-6 p-8 bg-card border border-border rounded-xl text-center">
-                  <AlertCircle className="w-16 h-16 text-destructive" />
-                  <div className="space-y-2">
-                    <h2 className="text-2xl font-bold">Auto-skip Paused</h2>
-                    <p className="text-muted-foreground">Too many dead channels detected (10+). Please select a channel manually.</p>
-                  </div>
-                  <Button onClick={() => setSkipError(false)} className="px-8">Dismiss</Button>
-                </div>
-              </div>
-            )}
           </div>
         );
       default:
-        return (
-          <HomeView 
-            channels={displayChannels} 
-            onChannelSelect={handleChannelSelect} 
-            loadMore={loadMore} 
-            hasMore={hasMore} 
-          />
-        );
+        return null;
     }
   };
 
@@ -214,9 +191,69 @@ export default function Home() {
         isSettingsOpen={isSettingsOpen}
         setIsSettingsOpen={setIsSettingsOpen}
       />
-      <main className={cn("flex-1", view === 'player' ? 'overflow-hidden' : 'overflow-y-auto')}>
-        {renderContent()}
+      
+      <main className={cn(
+        "flex-1 flex min-w-0 relative bg-background",
+        view === 'player' ? "overflow-hidden" : "flex-col overflow-y-auto"
+      )}>
+        {/* Persistent Sidebar and Header for Player View */}
+        {view === 'player' && (
+          <Sidebar
+            isSidebarOpen={isSidebarOpen}
+            setIsSidebarOpen={setIsSidebarOpen}
+            displayChannels={displayChannels}
+            selectedChannel={selectedChannel}
+            handleChannelClick={handleChannelSelect}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            categories={categories}
+            loading={loading}
+          />
+        )}
+
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+          {view === 'player' && (
+            <Header
+              selectedChannel={selectedChannel}
+              isSidebarOpen={isSidebarOpen}
+              setIsSidebarOpen={setIsSidebarOpen}
+              isFavorite={isFavorite(selectedChannel)}
+              onToggleFavorite={() => toggleFavorite(selectedChannel)}
+            />
+          )}
+
+          {/* Non-Player Views */}
+          <div className={cn("flex-1", view === 'player' ? "hidden" : "block")}>
+            {renderContent()}
+          </div>
+
+          {/* Persistent Video Player - Always Mounted */}
+          <VideoPlayer 
+            channel={selectedChannel}
+            onStreamError={handleNextChannel}
+            autoSkip={settings.autoSkip}
+            isMuted={settings.muteOnStartup}
+            isPip={view !== 'player'}
+            onExpand={() => setView('player')}
+          />
+        </div>
+        
+        {skipError && (
+          <div className="absolute inset-0 z-[110] flex items-center justify-center bg-background/90 backdrop-blur-md">
+            <div className="flex flex-col items-center gap-6 p-8 bg-card border border-border rounded-xl text-center">
+              <AlertCircle className="w-16 h-16 text-destructive" />
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold">Auto-skip Paused</h2>
+                <p className="text-muted-foreground">Too many dead channels detected (10+). Please select a channel manually.</p>
+              </div>
+              <Button onClick={() => setSkipError(false)} className="px-8">Dismiss</Button>
+            </div>
+          </div>
+        )}
       </main>
+
       <SettingsView isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
       {isLoading && (
@@ -226,7 +263,6 @@ export default function Home() {
               <div className="absolute -inset-10 bg-primary/20 blur-3xl rounded-full animate-pulse" />
               <GtnLogo className="w-20 h-20 text-primary relative z-10 drop-shadow-[0_0_15px_rgba(0,174,239,0.8)]" />
             </div>
-
             <div className="flex items-center gap-3">
               {[0, 1, 2, 3].map((i) => (
                 <div 
@@ -236,7 +272,6 @@ export default function Home() {
                 />
               ))}
             </div>
-
             <div className="flex flex-col items-center gap-2">
               <span className="text-sm font-bold tracking-[0.4em] text-white/80 uppercase animate-pulse">
                 Initializing Channels
