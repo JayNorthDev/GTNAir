@@ -1,4 +1,3 @@
-
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
@@ -36,51 +35,8 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
     const video = videoRef.current;
     if (!channel || !video) return;
 
-    class SmartLoader extends Hls.DefaultConfig.loader {
-      load(context: any, config: any, callbacks: any) {
-        const originalUrl = context.url;
-        
-        // CRITICAL FIX: Only proxy the manifest to bypass CORS. Let video chunks load directly from the browser's residential IP!
-        const isManifest = originalUrl.toLowerCase().includes('.m3u') || context.type === 'manifest';
-        const proxyUrl = isManifest
-          ? `/api/proxy?url=${encodeURIComponent(originalUrl)}`
-          : originalUrl;
-
-        if (!context.stats) {
-          context.stats = {
-            trequest: performance.now(), retry: 0, tfirst: 0, tload: 0, parsed: 0,
-            loader: { start: 0, end: 0 }, parsing: { start: 0, end: 0 }, buffering: { start: 0, end: 0 },
-            bwEstimate: 0, total: 0, loaded: 0
-          };
-        }
-        const stats = context.stats;
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', proxyUrl, true);
-        xhr.responseType = context.responseType || 'text';
-        stats.trequest = performance.now();
-
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            stats.tfirst = Math.max(stats.trequest, performance.now());
-            stats.tload = performance.now();
-            stats.loaded = xhr.response?.byteLength || xhr.response?.length || 0;
-            stats.total = stats.loaded;
-            // CRITICAL: originalUrl MUST be passed back so relative TS paths resolve to the upstream server, not the local proxy.
-            callbacks.onSuccess({ url: originalUrl, data: xhr.response }, stats, context, xhr);
-          } else {
-            callbacks.onError({ code: xhr.status, text: xhr.statusText }, context, xhr);
-          }
-        };
-        xhr.onerror = () => callbacks.onError({ code: xhr.status, text: xhr.statusText }, context, xhr);
-        xhr.ontimeout = () => callbacks.onTimeout({}, context, xhr);
-        xhr.send();
-      }
-    }
-
     if (Hls.isSupported()) {
       const hls = new Hls({
-        loader: SmartLoader,
         enableWorker: true,
         lowLatencyMode: true,
         fragLoadingTimeOut: 20000,
@@ -133,7 +89,7 @@ export default function VideoPlayer({ channel, onStreamError, autoSkip, isMuted 
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = `/api/proxy?url=${encodeURIComponent(channel.url)}`;
+      video.src = channel.url;
       video.play().catch((e) => {
          if (e.name !== 'AbortError') console.error(e);
       });
