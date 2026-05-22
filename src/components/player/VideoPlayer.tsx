@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import { Channel } from '@/lib/m3u-parser';
-import { MonitorPlay, Maximize2, X, Play, Pause, GripHorizontal, Minus, ArrowUpLeft } from 'lucide-react';
+import { MonitorPlay, Maximize2, X, Play, Pause, Minus, ArrowUpLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -33,68 +33,126 @@ export default function VideoPlayer({
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
 
-  // Dragging state
+  // Position and Size state for persistence
   const [position, setPosition] = useState({ x: 24, y: 24 }); // Bottom-right offsets
+  const [pipWidth, setPipWidth] = useState(400); // Default PIP width
+  
   const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ mouseX: 0, mouseY: 0, startX: 0, startY: 0 });
+  const [isResizing, setIsResizing] = useState(false);
+  
+  const interactionStart = useRef({ 
+    mouseX: 0, 
+    mouseY: 0, 
+    startX: 0, 
+    startY: 0, 
+    startWidth: 0 
+  });
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isPip || isMinimized) return;
-    setIsDragging(true);
-    dragStart.current = {
+    if (!isPip || isMinimized || !containerRef.current) return;
+    
+    const rect = containerRef.current.getBoundingClientRect();
+    const borderThreshold = 15;
+    
+    // Check if mouse is near the left or top edges for resizing
+    const isNearLeft = e.clientX - rect.left < borderThreshold;
+    const isNearTop = e.clientY - rect.top < borderThreshold;
+
+    interactionStart.current = {
       mouseX: e.clientX,
       mouseY: e.clientY,
       startX: position.x,
-      startY: position.y
+      startY: position.y,
+      startWidth: rect.width
     };
+
+    if (isNearLeft || isNearTop) {
+      setIsResizing(true);
+    } else {
+      // Only drag if not clicking buttons
+      const target = e.target as HTMLElement;
+      if (!target.closest('button')) {
+        setIsDragging(true);
+      }
+    }
   };
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !isPip) return;
-    const deltaX = dragStart.current.mouseX - e.clientX;
-    const deltaY = dragStart.current.mouseY - e.clientY;
+    if (!isPip || isMinimized || !containerRef.current) return;
     
-    setPosition({
-      x: dragStart.current.startX + deltaX,
-      y: dragStart.current.startY + deltaY
-    });
-  }, [isDragging, isPip]);
+    if (isDragging) {
+      const deltaX = interactionStart.current.mouseX - e.clientX;
+      const deltaY = interactionStart.current.mouseY - e.clientY;
+      const newX = interactionStart.current.startX + deltaX;
+      const newY = interactionStart.current.startY + deltaY;
+      
+      // Update DOM directly for max performance (no lag)
+      containerRef.current.style.right = `${newX}px`;
+      containerRef.current.style.bottom = `${newY}px`;
+    } else if (isResizing) {
+      const deltaX = interactionStart.current.mouseX - e.clientX;
+      const deltaY = interactionStart.current.mouseY - e.clientY;
+      
+      // Since we're anchored to bottom-right, moving mouse left/up increases width/height
+      // We prioritize X delta for width and let aspect-ratio handle height
+      const newWidth = Math.max(280, interactionStart.current.startWidth + Math.max(deltaX, deltaY));
+      
+      containerRef.current.style.width = `${newWidth}px`;
+    }
+  }, [isDragging, isResizing, isPip, isMinimized]);
 
   const handleMouseUp = useCallback(() => {
+    if ((isDragging || isResizing) && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const parentWidth = window.innerWidth;
+      const parentHeight = window.innerHeight;
+      
+      // Finalize position in state
+      setPosition({
+        x: parentWidth - rect.right,
+        y: parentHeight - rect.bottom
+      });
+      setPipWidth(rect.width);
+    }
     setIsDragging(false);
-  }, []);
+    setIsResizing(false);
+  }, [isDragging, isResizing]);
 
   useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
+    if (isDragging || isResizing) {
+      window.addEventListener('mousemove', handleMouseMove, { passive: true });
       window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = isResizing ? 'nwse-resize' : 'grabbing';
     } else {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
     }
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
     };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
-  // Restore if moving back to full player view
   useEffect(() => {
     if (!isPip) {
       setIsMinimized(false);
     }
   }, [isPip]);
 
-  // Handle Player Initialization (Only on channel change)
   useEffect(() => {
     if (!channel || !containerRef.current) return;
 
-    // Create video element
     const videoElement = document.createElement('video');
     videoElement.className = 'video-js vjs-big-play-centered w-full h-full';
     videoElement.setAttribute('playsinline', 'true');
-    containerRef.current.appendChild(videoElement);
-    videoElementRef.current = videoElement;
+    
+    const playerContainer = containerRef.current.querySelector('.video-container');
+    if (playerContainer) {
+      playerContainer.innerHTML = '';
+      playerContainer.appendChild(videoElement);
+    }
 
     const player = videojs(videoElement, {
       autoplay: true,
@@ -130,12 +188,10 @@ export default function VideoPlayer({
       if (player && !player.isDisposed()) {
         player.dispose();
         playerRef.current = null;
-        videoElementRef.current = null;
       }
     };
   }, [channel?.url, autoSkip, onStreamError]);
 
-  // Handle Dynamic Updates (Mute/Controls) without re-initializing
   useEffect(() => {
     const player = playerRef.current;
     if (player && !player.isDisposed()) {
@@ -176,42 +232,42 @@ export default function VideoPlayer({
 
   return (
     <div 
+      ref={containerRef}
+      onMouseDown={handleMouseDown}
       style={isPip ? { 
         right: `${position.x}px`, 
         bottom: `${position.y}px`,
-        width: isMinimized ? '150px' : undefined,
-        height: isMinimized ? '40px' : undefined,
+        width: isMinimized ? '180px' : `${pipWidth}px`,
+        height: isMinimized ? '44px' : 'auto',
         aspectRatio: isMinimized ? 'unset' : '16/9'
       } : undefined}
       className={cn(
-        "transition-all duration-300 ease-in-out",
+        "transition-[opacity,transform] duration-200 ease-out",
         isPip 
-          ? "fixed z-[100] rounded-xl shadow-2xl border border-white/20 bg-black overflow-hidden group select-none flex flex-col items-center justify-center"
+          ? "fixed z-[100] rounded-xl shadow-2xl border border-white/20 bg-black overflow-hidden group select-none flex flex-col items-center justify-center cursor-move"
           : "flex-1 flex flex-col bg-black relative w-full h-full",
-        // Enforce 16:9 by only allowing horizontal resize, which aspect-ratio will follow.
-        // Increased min-width to prevent UI breakage.
-        isPip && !isMinimized && "w-72 md:w-[480px] resize-x min-w-[280px]",
-        isDragging && "opacity-80 scale-[1.02] cursor-grabbing"
+        isDragging && "opacity-80 scale-[1.01] transition-none",
+        isResizing && "transition-none",
+        isMinimized && "hover:bg-slate-900"
       )}
     >
-      {/* Drag Handle for PIP */}
+      {/* Edge Resize Indicators (Invisible handles) */}
       {isPip && !isMinimized && (
-        <div 
-          onMouseDown={handleMouseDown}
-          className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 flex items-center justify-center"
-        >
-          <GripHorizontal className="w-8 h-8 text-white/50" />
-        </div>
+        <>
+          <div className="absolute top-0 left-0 w-full h-3 cursor-ns-resize z-50 hover:bg-primary/10" />
+          <div className="absolute top-0 left-0 w-3 h-full cursor-ew-resize z-50 hover:bg-primary/10" />
+          <div className="absolute top-0 left-0 w-6 h-6 cursor-nwse-resize z-50 hover:bg-primary/20" />
+        </>
       )}
 
       {/* PIP Controls Overlay */}
       {isPip && (
-        <div className="absolute top-0 left-0 right-0 z-30 p-2 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/80 to-transparent">
+        <div className="absolute top-0 left-0 right-0 z-40 p-2 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
           <div className="flex items-center gap-1 overflow-hidden mr-2">
              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shrink-0" />
              <span className="text-[10px] font-bold text-white truncate drop-shadow-md uppercase tracking-wider">{channel.name}</span>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1 shrink-0 pointer-events-auto">
              <Button 
                variant="ghost" 
                size="icon" 
@@ -243,7 +299,7 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* Play/Pause for PIP - Only triggered when clicking the central circle */}
+      {/* Central Play/Pause for PIP */}
       {isPip && !isMinimized && (
         <div className="absolute inset-0 z-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
           <button 
@@ -255,8 +311,9 @@ export default function VideoPlayer({
         </div>
       )}
 
-      <div className={cn("w-full h-full flex items-center justify-center bg-black", (isPip && isMinimized) && "hidden")}>
-        <div ref={containerRef} className="w-full h-full [&_video]:object-contain" />
+      {/* Video Container */}
+      <div className={cn("w-full h-full flex items-center justify-center bg-black video-container", (isPip && isMinimized) && "hidden")}>
+        {/* video element injected here via useEffect */}
       </div>
 
       {(isPip && isMinimized) && (
