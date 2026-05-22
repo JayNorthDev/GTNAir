@@ -46,7 +46,8 @@ export default function VideoPlayer({
     mouseY: 0, 
     startX: 0, 
     startY: 0, 
-    startWidth: 0 
+    startWidth: 0,
+    hasMoved: false
   });
 
   const handleMouseDown = (e: React.MouseEvent, direction: ResizeDirection = null) => {
@@ -59,7 +60,8 @@ export default function VideoPlayer({
       mouseY: e.clientY,
       startX: position.x,
       startY: position.y,
-      startWidth: rect.width
+      startWidth: rect.width,
+      hasMoved: false
     };
 
     if (direction) {
@@ -76,6 +78,14 @@ export default function VideoPlayer({
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isPip || isMinimized || !containerRef.current) return;
     
+    // Check if mouse actually moved to avoid click-to-resize bug
+    if (Math.abs(e.clientX - interactionStart.current.mouseX) > 2 || 
+        Math.abs(e.clientY - interactionStart.current.mouseY) > 2) {
+      interactionStart.current.hasMoved = true;
+    }
+
+    if (!interactionStart.current.hasMoved) return;
+
     if (isDragging) {
       const deltaX = interactionStart.current.mouseX - e.clientX;
       const deltaY = interactionStart.current.mouseY - e.clientY;
@@ -95,18 +105,14 @@ export default function VideoPlayer({
         newWidth = interactionStart.current.startWidth - deltaX;
       } else if (resizeDir.includes('e') || resizeDir === 'ne' || resizeDir === 'se') {
         newWidth = interactionStart.current.startWidth + deltaX;
-        // Adjust position because we are anchored to the right
         const posDelta = deltaX;
         containerRef.current.style.right = `${interactionStart.current.startX - posDelta}px`;
       }
 
       if (resizeDir.includes('n') || resizeDir === 'nw' || resizeDir === 'ne') {
-        // Vertical dragging affects width to keep 16:9
-        const widthFromHeight = (interactionStart.current.startWidth * (interactionStart.current.startWidth / (interactionStart.current.startWidth / 1.77) - deltaY)) / (interactionStart.current.startWidth / 1.77);
         newWidth = Math.max(newWidth, interactionStart.current.startWidth - deltaY * 1.77);
       } else if (resizeDir.includes('s') || resizeDir === 'sw' || resizeDir === 'se') {
         newWidth = Math.max(newWidth, interactionStart.current.startWidth + deltaY * 1.77);
-        // Adjust position because we are anchored to the bottom
         const posDelta = deltaY;
         containerRef.current.style.bottom = `${interactionStart.current.startY - posDelta}px`;
       }
@@ -117,12 +123,11 @@ export default function VideoPlayer({
   }, [isDragging, resizeDir, isPip, isMinimized]);
 
   const handleMouseUp = useCallback(() => {
-    if ((isDragging || resizeDir) && containerRef.current) {
+    if (interactionStart.current.hasMoved && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const parentWidth = window.innerWidth;
       const parentHeight = window.innerHeight;
       
-      // Finalize position and width in React state
       setPosition({
         x: parentWidth - rect.right,
         y: parentHeight - rect.bottom
@@ -131,7 +136,8 @@ export default function VideoPlayer({
     }
     setIsDragging(false);
     setResizeDirection(null);
-  }, [isDragging, resizeDir]);
+    interactionStart.current.hasMoved = false;
+  }, []);
 
   useEffect(() => {
     if (isDragging || resizeDir) {
@@ -336,7 +342,6 @@ export default function VideoPlayer({
 
       {/* Video Container */}
       <div className={cn("w-full h-full flex items-center justify-center bg-black video-container overflow-hidden", (isPip && isMinimized) && "hidden")}>
-        {/* video element injected here via useEffect */}
       </div>
 
       {(isPip && isMinimized) && (
