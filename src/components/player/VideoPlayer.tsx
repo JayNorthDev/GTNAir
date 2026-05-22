@@ -53,6 +53,10 @@ export default function VideoPlayer({
   const handleMouseDown = (e: React.MouseEvent, direction: ResizeDirection = null) => {
     if (!isPip || isMinimized || !containerRef.current) return;
     
+    // Prevent dragging if clicking a button
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) return;
+
     const rect = containerRef.current.getBoundingClientRect();
     
     interactionStart.current = {
@@ -67,21 +71,22 @@ export default function VideoPlayer({
     if (direction) {
       setResizeDirection(direction);
     } else {
-      // Only drag if not clicking buttons
-      const target = e.target as HTMLElement;
-      if (!target.closest('button')) {
-        setIsDragging(true);
-      }
+      setIsDragging(true);
     }
+    
+    // Stop event propagation to prevent triggering unwanted parent actions
+    e.stopPropagation();
   };
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isPip || isMinimized || !containerRef.current) return;
     
-    // Check if mouse actually moved to avoid click-to-resize bug
-    if (Math.abs(e.clientX - interactionStart.current.mouseX) > 2 || 
-        Math.abs(e.clientY - interactionStart.current.mouseY) > 2) {
-      interactionStart.current.hasMoved = true;
+    // Check if mouse actually moved to avoid click-to-resize jitter
+    if (!interactionStart.current.hasMoved) {
+      if (Math.abs(e.clientX - interactionStart.current.mouseX) > 3 || 
+          Math.abs(e.clientY - interactionStart.current.mouseY) > 3) {
+        interactionStart.current.hasMoved = true;
+      }
     }
 
     if (!interactionStart.current.hasMoved) return;
@@ -100,19 +105,23 @@ export default function VideoPlayer({
       
       let newWidth = interactionStart.current.startWidth;
 
-      // Logic based on which side is being pulled
-      if (resizeDir.includes('w') || resizeDir === 'nw' || resizeDir === 'sw') {
+      // Maintain 16:9 ratio while resizing from any side
+      if (resizeDir.includes('w')) {
         newWidth = interactionStart.current.startWidth - deltaX;
-      } else if (resizeDir.includes('e') || resizeDir === 'ne' || resizeDir === 'se') {
+      } else if (resizeDir.includes('e')) {
         newWidth = interactionStart.current.startWidth + deltaX;
         const posDelta = deltaX;
         containerRef.current.style.right = `${interactionStart.current.startX - posDelta}px`;
       }
 
-      if (resizeDir.includes('n') || resizeDir === 'nw' || resizeDir === 'ne') {
-        newWidth = Math.max(newWidth, interactionStart.current.startWidth - deltaY * 1.77);
-      } else if (resizeDir.includes('s') || resizeDir === 'sw' || resizeDir === 'se') {
-        newWidth = Math.max(newWidth, interactionStart.current.startWidth + deltaY * 1.77);
+      if (resizeDir.includes('n')) {
+        const heightDelta = -deltaY;
+        const widthFromHeight = interactionStart.current.startWidth + (heightDelta * 1.77);
+        newWidth = Math.max(newWidth, widthFromHeight);
+      } else if (resizeDir.includes('s')) {
+        const heightDelta = deltaY;
+        const widthFromHeight = interactionStart.current.startWidth + (heightDelta * 1.77);
+        newWidth = Math.max(newWidth, widthFromHeight);
         const posDelta = deltaY;
         containerRef.current.style.bottom = `${interactionStart.current.startY - posDelta}px`;
       }
@@ -143,22 +152,20 @@ export default function VideoPlayer({
     if (isDragging || resizeDir) {
       window.addEventListener('mousemove', handleMouseMove, { passive: true });
       window.addEventListener('mouseup', handleMouseUp);
-      if (isDragging) document.body.style.cursor = 'grabbing';
     } else {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
     }
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = '';
     };
   }, [isDragging, resizeDir, handleMouseMove, handleMouseUp]);
 
   useEffect(() => {
     if (!channel || !containerRef.current) return;
 
+    // Standard Video.js setup - only re-init when channel URL changes
     const videoElement = document.createElement('video');
     videoElement.className = 'video-js vjs-big-play-centered w-full h-full object-contain';
     videoElement.setAttribute('playsinline', 'true');
@@ -263,25 +270,24 @@ export default function VideoPlayer({
         aspectRatio: isMinimized ? 'unset' : '16/9'
       } : undefined}
       className={cn(
-        "transition-[opacity,transform] duration-200 ease-out",
+        "transition-[opacity,transform,width,height] duration-200 ease-out",
         isPip 
           ? "fixed z-[100] rounded-xl shadow-2xl border border-white/20 bg-black overflow-hidden group select-none flex flex-col items-center justify-center cursor-move"
           : "flex-1 flex flex-col bg-black relative w-full h-full",
-        isDragging && "opacity-80 scale-[1.01] transition-none",
-        resizeDir && "transition-none",
+        (isDragging || resizeDir) && "transition-none",
         isMinimized && "hover:bg-slate-900"
       )}
     >
-      {/* 8-Way Edge Resize Handles */}
+      {/* 8-Way Edge Resize Handles - Only show when in PIP and not minimized */}
       {isPip && !isMinimized && (
         <>
-          {/* Edges */}
-          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'n'); }} className="absolute top-0 left-0 w-full h-2 cursor-ns-resize z-50 hover:bg-primary/20" />
-          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 's'); }} className="absolute bottom-0 left-0 w-full h-2 cursor-ns-resize z-50 hover:bg-primary/20" />
-          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'w'); }} className="absolute top-0 left-0 w-2 h-full cursor-ew-resize z-50 hover:bg-primary/20" />
-          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'e'); }} className="absolute top-0 right-0 w-2 h-full cursor-ew-resize z-50 hover:bg-primary/20" />
+          {/* Edge Handles */}
+          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'n'); }} className="absolute top-0 left-0 w-full h-2 cursor-ns-resize z-50" />
+          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 's'); }} className="absolute bottom-0 left-0 w-full h-2 cursor-ns-resize z-50" />
+          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'w'); }} className="absolute top-0 left-0 w-2 h-full cursor-ew-resize z-50" />
+          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'e'); }} className="absolute top-0 right-0 w-2 h-full cursor-ew-resize z-50" />
           
-          {/* Corners */}
+          {/* Corner Handles */}
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'nw'); }} className="absolute top-0 left-0 w-4 h-4 cursor-nwse-resize z-[60]" />
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'ne'); }} className="absolute top-0 right-0 w-4 h-4 cursor-nesw-resize z-[60]" />
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'sw'); }} className="absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-[60]" />
@@ -328,7 +334,7 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* Central Play/Pause for PIP */}
+      {/* Central Play/Pause for PIP - Only clickable on the button itself */}
       {isPip && !isMinimized && (
         <div className="absolute inset-0 z-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
           <button 
