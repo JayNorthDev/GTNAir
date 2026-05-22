@@ -92,7 +92,8 @@ export default function VideoPlayer({
     const player = videojs(videoElement, {
       autoplay: true,
       controls: !isPip,
-      fluid: true,
+      fluid: !isPip, // Fluid in full mode, fixed/fill in PIP
+      fill: isPip,   // Fill container in PIP to avoid padding issues
       muted: !!isMuted,
       responsive: true,
       sources: [{
@@ -133,6 +134,7 @@ export default function VideoPlayer({
     if (player && !player.isDisposed()) {
       player.muted(!!isMuted);
       player.controls(!isPip);
+      // Update fluid/fill state dynamically if possible, or handle via layout
     }
     // Automatically restore if moving back to full player view
     if (!isPip) {
@@ -150,10 +152,15 @@ export default function VideoPlayer({
     }
   };
 
-  const handleExpand = (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+  const handleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsMinimized(false);
     onExpand?.();
+  };
+
+  const toggleMinimize = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMinimized(!isMinimized);
   };
 
   if (!channel) {
@@ -171,14 +178,15 @@ export default function VideoPlayer({
         right: `${position.x}px`, 
         bottom: `${position.y}px`,
         width: isMinimized ? '150px' : undefined,
-        height: isMinimized ? '40px' : undefined
+        height: isMinimized ? '40px' : undefined,
+        aspectRatio: isMinimized ? 'unset' : '16/9'
       } : undefined}
       className={cn(
         "transition-all duration-300 ease-in-out",
         isPip 
-          ? "fixed z-[100] rounded-xl shadow-2xl border border-white/20 bg-black overflow-hidden group select-none"
+          ? "fixed z-[100] rounded-xl shadow-2xl border border-white/20 bg-black overflow-hidden group select-none flex flex-col items-center justify-center"
           : "flex-1 flex flex-col bg-black relative w-full h-full",
-        isPip && !isMinimized && "w-72 md:w-[480px] aspect-video resize min-w-[200px] min-h-[120px]",
+        isPip && !isMinimized && "w-72 md:w-[480px] resize min-w-[200px]",
         isDragging && "opacity-80 scale-[1.02] cursor-grabbing"
       )}
     >
@@ -204,8 +212,8 @@ export default function VideoPlayer({
                variant="ghost" 
                size="icon" 
                className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white"
-               onClick={(e) => { e.stopPropagation(); setIsMinimized(!isMinimized); }}
-               title={isMinimized ? "Maximize" : "Minimize"}
+               onClick={toggleMinimize}
+               title={isMinimized ? "Restore" : "Minimize"}
              >
                {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
              </Button>
@@ -243,8 +251,8 @@ export default function VideoPlayer({
         </div>
       )}
 
-      <div className={cn("w-full h-full", (isPip && isMinimized) && "hidden")}>
-        <div ref={containerRef} className="w-full h-full" />
+      <div className={cn("w-full h-full flex items-center justify-center bg-black", (isPip && isMinimized) && "hidden")}>
+        <div ref={containerRef} className="w-full h-full [&_video]:object-contain" />
       </div>
 
       {(isPip && isMinimized) && (
