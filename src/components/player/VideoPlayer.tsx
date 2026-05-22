@@ -24,21 +24,26 @@ export default function VideoPlayer({
   isPip, 
   onExpand 
 }: VideoPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
 
   /**
    * Main Initialization & Disposal Effect
-   * This effect handles the creation and destruction of the Video.js instance.
-   * It re-runs strictly when the channel URL changes, ensuring the old player
-   * is dismantled before a new one is built.
+   * We initialize Video.js on a stable container to prevent React from throwing 
+   * 'removeChild' errors when the DOM is modified by both React and Video.js.
    */
   useEffect(() => {
     // Exit if no channel is selected or DOM is not ready
     if (!channel || !videoRef.current) return;
 
-    // 1. Initialize Video.js instance
-    const player = videojs(videoRef.current, {
+    // 1. Create a fresh video element manually to avoid React reconciliation conflicts
+    const videoElement = document.createElement('video');
+    videoElement.className = 'video-js vjs-big-play-centered w-full h-full object-contain';
+    videoElement.setAttribute('playsinline', 'true');
+    videoRef.current.appendChild(videoElement);
+
+    // 2. Initialize Video.js instance
+    const player = videojs(videoElement, {
       autoplay: true,
       controls: !isPip,
       fluid: true,
@@ -52,14 +57,13 @@ export default function VideoPlayer({
 
     playerRef.current = player;
 
-    // 2. Attach error listeners for auto-skip logic
+    // 3. Attach error listeners for auto-skip logic
     player.on('error', () => {
       const error = player.error();
       if (error && autoSkip && onStreamError) {
         console.warn('Playback error detected, triggering auto-skip logic...');
-        // Small delay to avoid rapid skipping loops that can freeze the browser
+        // Small delay to avoid rapid skipping loops
         setTimeout(() => {
-          // Ensure we are still managing the same player instance before triggering skip
           if (playerRef.current === player && !player.isDisposed()) {
             onStreamError();
           }
@@ -68,10 +72,9 @@ export default function VideoPlayer({
     });
 
     /**
-     * CRITICAL CLEANUP: The return function of useEffect is guaranteed to run
-     * when the component unmounts OR before the effect re-runs (due to channel URL change).
-     * This ensures player.dispose() is called, preventing orphaned streams from 
-     * playing in the background.
+     * CRITICAL CLEANUP: The return function ensures player.dispose() is called.
+     * Video.js dispose() will remove the 'videoElement' we created manually,
+     * leaving the React-managed 'videoRef' container empty but intact.
      */
     return () => {
       if (player && !player.isDisposed()) {
@@ -83,7 +86,6 @@ export default function VideoPlayer({
 
   /**
    * Mute State Sync Effect
-   * Updates the volume/mute state without re-initializing the entire player.
    */
   useEffect(() => {
     if (playerRef.current && !playerRef.current.isDisposed()) {
@@ -93,7 +95,6 @@ export default function VideoPlayer({
 
   /**
    * UI Controls Sync Effect
-   * Toggles controls based on PIP mode without re-initializing the entire player.
    */
   useEffect(() => {
     if (playerRef.current && !playerRef.current.isDisposed()) {
@@ -106,13 +107,6 @@ export default function VideoPlayer({
 
   return (
     <div 
-      /**
-       * The 'key' attribute is vital here. By keying the container with the channel's URL,
-       * React will completely destroy the old DOM subtree and recreate it whenever
-       * the channel changes. This gives Video.js a fresh <video> element every time,
-       * which is the most robust way to avoid stale player states.
-       */
-      key={channel?.url || 'empty-player'}
       onClick={isPip ? onExpand : undefined}
       className={cn(
         isPip 
@@ -122,11 +116,8 @@ export default function VideoPlayer({
     >
       {channel ? (
         <div data-vjs-player className="w-full h-full">
-          <video 
-            ref={videoRef} 
-            className="video-js vjs-big-play-centered w-full h-full object-contain" 
-            playsInline
-          />
+          {/* Stable container for Video.js to mount onto */}
+          <div ref={videoRef} className="w-full h-full" />
         </div>
       ) : (
         !isPip && (
