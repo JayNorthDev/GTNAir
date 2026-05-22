@@ -33,6 +33,9 @@ export default function VideoPlayer({
   const playerRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showControls, setShowControls] = useState(false);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Position and Size state for persistence
   const [position, setPosition] = useState({ x: 24, y: 24 }); // Bottom-right offsets
@@ -50,8 +53,30 @@ export default function VideoPlayer({
     hasMoved: false
   });
 
+  // Track mouse move to show controls
+  const handleMouseMoveActive = useCallback(() => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
+  }, []);
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      const isFs = !!document.fullscreenElement;
+      setIsFullscreen(isFs);
+      if (isFs) {
+        setShowControls(true);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    };
+  }, []);
+
   const handleMouseDown = (e: React.MouseEvent, direction: ResizeDirection = null) => {
-    if (!isPip || isMinimized || !containerRef.current) return;
+    if (!isPip || isMinimized || isFullscreen || !containerRef.current) return;
     
     // Prevent dragging if clicking a button
     const target = e.target as HTMLElement;
@@ -78,7 +103,7 @@ export default function VideoPlayer({
   };
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isPip || isMinimized || !containerRef.current) return;
+    if (!isPip || isMinimized || isFullscreen || !containerRef.current) return;
     
     if (!interactionStart.current.hasMoved) {
       if (Math.abs(e.clientX - interactionStart.current.mouseX) > 3 || 
@@ -126,7 +151,7 @@ export default function VideoPlayer({
       const finalWidth = Math.max(280, newWidth);
       containerRef.current.style.width = `${finalWidth}px`;
     }
-  }, [isDragging, resizeDir, isPip, isMinimized]);
+  }, [isDragging, resizeDir, isPip, isMinimized, isFullscreen]);
 
   const handleMouseUp = useCallback(() => {
     if (interactionStart.current.hasMoved && containerRef.current) {
@@ -174,7 +199,7 @@ export default function VideoPlayer({
 
     const player = videojs(videoElement, {
       autoplay: true,
-      controls: !isPip,
+      controls: false,
       fluid: false, 
       fill: true,   
       muted: !!isMuted,
@@ -214,9 +239,9 @@ export default function VideoPlayer({
     const player = playerRef.current;
     if (player && !player.isDisposed()) {
       player.muted(!!isMuted);
-      player.controls(!isPip);
+      player.controls(false);
     }
-  }, [isMuted, isPip]);
+  }, [isMuted]);
 
   useEffect(() => {
     if (!isPip) {
@@ -247,8 +272,14 @@ export default function VideoPlayer({
 
   const handleFullScreen = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (playerRef.current && !playerRef.current.isDisposed()) {
-      playerRef.current.requestFullscreen();
+    if (containerRef.current) {
+      if (!document.fullscreenElement) {
+        containerRef.current.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
     }
   };
 
@@ -265,23 +296,31 @@ export default function VideoPlayer({
     <div 
       ref={containerRef}
       onMouseDown={(e) => handleMouseDown(e)}
-      style={isPip ? { 
+      onMouseMove={handleMouseMoveActive}
+      style={isPip && !isFullscreen ? { 
         right: `${position.x}px`, 
         bottom: `${position.y}px`,
         width: isMinimized ? '180px' : `${pipWidth}px`,
         height: isMinimized ? '44px' : 'auto',
         aspectRatio: isMinimized ? 'unset' : '16/9'
+      } : isFullscreen ? {
+        width: '100vw',
+        height: '100vh',
+        right: 0,
+        bottom: 0,
+        borderRadius: 0
       } : undefined}
       className={cn(
         "transition-[opacity,transform,width,height] duration-200 ease-out",
-        isPip 
+        isPip || isFullscreen
           ? "fixed z-[100] rounded-xl shadow-2xl border border-white/20 bg-black overflow-hidden group select-none flex flex-col items-center justify-center cursor-move"
           : "flex-1 flex flex-col bg-black relative w-full h-full",
         (isDragging || resizeDir) && "transition-none",
-        isMinimized && "hover:bg-slate-900"
+        isMinimized && "hover:bg-slate-900",
+        isFullscreen && "border-none rounded-none"
       )}
     >
-      {isPip && !isMinimized && (
+      {isPip && !isMinimized && !isFullscreen && (
         <>
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'n'); }} className="absolute top-0 left-0 w-full h-2 cursor-ns-resize z-50" />
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 's'); }} className="absolute bottom-0 left-0 w-full h-2 cursor-ns-resize z-50" />
@@ -295,60 +334,86 @@ export default function VideoPlayer({
         </>
       )}
 
-      {isPip && (
-        <div className="absolute top-0 left-0 right-0 z-40 p-2 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+      {(isPip || isFullscreen) && (
+        <div className={cn(
+          "absolute top-0 left-0 right-0 z-40 p-2 flex items-center justify-between transition-opacity duration-300 bg-gradient-to-b from-black/80 to-transparent pointer-events-none",
+          (showControls || !isFullscreen) ? "opacity-100" : "opacity-0"
+        )}>
           <div className="flex items-center gap-1 overflow-hidden mr-2">
              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shrink-0" />
-             <span className="text-[10px] font-bold text-white truncate drop-shadow-md uppercase tracking-wider">{channel.name}</span>
+             <span className={cn(
+               "font-bold text-white truncate drop-shadow-md uppercase tracking-wider",
+               isFullscreen ? "text-sm" : "text-[10px]"
+             )}>{channel.name}</span>
           </div>
           <div className="flex items-center gap-1 shrink-0 pointer-events-auto">
+             {!isFullscreen && (
+               <Button 
+                 variant="ghost" 
+                 size="icon" 
+                 className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white"
+                 onClick={toggleMinimize}
+                 title={isMinimized ? "Maximize" : "Minimize"}
+               >
+                 {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+               </Button>
+             )}
              <Button 
                variant="ghost" 
                size="icon" 
-               className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white"
-               onClick={toggleMinimize}
-               title={isMinimized ? "Restore" : "Minimize"}
-             >
-               {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
-             </Button>
-             <Button 
-               variant="ghost" 
-               size="icon" 
-               className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white"
+               className={cn(
+                 "rounded-full bg-black/40 hover:bg-black/60 text-white",
+                 isFullscreen ? "h-10 w-10" : "h-7 w-7"
+               )}
                onClick={handleFullScreen}
-               title="Full Screen"
+               title={isFullscreen ? "Exit Full Screen" : "Full Screen"}
              >
-               <Maximize className="w-4 h-4" />
+               {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-4 h-4" />}
              </Button>
+             {!isFullscreen && (
+               <Button 
+                 variant="ghost" 
+                 size="icon" 
+                 className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white"
+                 onClick={handleExpand}
+                 title="Back to tab"
+               >
+                 <ArrowUpLeft className="w-4 h-4" />
+               </Button>
+             )}
              <Button 
                variant="ghost" 
                size="icon" 
-               className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white"
-               onClick={handleExpand}
-               title="Back to tab"
-             >
-               <ArrowUpLeft className="w-4 h-4" />
-             </Button>
-             <Button 
-               variant="ghost" 
-               size="icon" 
-               className="h-7 w-7 rounded-full bg-red-500/80 hover:bg-red-500 text-white"
+               className={cn(
+                 "rounded-full bg-red-500/80 hover:bg-red-500 text-white",
+                 isFullscreen ? "h-10 w-10" : "h-7 w-7"
+               )}
                onClick={(e) => { e.stopPropagation(); onClose?.(); }}
                title="Close"
              >
-               <X className="w-4 h-4" />
+               <X className={isFullscreen ? "w-5 h-5" : "w-4 h-4"} />
              </Button>
           </div>
         </div>
       )}
 
-      {isPip && !isMinimized && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+      {(isPip || isFullscreen) && !isMinimized && (
+        <div className={cn(
+          "absolute inset-0 z-30 flex items-center justify-center transition-opacity duration-300 pointer-events-none",
+          (showControls || !isFullscreen) ? "opacity-100" : "opacity-0"
+        )}>
           <button 
             onClick={togglePlay}
-            className="p-4 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 hover:scale-110 transition-transform pointer-events-auto"
+            className={cn(
+              "rounded-full bg-black/40 backdrop-blur-sm border border-white/10 hover:scale-110 transition-transform pointer-events-auto",
+              isFullscreen ? "p-6" : "p-4"
+            )}
           >
-            {isPlaying ? <Pause className="w-8 h-8 text-white" /> : <Play className="w-8 h-8 text-white fill-current" />}
+            {isPlaying ? (
+              <Pause className={isFullscreen ? "w-12 h-12 text-white" : "w-8 h-8 text-white"} />
+            ) : (
+              <Play className={isFullscreen ? "w-12 h-12 text-white fill-current" : "w-8 h-8 text-white fill-current"} />
+            )}
           </button>
         </div>
       )}
