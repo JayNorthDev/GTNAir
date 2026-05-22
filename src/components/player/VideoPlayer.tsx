@@ -321,33 +321,40 @@ export default function VideoPlayer({
     );
   }
 
+  const pipStyle: React.CSSProperties = isFullscreen ? {
+    width: '100vw',
+    height: '100vh',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 0,
+    zIndex: 9999,
+    position: 'fixed'
+  } : isPip ? { 
+    right: `${position.x}px`, 
+    bottom: `${position.y}px`,
+    width: isMinimized ? '180px' : `${pipWidth}px`,
+    height: isMinimized ? '44px' : 'auto',
+    aspectRatio: isMinimized ? 'unset' : '16/9',
+    position: 'fixed'
+  } : {
+    position: 'relative'
+  };
+
   return (
     <div 
       ref={containerRef}
       onMouseDown={(e) => handleMouseDown(e)}
       onMouseMove={handleMouseMoveActive}
-      style={isPip && !isFullscreen ? { 
-        right: `${position.x}px`, 
-        bottom: `${position.y}px`,
-        width: isMinimized ? '180px' : `${pipWidth}px`,
-        height: isMinimized ? '44px' : 'auto',
-        aspectRatio: isMinimized ? 'unset' : '16/9'
-      } : isFullscreen ? {
-        width: '100vw',
-        height: '100vh',
-        right: 0,
-        bottom: 0,
-        borderRadius: 0,
-        zIndex: 9999
-      } : undefined}
+      style={pipStyle}
       className={cn(
-        "transition-all duration-300 ease-in-out",
-        isPip || isFullscreen
-          ? "fixed z-[100] rounded-xl shadow-2xl border border-white/20 bg-black overflow-hidden group select-none flex flex-col items-center justify-center cursor-move"
-          : "flex-1 flex flex-col bg-black relative w-full h-full",
-        (isDragging || resizeDir) && "transition-none",
+        "transition-all duration-300 ease-in-out bg-black overflow-hidden group select-none flex flex-col items-center justify-center cursor-move",
+        (isPip || isFullscreen) && "z-[100] rounded-xl shadow-2xl border border-white/20",
+        !isPip && !isFullscreen && "flex-1 w-full h-full border-none rounded-none",
+        (isDragging || resizeDir || isFullscreen) && "transition-none",
         isMinimized && "hover:bg-slate-900",
-        isFullscreen && "border-none rounded-none duration-0"
+        isFullscreen && "border-none rounded-none"
       )}
     >
       {isPip && !isMinimized && !isFullscreen && (
@@ -440,7 +447,7 @@ export default function VideoPlayer({
         </div>
       )}
 
-      <div className={cn("w-full h-full flex items-center justify-center bg-black video-container overflow-hidden transition-all duration-300", (isPip && isMinimized) && "hidden")}>
+      <div className={cn("w-full h-full flex items-center justify-center bg-black video-container overflow-hidden", (isPip && isMinimized) && "hidden")}>
       </div>
 
       {(isPip && isMinimized) && (
