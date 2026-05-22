@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import { Channel } from '@/lib/m3u-parser';
-import { MonitorPlay, Maximize2, X, Play, Pause, GripHorizontal, Minus, SquareArrowOutUpRight } from 'lucide-react';
+import { MonitorPlay, Maximize2, X, Play, Pause, GripHorizontal, Minus, ArrowUpLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -217,7 +217,7 @@ export default function VideoPlayer({
                onClick={handleExpand}
                title="Back to tab"
              >
-               <SquareArrowOutUpRight className="w-4 h-4" />
+               <ArrowUpLeft className="w-4 h-4" />
              </Button>
              <Button 
                variant="ghost" 
