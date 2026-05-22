@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import { Channel } from '@/lib/m3u-parser';
-import { MonitorPlay, Maximize2, X, Play, Pause, Minus, ArrowUpLeft } from 'lucide-react';
+import { MonitorPlay, Maximize2, X, Play, Pause, Minus, ArrowUpLeft, Maximize } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -74,14 +74,12 @@ export default function VideoPlayer({
       setIsDragging(true);
     }
     
-    // Stop event propagation to prevent triggering unwanted parent actions
     e.stopPropagation();
   };
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isPip || isMinimized || !containerRef.current) return;
     
-    // Check if mouse actually moved to avoid click-to-resize jitter
     if (!interactionStart.current.hasMoved) {
       if (Math.abs(e.clientX - interactionStart.current.mouseX) > 3 || 
           Math.abs(e.clientY - interactionStart.current.mouseY) > 3) {
@@ -105,7 +103,6 @@ export default function VideoPlayer({
       
       let newWidth = interactionStart.current.startWidth;
 
-      // Maintain 16:9 ratio while resizing from any side
       if (resizeDir.includes('w')) {
         newWidth = interactionStart.current.startWidth - deltaX;
       } else if (resizeDir.includes('e')) {
@@ -165,7 +162,6 @@ export default function VideoPlayer({
   useEffect(() => {
     if (!channel || !containerRef.current) return;
 
-    // Standard Video.js setup - only re-init when channel URL changes
     const videoElement = document.createElement('video');
     videoElement.className = 'video-js vjs-big-play-centered w-full h-full object-contain';
     videoElement.setAttribute('playsinline', 'true');
@@ -249,6 +245,13 @@ export default function VideoPlayer({
     setIsMinimized(!isMinimized);
   };
 
+  const handleFullScreen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (playerRef.current && !playerRef.current.isDisposed()) {
+      playerRef.current.requestFullscreen();
+    }
+  };
+
   if (!channel) {
     return isPip ? null : (
       <div className="flex-1 flex flex-col items-center justify-center h-full text-slate-400 bg-transparent">
@@ -278,16 +281,13 @@ export default function VideoPlayer({
         isMinimized && "hover:bg-slate-900"
       )}
     >
-      {/* 8-Way Edge Resize Handles - Only show when in PIP and not minimized */}
       {isPip && !isMinimized && (
         <>
-          {/* Edge Handles */}
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'n'); }} className="absolute top-0 left-0 w-full h-2 cursor-ns-resize z-50" />
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 's'); }} className="absolute bottom-0 left-0 w-full h-2 cursor-ns-resize z-50" />
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'w'); }} className="absolute top-0 left-0 w-2 h-full cursor-ew-resize z-50" />
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'e'); }} className="absolute top-0 right-0 w-2 h-full cursor-ew-resize z-50" />
           
-          {/* Corner Handles */}
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'nw'); }} className="absolute top-0 left-0 w-4 h-4 cursor-nwse-resize z-[60]" />
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'ne'); }} className="absolute top-0 right-0 w-4 h-4 cursor-nesw-resize z-[60]" />
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'sw'); }} className="absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-[60]" />
@@ -295,7 +295,6 @@ export default function VideoPlayer({
         </>
       )}
 
-      {/* PIP Controls Overlay */}
       {isPip && (
         <div className="absolute top-0 left-0 right-0 z-40 p-2 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
           <div className="flex items-center gap-1 overflow-hidden mr-2">
@@ -311,6 +310,15 @@ export default function VideoPlayer({
                title={isMinimized ? "Restore" : "Minimize"}
              >
                {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+             </Button>
+             <Button 
+               variant="ghost" 
+               size="icon" 
+               className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white"
+               onClick={handleFullScreen}
+               title="Full Screen"
+             >
+               <Maximize className="w-4 h-4" />
              </Button>
              <Button 
                variant="ghost" 
@@ -334,7 +342,6 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* Central Play/Pause for PIP - Only clickable on the button itself */}
       {isPip && !isMinimized && (
         <div className="absolute inset-0 z-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
           <button 
@@ -346,7 +353,6 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* Video Container */}
       <div className={cn("w-full h-full flex items-center justify-center bg-black video-container overflow-hidden", (isPip && isMinimized) && "hidden")}>
       </div>
 
