@@ -27,28 +27,22 @@ export default function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
 
+  /**
+   * Main Initialization & Disposal Effect
+   * This effect handles the creation and destruction of the Video.js instance.
+   * It re-runs strictly when the channel URL changes, ensuring the old player
+   * is dismantled before a new one is built.
+   */
   useEffect(() => {
-    // If there's no channel or no video element, cleanup and return
-    if (!channel || !videoRef.current) {
-      if (playerRef.current && !playerRef.current.isDisposed()) {
-        playerRef.current.dispose();
-        playerRef.current = null;
-      }
-      return;
-    }
+    // Exit if no channel is selected or DOM is not ready
+    if (!channel || !videoRef.current) return;
 
-    // Dispose existing player before re-initializing for a new channel
-    if (playerRef.current && !playerRef.current.isDisposed()) {
-      playerRef.current.dispose();
-      playerRef.current = null;
-    }
-
-    // Initialize Video.js player with direct URL
-    const player = playerRef.current = videojs(videoRef.current, {
+    // 1. Initialize Video.js instance
+    const player = videojs(videoRef.current, {
       autoplay: true,
       controls: !isPip,
       fluid: true,
-      muted: isMuted,
+      muted: !!isMuted,
       responsive: true,
       sources: [{
         src: channel.url,
@@ -56,34 +50,69 @@ export default function VideoPlayer({
       }]
     });
 
-    // Handle stream errors for auto-skip logic
+    playerRef.current = player;
+
+    // 2. Attach error listeners for auto-skip logic
     player.on('error', () => {
       const error = player.error();
-      if (error) {
-        console.error('Video.js Playback Error:', error.code, error.message);
-        if (autoSkip && onStreamError) {
-          // Delay to prevent rapid skip loops if multiple channels are down
-          setTimeout(() => {
+      if (error && autoSkip && onStreamError) {
+        console.warn('Playback error detected, triggering auto-skip logic...');
+        // Small delay to avoid rapid skipping loops that can freeze the browser
+        setTimeout(() => {
+          // Ensure we are still managing the same player instance before triggering skip
+          if (playerRef.current === player && !player.isDisposed()) {
             onStreamError();
-          }, 2000);
-        }
+          }
+        }, 2500);
       }
     });
 
-    // Cleanup on unmount or channel change
+    /**
+     * CRITICAL CLEANUP: The return function of useEffect is guaranteed to run
+     * when the component unmounts OR before the effect re-runs (due to channel URL change).
+     * This ensures player.dispose() is called, preventing orphaned streams from 
+     * playing in the background.
+     */
     return () => {
       if (player && !player.isDisposed()) {
         player.dispose();
         playerRef.current = null;
       }
     };
-  }, [channel, isMuted, isPip, autoSkip, onStreamError]);
+  }, [channel?.url, autoSkip, onStreamError]);
 
-  // If PIP mode and no channel is selected, don't render anything
+  /**
+   * Mute State Sync Effect
+   * Updates the volume/mute state without re-initializing the entire player.
+   */
+  useEffect(() => {
+    if (playerRef.current && !playerRef.current.isDisposed()) {
+      playerRef.current.muted(!!isMuted);
+    }
+  }, [isMuted]);
+
+  /**
+   * UI Controls Sync Effect
+   * Toggles controls based on PIP mode without re-initializing the entire player.
+   */
+  useEffect(() => {
+    if (playerRef.current && !playerRef.current.isDisposed()) {
+      playerRef.current.controls(!isPip);
+    }
+  }, [isPip]);
+
+  // Don't render a PIP box if there's no active stream
   if (isPip && !channel) return null;
 
   return (
     <div 
+      /**
+       * The 'key' attribute is vital here. By keying the container with the channel's URL,
+       * React will completely destroy the old DOM subtree and recreate it whenever
+       * the channel changes. This gives Video.js a fresh <video> element every time,
+       * which is the most robust way to avoid stale player states.
+       */
+      key={channel?.url || 'empty-player'}
       onClick={isPip ? onExpand : undefined}
       className={cn(
         isPip 
