@@ -4,7 +4,17 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import { Channel } from '@/lib/m3u-parser';
-import { MonitorPlay, Maximize2, X, Play, Pause, Minus, ArrowUpLeft, Maximize, Minimize } from 'lucide-react';
+import { 
+  MonitorPlay, 
+  Maximize2, 
+  X, 
+  Play, 
+  Pause, 
+  Minus, 
+  ArrowUpLeft, 
+  Maximize, 
+  Minimize 
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -38,8 +48,8 @@ export default function VideoPlayer({
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Position and Size state for persistence
-  const [position, setPosition] = useState({ x: 24, y: 24 }); // Bottom-right offsets
-  const [pipWidth, setPipWidth] = useState(400); // Default PIP width
+  const [position, setPosition] = useState({ x: 24, y: 24 });
+  const [pipWidth, setPipWidth] = useState(400);
   
   const [isDragging, setIsDragging] = useState(false);
   const [resizeDir, setResizeDirection] = useState<ResizeDirection>(null);
@@ -53,7 +63,6 @@ export default function VideoPlayer({
     hasMoved: false
   });
 
-  // Track mouse move to show controls
   const handleMouseMoveActive = useCallback(() => {
     setShowControls(true);
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
@@ -69,9 +78,7 @@ export default function VideoPlayer({
         (document as any).msFullscreenElement
       );
       setIsFullscreen(isFs);
-      if (isFs) {
-        setShowControls(true);
-      }
+      if (isFs) setShowControls(true);
     };
     document.addEventListener('fullscreenchange', handleFsChange);
     document.addEventListener('webkitfullscreenchange', handleFsChange);
@@ -90,7 +97,6 @@ export default function VideoPlayer({
   const handleMouseDown = (e: React.MouseEvent, direction: ResizeDirection = null) => {
     if (!isPip || isMinimized || isFullscreen || !containerRef.current) return;
     
-    // Prevent dragging if clicking a button
     const target = e.target as HTMLElement;
     if (target.closest('button')) return;
 
@@ -126,26 +132,25 @@ export default function VideoPlayer({
 
     if (!interactionStart.current.hasMoved) return;
 
+    const deltaX = e.clientX - interactionStart.current.mouseX;
+    const deltaY = e.clientY - interactionStart.current.mouseY;
+
     if (isDragging) {
-      const deltaX = interactionStart.current.mouseX - e.clientX;
-      const deltaY = interactionStart.current.mouseY - e.clientY;
-      const newX = interactionStart.current.startX + deltaX;
-      const newY = interactionStart.current.startY + deltaY;
+      const newX = interactionStart.current.startX - deltaX;
+      const newY = interactionStart.current.startY - deltaY;
       
       containerRef.current.style.right = `${newX}px`;
       containerRef.current.style.bottom = `${newY}px`;
     } else if (resizeDir) {
-      const deltaX = e.clientX - interactionStart.current.mouseX;
-      const deltaY = e.clientY - interactionStart.current.mouseY;
-      
       let newWidth = interactionStart.current.startWidth;
 
-      if (resizeDir.includes('w')) {
-        newWidth = interactionStart.current.startWidth - deltaX;
-      } else if (resizeDir.includes('e')) {
+      // Logic to maintain 16:9 while resizing from any side
+      if (resizeDir.includes('e')) {
         newWidth = interactionStart.current.startWidth + deltaX;
         const posDelta = deltaX;
         containerRef.current.style.right = `${interactionStart.current.startX - posDelta}px`;
+      } else if (resizeDir.includes('w')) {
+        newWidth = interactionStart.current.startWidth - deltaX;
       }
 
       if (resizeDir.includes('n')) {
@@ -229,13 +234,15 @@ export default function VideoPlayer({
     player.on('pause', () => setIsPlaying(false));
 
     player.on('error', () => {
-      const error = player.error();
-      if (error && autoSkip && onStreamError) {
-        setTimeout(() => {
-          if (playerRef.current === player && !player.isDisposed()) {
-            onStreamError();
-          }
-        }, 2500);
+      if (!player.isDisposed()) {
+        const error = player.error();
+        if (error && autoSkip && onStreamError) {
+          setTimeout(() => {
+            if (playerRef.current === player && !player.isDisposed()) {
+              onStreamError();
+            }
+          }, 2500);
+        }
       }
     });
 
@@ -251,23 +258,21 @@ export default function VideoPlayer({
     const player = playerRef.current;
     if (player && !player.isDisposed()) {
       player.muted(!!isMuted);
-      player.controls(false);
     }
   }, [isMuted]);
 
   useEffect(() => {
-    if (!isPip) {
-      setIsMinimized(false);
-    }
+    if (!isPip) setIsMinimized(false);
   }, [isPip]);
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!playerRef.current) return;
-    if (playerRef.current.paused()) {
-      playerRef.current.play();
+    const player = playerRef.current;
+    if (!player || player.isDisposed()) return;
+    if (player.paused()) {
+      player.play();
     } else {
-      playerRef.current.pause();
+      player.pause();
     }
   };
 
@@ -289,25 +294,15 @@ export default function VideoPlayer({
     
     if (el) {
       if (!doc.fullscreenElement && !doc.webkitFullscreenElement && !doc.mozFullScreenElement && !doc.msFullscreenElement) {
-        if (el.requestFullscreen) {
-          el.requestFullscreen();
-        } else if (el.webkitRequestFullscreen) {
-          el.webkitRequestFullscreen();
-        } else if (el.mozRequestFullScreen) {
-          el.mozRequestFullScreen();
-        } else if (el.msRequestFullscreen) {
-          el.msRequestFullscreen();
-        }
+        if (el.requestFullscreen) el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+        else if (el.msRequestFullscreen) el.msRequestFullscreen();
       } else {
-        if (doc.exitFullscreen) {
-          doc.exitFullscreen();
-        } else if (doc.webkitExitFullscreen) {
-          doc.webkitExitFullscreen();
-        } else if (doc.mozCancelFullScreen) {
-          doc.mozCancelFullScreen();
-        } else if (doc.msExitFullscreen) {
-          doc.msExitFullscreen();
-        }
+        if (doc.exitFullscreen) doc.exitFullscreen();
+        else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+        else if (doc.mozCancelFullScreen) doc.mozCancelFullScreen();
+        else if (doc.msExitFullscreen) doc.msExitFullscreen();
       }
     }
   };
@@ -349,14 +344,16 @@ export default function VideoPlayer({
       onMouseMove={handleMouseMoveActive}
       style={pipStyle}
       className={cn(
-        "transition-all duration-300 ease-in-out bg-black overflow-hidden group select-none flex flex-col items-center justify-center cursor-move",
+        "transition-all duration-300 ease-in-out bg-black overflow-hidden group select-none flex flex-col items-center justify-center",
         (isPip || isFullscreen) && "z-[100] rounded-xl shadow-2xl border border-white/20",
         !isPip && !isFullscreen && "flex-1 w-full h-full border-none rounded-none",
         (isDragging || resizeDir || isFullscreen) && "transition-none",
         isMinimized && "hover:bg-slate-900",
-        isFullscreen && "border-none rounded-none"
+        isFullscreen && "border-none rounded-none",
+        isPip && !isMinimized && !isFullscreen && "cursor-move"
       )}
     >
+      {/* Universal Resize Handles */}
       {isPip && !isMinimized && !isFullscreen && (
         <>
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'n'); }} className="absolute top-0 left-0 w-full h-2 cursor-ns-resize z-50" />
@@ -385,43 +382,51 @@ export default function VideoPlayer({
           </div>
           <div className="flex items-center gap-1 shrink-0 pointer-events-auto">
              {!isFullscreen && (
-               <button 
+               <Button 
+                 variant="ghost" 
+                 size="icon" 
                  onClick={toggleMinimize}
-                 className="flex items-center justify-center h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white transition-colors"
+                 className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white"
                  title={isMinimized ? "Maximize" : "Minimize"}
                >
                  {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
-               </button>
+               </Button>
              )}
-             <button 
+             <Button 
+               variant="ghost" 
+               size="icon" 
                onClick={handleFullScreen}
                className={cn(
-                 "flex items-center justify-center rounded-full bg-black/40 hover:bg-black/60 text-white transition-colors",
+                 "rounded-full bg-black/40 hover:bg-black/60 text-white transition-colors",
                  isFullscreen ? "h-10 w-10" : "h-7 w-7"
                )}
                title={isFullscreen ? "Exit Full Screen" : "Full Screen"}
              >
                {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-4 h-4" />}
-             </button>
+             </Button>
              {!isFullscreen && (
-               <button 
+               <Button 
+                 variant="ghost" 
+                 size="icon" 
                  onClick={handleExpand}
-                 className="flex items-center justify-center h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white transition-colors"
+                 className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white"
                  title="Back to tab"
                >
                  <ArrowUpLeft className="w-4 h-4" />
-               </button>
+               </Button>
              )}
-             <button 
+             <Button 
+               variant="ghost" 
+               size="icon" 
                onClick={(e) => { e.stopPropagation(); onClose?.(); }}
                className={cn(
-                 "flex items-center justify-center rounded-full bg-red-500/80 hover:bg-red-500 text-white transition-colors",
+                 "rounded-full bg-red-500/80 hover:bg-red-500 text-white transition-colors",
                  isFullscreen ? "h-10 w-10" : "h-7 w-7"
                )}
                title="Close"
              >
                <X className={isFullscreen ? "w-5 h-5" : "w-4 h-4"} />
-             </button>
+             </Button>
           </div>
         </div>
       )}
