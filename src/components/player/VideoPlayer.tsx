@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import { Channel } from '@/lib/m3u-parser';
-import { MonitorPlay, Maximize2, X, Play, Pause, GripHorizontal, Minus } from 'lucide-react';
+import { MonitorPlay, Maximize2, X, Play, Pause, GripHorizontal, Minus, SquareArrowOutUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -39,7 +39,7 @@ export default function VideoPlayer({
   const dragStart = useRef({ mouseX: 0, mouseY: 0, startX: 0, startY: 0 });
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!isPip) return;
+    if (!isPip || isMinimized) return;
     setIsDragging(true);
     dragStart.current = {
       mouseX: e.clientX,
@@ -134,6 +134,10 @@ export default function VideoPlayer({
       player.muted(!!isMuted);
       player.controls(!isPip);
     }
+    // Automatically restore if moving back to full player view
+    if (!isPip) {
+      setIsMinimized(false);
+    }
   }, [isMuted, isPip]);
 
   const togglePlay = (e: React.MouseEvent) => {
@@ -144,6 +148,12 @@ export default function VideoPlayer({
     } else {
       playerRef.current.pause();
     }
+  };
+
+  const handleExpand = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setIsMinimized(false);
+    onExpand?.();
   };
 
   if (!channel) {
@@ -163,12 +173,13 @@ export default function VideoPlayer({
         width: isMinimized ? '150px' : undefined,
         height: isMinimized ? '40px' : undefined
       } : undefined}
+      onClick={isPip ? handleExpand : undefined}
       className={cn(
         "transition-all duration-300 ease-in-out",
         isPip 
           ? "fixed z-[100] rounded-xl shadow-2xl border border-white/20 bg-black overflow-hidden group select-none"
           : "flex-1 flex flex-col bg-black relative w-full h-full",
-        isPip && !isMinimized && "w-72 md:w-[480px] aspect-video resize overflow-hidden min-w-[200px] min-h-[120px]",
+        isPip && !isMinimized && "w-72 md:w-[480px] aspect-video resize min-w-[200px] min-h-[120px]",
         isDragging && "opacity-80 scale-[1.02] cursor-grabbing"
       )}
     >
@@ -195,18 +206,18 @@ export default function VideoPlayer({
                size="icon" 
                className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white"
                onClick={(e) => { e.stopPropagation(); setIsMinimized(!isMinimized); }}
-               title={isMinimized ? "Restore" : "Minimize"}
+               title={isMinimized ? "Maximize" : "Minimize"}
              >
-               <Minus className="w-4 h-4" />
+               {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
              </Button>
              <Button 
                variant="ghost" 
                size="icon" 
                className="h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 text-white"
-               onClick={(e) => { e.stopPropagation(); onExpand?.(); }}
+               onClick={handleExpand}
                title="Back to tab"
              >
-               <Maximize2 className="w-4 h-4" />
+               <SquareArrowOutUpRight className="w-4 h-4" />
              </Button>
              <Button 
                variant="ghost" 
@@ -233,13 +244,13 @@ export default function VideoPlayer({
         </button>
       )}
 
-      <div className={cn("w-full h-full", isMinimized && "hidden")}>
+      <div className={cn("w-full h-full", (isPip && isMinimized) && "hidden")}>
         <div ref={containerRef} className="w-full h-full" />
       </div>
 
-      {isMinimized && (
+      {(isPip && isMinimized) && (
         <div className="w-full h-full flex items-center justify-center bg-black/90 p-2">
-           <span className="text-[10px] text-white/60 truncate font-bold">PIP MINIMIZED</span>
+           <span className="text-[10px] text-white/60 truncate font-bold uppercase tracking-widest">PIP Minimized</span>
         </div>
       )}
     </div>
