@@ -47,6 +47,18 @@ export default function VideoPlayer({
   const [showControls, setShowControls] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Use refs for callbacks and settings to avoid player re-initialization
+  const onStreamErrorRef = useRef(onStreamError);
+  const autoSkipRef = useRef(autoSkip);
+
+  useEffect(() => {
+    onStreamErrorRef.current = onStreamError;
+  }, [onStreamError]);
+
+  useEffect(() => {
+    autoSkipRef.current = autoSkip;
+  }, [autoSkip]);
+
   // Position and Size state for persistence
   const [position, setPosition] = useState({ x: 24, y: 24 });
   const [pipWidth, setPipWidth] = useState(400);
@@ -144,7 +156,6 @@ export default function VideoPlayer({
     } else if (resizeDir) {
       let newWidth = interactionStart.current.startWidth;
 
-      // Logic to maintain 16:9 while resizing from any side
       if (resizeDir.includes('e')) {
         newWidth = interactionStart.current.startWidth + deltaX;
         const posDelta = deltaX;
@@ -201,8 +212,9 @@ export default function VideoPlayer({
     };
   }, [isDragging, resizeDir, handleMouseMove, handleMouseUp]);
 
+  // Main Player Initialization - Only depends on channel.url
   useEffect(() => {
-    if (!channel || !containerRef.current) return;
+    if (!channel?.url || !containerRef.current) return;
 
     const videoElement = document.createElement('video');
     videoElement.className = 'video-js vjs-big-play-centered w-full h-full object-contain';
@@ -236,10 +248,10 @@ export default function VideoPlayer({
     player.on('error', () => {
       if (!player.isDisposed()) {
         const error = player.error();
-        if (error && autoSkip && onStreamError) {
+        if (error && autoSkipRef.current && onStreamErrorRef.current) {
           setTimeout(() => {
             if (playerRef.current === player && !player.isDisposed()) {
-              onStreamError();
+              onStreamErrorRef.current?.();
             }
           }, 2500);
         }
@@ -252,7 +264,7 @@ export default function VideoPlayer({
         playerRef.current = null;
       }
     };
-  }, [channel?.url, autoSkip, onStreamError]);
+  }, [channel?.url]);
 
   useEffect(() => {
     const player = playerRef.current;
@@ -344,7 +356,7 @@ export default function VideoPlayer({
       onMouseMove={handleMouseMoveActive}
       style={pipStyle}
       className={cn(
-        "transition-all duration-300 ease-in-out bg-black overflow-hidden group select-none flex flex-col items-center justify-center",
+        "bg-black overflow-hidden group select-none flex flex-col items-center justify-center transition-all duration-300 ease-in-out",
         (isPip || isFullscreen) && "z-[100] rounded-xl shadow-2xl border border-white/20",
         !isPip && !isFullscreen && "flex-1 w-full h-full border-none rounded-none",
         (isDragging || resizeDir || isFullscreen) && "transition-none",
