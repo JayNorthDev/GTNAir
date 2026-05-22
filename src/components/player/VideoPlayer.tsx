@@ -232,16 +232,16 @@ export default function VideoPlayer({
         </div>
       )}
 
-      {/* Play/Pause for PIP */}
+      {/* Play/Pause for PIP - Only triggered when clicking the central circle */}
       {isPip && !isMinimized && (
-        <button 
-          onClick={togglePlay}
-          className="absolute inset-0 z-20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <div className="p-4 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 hover:scale-110 transition-transform">
+        <div className="absolute inset-0 z-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+          <button 
+            onClick={togglePlay}
+            className="p-4 rounded-full bg-black/40 backdrop-blur-sm border border-white/10 hover:scale-110 transition-transform pointer-events-auto"
+          >
             {isPlaying ? <Pause className="w-8 h-8 text-white" /> : <Play className="w-8 h-8 text-white fill-current" />}
-          </div>
-        </button>
+          </button>
+        </div>
       )}
 
       <div className={cn("w-full h-full", (isPip && isMinimized) && "hidden")}>
