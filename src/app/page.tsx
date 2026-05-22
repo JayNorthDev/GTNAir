@@ -90,7 +90,8 @@ export default function Home() {
   const handlePlaylistSelect = (playlistId: string) => {
     updateSettings({ selectedPlaylistId: playlistId });
     setView("player");
-    setSelectedChannel(null);
+    // We no longer set selectedChannel to null here to ensure PIP remains active
+    // while the user transitions back to the player view with the new playlist.
   };
 
   if (error) {
