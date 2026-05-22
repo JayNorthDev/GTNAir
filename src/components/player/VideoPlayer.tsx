@@ -78,13 +78,20 @@ export default function VideoPlayer({
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
+  // Restore if moving back to full player view
+  useEffect(() => {
+    if (!isPip) {
+      setIsMinimized(false);
+    }
+  }, [isPip]);
+
   // Handle Player Initialization (Only on channel change)
   useEffect(() => {
     if (!channel || !containerRef.current) return;
 
     // Create video element
     const videoElement = document.createElement('video');
-    videoElement.className = 'video-js vjs-big-play-centered w-full h-full object-contain';
+    videoElement.className = 'video-js vjs-big-play-centered w-full h-full';
     videoElement.setAttribute('playsinline', 'true');
     containerRef.current.appendChild(videoElement);
     videoElementRef.current = videoElement;
@@ -92,8 +99,8 @@ export default function VideoPlayer({
     const player = videojs(videoElement, {
       autoplay: true,
       controls: !isPip,
-      fluid: !isPip, // Fluid in full mode, fixed/fill in PIP
-      fill: isPip,   // Fill container in PIP to avoid padding issues
+      fluid: false, 
+      fill: true,   
       muted: !!isMuted,
       responsive: true,
       sources: [{
@@ -134,11 +141,6 @@ export default function VideoPlayer({
     if (player && !player.isDisposed()) {
       player.muted(!!isMuted);
       player.controls(!isPip);
-      // Update fluid/fill state dynamically if possible, or handle via layout
-    }
-    // Automatically restore if moving back to full player view
-    if (!isPip) {
-      setIsMinimized(false);
     }
   }, [isMuted, isPip]);
 
@@ -186,7 +188,9 @@ export default function VideoPlayer({
         isPip 
           ? "fixed z-[100] rounded-xl shadow-2xl border border-white/20 bg-black overflow-hidden group select-none flex flex-col items-center justify-center"
           : "flex-1 flex flex-col bg-black relative w-full h-full",
-        isPip && !isMinimized && "w-72 md:w-[480px] resize min-w-[200px]",
+        // Enforce 16:9 by only allowing horizontal resize, which aspect-ratio will follow.
+        // Increased min-width to prevent UI breakage.
+        isPip && !isMinimized && "w-72 md:w-[480px] resize-x min-w-[280px]",
         isDragging && "opacity-80 scale-[1.02] cursor-grabbing"
       )}
     >
