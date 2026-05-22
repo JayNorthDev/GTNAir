@@ -168,7 +168,7 @@ export default function VideoPlayer({
         isPip 
           ? "fixed z-[100] rounded-xl shadow-2xl border border-white/20 bg-black overflow-hidden group select-none"
           : "flex-1 flex flex-col bg-black relative w-full h-full",
-        isPip && !isMinimized && "w-72 md:w-[480px] aspect-video resize overflow-auto min-w-[200px] min-h-[120px]",
+        isPip && !isMinimized && "w-72 md:w-[480px] aspect-video resize overflow-hidden min-w-[200px] min-h-[120px]",
         isDragging && "opacity-80 scale-[1.02] cursor-grabbing"
       )}
     >
