@@ -173,7 +173,6 @@ export default function VideoPlayer({
         width: isMinimized ? '150px' : undefined,
         height: isMinimized ? '40px' : undefined
       } : undefined}
-      onClick={isPip ? handleExpand : undefined}
       className={cn(
         "transition-all duration-300 ease-in-out",
         isPip 
@@ -249,7 +248,10 @@ export default function VideoPlayer({
       </div>
 
       {(isPip && isMinimized) && (
-        <div className="w-full h-full flex items-center justify-center bg-black/90 p-2">
+        <div 
+          onClick={handleExpand}
+          className="w-full h-full flex items-center justify-center bg-black/90 p-2 cursor-pointer hover:bg-black transition-colors"
+        >
            <span className="text-[10px] text-white/60 truncate font-bold uppercase tracking-widest">PIP Minimized</span>
         </div>
       )}
