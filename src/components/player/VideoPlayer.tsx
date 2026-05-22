@@ -27,7 +27,8 @@ export default function VideoPlayer({
   onExpand,
   onClose
 }: VideoPlayerProps) {
-  const videoRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const playerRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -77,13 +78,16 @@ export default function VideoPlayer({
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
+  // Handle Player Initialization (Only on channel change)
   useEffect(() => {
-    if (!channel || !videoRef.current) return;
+    if (!channel || !containerRef.current) return;
 
+    // Create video element
     const videoElement = document.createElement('video');
     videoElement.className = 'video-js vjs-big-play-centered w-full h-full object-contain';
     videoElement.setAttribute('playsinline', 'true');
-    videoRef.current.appendChild(videoElement);
+    containerRef.current.appendChild(videoElement);
+    videoElementRef.current = videoElement;
 
     const player = videojs(videoElement, {
       autoplay: true,
@@ -118,9 +122,19 @@ export default function VideoPlayer({
       if (player && !player.isDisposed()) {
         player.dispose();
         playerRef.current = null;
+        videoElementRef.current = null;
       }
     };
-  }, [channel?.url, autoSkip, onStreamError, isMuted, isPip]);
+  }, [channel?.url, autoSkip, onStreamError]);
+
+  // Handle Dynamic Updates (Mute/Controls) without re-initializing
+  useEffect(() => {
+    const player = playerRef.current;
+    if (player && !player.isDisposed()) {
+      player.muted(!!isMuted);
+      player.controls(!isPip);
+    }
+  }, [isMuted, isPip]);
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -150,7 +164,7 @@ export default function VideoPlayer({
         height: isMinimized ? '40px' : undefined
       } : undefined}
       className={cn(
-        "transition-all duration-200",
+        "transition-all duration-300 ease-in-out",
         isPip 
           ? "fixed z-[100] rounded-xl shadow-2xl border border-white/20 bg-black overflow-hidden group select-none"
           : "flex-1 flex flex-col bg-black relative w-full h-full",
@@ -159,7 +173,7 @@ export default function VideoPlayer({
       )}
     >
       {/* Drag Handle for PIP */}
-      {isPip && (
+      {isPip && !isMinimized && (
         <div 
           onMouseDown={handleMouseDown}
           className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 flex items-center justify-center"
@@ -219,8 +233,8 @@ export default function VideoPlayer({
         </button>
       )}
 
-      <div data-vjs-player className={cn("w-full h-full", isMinimized && "hidden")}>
-        <div ref={videoRef} className="w-full h-full" />
+      <div className={cn("w-full h-full", isMinimized && "hidden")}>
+        <div ref={containerRef} className="w-full h-full" />
       </div>
 
       {isMinimized && (
