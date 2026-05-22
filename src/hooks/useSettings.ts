@@ -9,6 +9,7 @@ export type View = 'home' | 'player' | 'favorites' | 'categories';
 export type Settings = {
   autoSkip: boolean;
   muteOnStartup: boolean;
+  forceLiveEdge: boolean;
   defaultView: View;
   customPlaylistUrl: string;
   selectedPlaylistId: string;
@@ -17,6 +18,7 @@ export type Settings = {
 export const defaultSettings: Settings = {
   autoSkip: true,
   muteOnStartup: false,
+  forceLiveEdge: true,
   defaultView: 'home',
   customPlaylistUrl: '',
   selectedPlaylistId: '',
@@ -27,16 +29,13 @@ export function useSettings() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // This effect runs only on the client, after hydration
     try {
       const item = window.localStorage.getItem(SETTINGS_KEY);
       if (item) {
-        // Merge saved settings with defaults to avoid breaking changes
         const savedSettings = JSON.parse(item);
         const newSettings = { ...defaultSettings, ...savedSettings };
         
-        // Ensure defaultView is a valid value
-        if (newSettings.defaultView === 'settings') {
+        if (newSettings.defaultView === 'settings' as any) {
           newSettings.defaultView = 'home';
         }
         setSettings(newSettings);

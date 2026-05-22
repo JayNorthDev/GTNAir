@@ -40,7 +40,6 @@ export default function Home() {
   const [view, setView] = useState<SettingsViewType>("home");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Failure tracking for auto-skip
   const [failCount, setFailCount] = useState(0);
   const [skipError, setSkipError] = useState(false);
 
@@ -195,7 +194,6 @@ export default function Home() {
         "flex-1 flex min-w-0 relative bg-background",
         view === 'player' ? "overflow-hidden" : "flex-col overflow-y-auto"
       )}>
-        {/* Persistent Sidebar and Header for Player View - only functional when in player view */}
         {view === 'player' && (
           <Sidebar
             isSidebarOpen={isSidebarOpen}
@@ -223,17 +221,16 @@ export default function Home() {
             />
           )}
 
-          {/* Views Area */}
           <div className={cn("flex-1", view === 'player' ? "hidden" : "block")}>
             {renderContent()}
           </div>
 
-          {/* Persistent Video Player - Extracted from view logic to support PIP */}
           <VideoPlayer 
             channel={selectedChannel}
             onStreamError={handleNextChannel}
             autoSkip={settings.autoSkip}
             isMuted={settings.muteOnStartup}
+            forceLiveEdge={settings.forceLiveEdge}
             isPip={view !== 'player'}
             onExpand={() => setView('player')}
             onClose={() => setSelectedChannel(null)}

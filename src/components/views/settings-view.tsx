@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from '@/hooks/use-toast';
-import { X } from 'lucide-react';
+import { X, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type SettingsViewProps = {
   isOpen: boolean;
@@ -47,7 +48,6 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
     document.addEventListener('mozfullscreenchange', handler);
     document.addEventListener('MSFullscreenChange', handler);
 
-    // Initial check
     handler();
 
     return () => {
@@ -146,11 +146,10 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
     >
       <div 
         className="absolute inset-0 bg-slate-950/50 backdrop-blur-xl"
-        // Backdrop click no longer closes the modal per strict instructions
       />
       <div 
         className="relative h-full w-full max-w-4xl mx-auto flex flex-col"
-        onClick={(e) => e.stopPropagation()} // Prevent bubbles from inside the content area
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="absolute top-4 right-4 md:top-6 md:right-6 z-10">
           <button onClick={onClose} className="p-2 rounded-md bg-white/10 hover:bg-white/20 text-slate-200 transition-colors">
@@ -192,7 +191,7 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
                         onCheckedChange={(checked) => updateSettings({ autoSkip: checked })}
                       />
                     </div>
-                     <div className="flex items-center justify-between py-6">
+                    <div className="flex items-center justify-between py-6">
                       <Label htmlFor="mute-on-startup" className="flex flex-col space-y-1 pr-6">
                         <span className="font-semibold">Mute by Default</span>
                         <span className="font-normal leading-snug text-muted-foreground">
@@ -203,6 +202,31 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
                         id="mute-on-startup"
                         checked={settings.muteOnStartup}
                         onCheckedChange={(checked) => updateSettings({ muteOnStartup: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between py-6">
+                      <Label htmlFor="force-live-edge" className="flex flex-col space-y-1 pr-6">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">Smart Live Sync</span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="w-4 h-4 text-primary cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p>Forces the player to stay at the live edge, preventing delays caused by internet interruptions.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <span className="font-normal leading-snug text-muted-foreground">
+                          Always play from the latest live moment.
+                        </span>
+                      </Label>
+                      <Switch
+                        id="force-live-edge"
+                        checked={settings.forceLiveEdge}
+                        onCheckedChange={(checked) => updateSettings({ forceLiveEdge: checked })}
                       />
                     </div>
                   </CardContent>
@@ -236,7 +260,7 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
                       </Label>
                       <Select
                         value={settings.defaultView}
-                        onValueChange={(value) => updateSettings({ defaultView: value as 'home' | 'player' | 'favorites' | 'categories' })}
+                        onValueChange={(value) => updateSettings({ defaultView: value as any })}
                       >
                         <SelectTrigger className="w-[180px]">
                           <SelectValue placeholder="Select a view" />
@@ -245,6 +269,7 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
                           <SelectItem value="home">Home</SelectItem>
                           <SelectItem value="player">Live TV</SelectItem>
                           <SelectItem value="favorites">Favorites</SelectItem>
+                          <SelectItem value="categories">Categories</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

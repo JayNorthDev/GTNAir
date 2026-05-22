@@ -13,7 +13,8 @@ import {
   Minus, 
   ArrowUpLeft, 
   Maximize, 
-  Minimize 
+  Minimize,
+  Radio
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ type VideoPlayerProps = {
   onStreamError?: () => void;
   autoSkip?: boolean;
   isMuted?: boolean;
+  forceLiveEdge?: boolean;
   isPip?: boolean;
   onExpand?: () => void;
   onClose?: () => void;
@@ -35,6 +37,7 @@ export default function VideoPlayer({
   onStreamError, 
   autoSkip, 
   isMuted, 
+  forceLiveEdge,
   isPip, 
   onExpand,
   onClose
@@ -46,10 +49,11 @@ export default function VideoPlayer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isAtLiveEdge, setIsAtLiveEdge] = useState(true);
 
-  // Use refs for callbacks and settings to avoid player re-initialization
   const onStreamErrorRef = useRef(onStreamError);
   const autoSkipRef = useRef(autoSkip);
+  const forceLiveEdgeRef = useRef(forceLiveEdge);
 
   useEffect(() => {
     onStreamErrorRef.current = onStreamError;
@@ -59,7 +63,10 @@ export default function VideoPlayer({
     autoSkipRef.current = autoSkip;
   }, [autoSkip]);
 
-  // Position and Size state for persistence
+  useEffect(() => {
+    forceLiveEdgeRef.current = forceLiveEdge;
+  }, [forceLiveEdge]);
+
   const [position, setPosition] = useState({ x: 24, y: 24 });
   const [pipWidth, setPipWidth] = useState(400);
   
@@ -136,8 +143,8 @@ export default function VideoPlayer({
     if (!isPip || isMinimized || isFullscreen || !containerRef.current) return;
     
     if (!interactionStart.current.hasMoved) {
-      if (Math.abs(e.clientX - interactionStart.current.mouseX) > 3 || 
-          Math.abs(e.clientY - interactionStart.current.mouseY) > 3) {
+      if (Math.abs(e.clientX - interactionStart.current.mouseX) > 5 || 
+          Math.abs(e.clientY - interactionStart.current.mouseY) > 5) {
         interactionStart.current.hasMoved = true;
       }
     }
@@ -166,18 +173,19 @@ export default function VideoPlayer({
 
       if (resizeDir.includes('n')) {
         const heightDelta = -deltaY;
-        const widthFromHeight = interactionStart.current.startWidth + (heightDelta * 1.77);
-        newWidth = Math.max(newWidth, widthFromHeight);
+        const widthFromHeight = (interactionStart.current.startWidth / 1.77) + heightDelta;
+        newWidth = Math.max(newWidth, widthFromHeight * 1.77);
       } else if (resizeDir.includes('s')) {
         const heightDelta = deltaY;
-        const widthFromHeight = interactionStart.current.startWidth + (heightDelta * 1.77);
-        newWidth = Math.max(newWidth, widthFromHeight);
+        const widthFromHeight = (interactionStart.current.startWidth / 1.77) + heightDelta;
+        newWidth = Math.max(newWidth, widthFromHeight * 1.77);
         const posDelta = deltaY;
         containerRef.current.style.bottom = `${interactionStart.current.startY - posDelta}px`;
       }
 
       const finalWidth = Math.max(280, newWidth);
       containerRef.current.style.width = `${finalWidth}px`;
+      containerRef.current.style.height = `${finalWidth / 1.77}px`;
     }
   }, [isDragging, resizeDir, isPip, isMinimized, isFullscreen]);
 
@@ -212,7 +220,6 @@ export default function VideoPlayer({
     };
   }, [isDragging, resizeDir, handleMouseMove, handleMouseUp]);
 
-  // Main Player Initialization - Only depends on channel.url
   useEffect(() => {
     if (!channel?.url || !containerRef.current) return;
 
@@ -245,6 +252,24 @@ export default function VideoPlayer({
     player.on('play', () => setIsPlaying(true));
     player.on('pause', () => setIsPlaying(false));
 
+    player.on('timeupdate', () => {
+      if (player.liveTracker) {
+        setIsAtLiveEdge(player.liveTracker.atLiveEdge());
+      }
+    });
+
+    player.on('waiting', () => {
+      if (forceLiveEdgeRef.current && player.liveTracker && !player.liveTracker.atLiveEdge()) {
+        player.liveTracker.seekToLiveEdge();
+      }
+    });
+
+    const syncInterval = setInterval(() => {
+      if (forceLiveEdgeRef.current && player.liveTracker && !player.liveTracker.atLiveEdge() && !player.paused()) {
+        player.liveTracker.seekToLiveEdge();
+      }
+    }, 10000);
+
     player.on('error', () => {
       if (!player.isDisposed()) {
         const error = player.error();
@@ -259,6 +284,7 @@ export default function VideoPlayer({
     });
 
     return () => {
+      clearInterval(syncInterval);
       if (player && !player.isDisposed()) {
         player.dispose();
         playerRef.current = null;
@@ -299,6 +325,14 @@ export default function VideoPlayer({
     setIsMinimized(!isMinimized);
   };
 
+  const handleLiveSync = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const player = playerRef.current;
+    if (player && player.liveTracker) {
+      player.liveTracker.seekToLiveEdge();
+    }
+  };
+
   const handleFullScreen = (e: React.MouseEvent) => {
     e.stopPropagation();
     const doc = document as any;
@@ -337,16 +371,18 @@ export default function VideoPlayer({
     bottom: 0,
     borderRadius: 0,
     zIndex: 9999,
-    position: 'fixed'
+    position: 'fixed',
+    transition: 'none'
   } : isPip ? { 
     right: `${position.x}px`, 
     bottom: `${position.y}px`,
     width: isMinimized ? '180px' : `${pipWidth}px`,
-    height: isMinimized ? '44px' : 'auto',
-    aspectRatio: isMinimized ? 'unset' : '16/9',
-    position: 'fixed'
+    height: isMinimized ? '44px' : `${pipWidth / 1.77}px`,
+    position: 'fixed',
+    transition: (isDragging || resizeDir) ? 'none' : 'all 0.3s ease-in-out'
   } : {
-    position: 'relative'
+    position: 'relative',
+    transition: 'all 0.3s ease-in-out'
   };
 
   return (
@@ -356,10 +392,9 @@ export default function VideoPlayer({
       onMouseMove={handleMouseMoveActive}
       style={pipStyle}
       className={cn(
-        "bg-black overflow-hidden group select-none flex flex-col items-center justify-center transition-all duration-300 ease-in-out",
+        "bg-black overflow-hidden group select-none flex flex-col items-center justify-center",
         (isPip || isFullscreen) && "z-[100] rounded-xl shadow-2xl border border-white/20",
         !isPip && !isFullscreen && "flex-1 w-full h-full border-none rounded-none",
-        (isDragging || resizeDir || isFullscreen) && "transition-none",
         isMinimized && "hover:bg-slate-900",
         isFullscreen && "border-none rounded-none",
         isPip && !isMinimized && !isFullscreen && "cursor-move"
@@ -372,7 +407,6 @@ export default function VideoPlayer({
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 's'); }} className="absolute bottom-0 left-0 w-full h-2 cursor-ns-resize z-50" />
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'w'); }} className="absolute top-0 left-0 w-2 h-full cursor-ew-resize z-50" />
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'e'); }} className="absolute top-0 right-0 w-2 h-full cursor-ew-resize z-50" />
-          
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'nw'); }} className="absolute top-0 left-0 w-4 h-4 cursor-nwse-resize z-[60]" />
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'ne'); }} className="absolute top-0 right-0 w-4 h-4 cursor-nesw-resize z-[60]" />
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'sw'); }} className="absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-[60]" />
@@ -385,8 +419,19 @@ export default function VideoPlayer({
           "absolute top-0 left-0 right-0 z-40 p-2 flex items-center justify-between transition-opacity duration-300 bg-gradient-to-b from-black/80 to-transparent pointer-events-none",
           (showControls || !isFullscreen) ? "opacity-100" : "opacity-0"
         )}>
-          <div className="flex items-center gap-1 overflow-hidden mr-2">
-             <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shrink-0" />
+          <div className="flex items-center gap-2 overflow-hidden mr-2">
+             <div className="flex items-center gap-1">
+               <div className={cn("w-2 h-2 rounded-full animate-pulse shrink-0", isAtLiveEdge ? "bg-red-500" : "bg-gray-500")} />
+               <button 
+                onClick={handleLiveSync}
+                className={cn(
+                  "px-1.5 py-0.5 rounded text-[8px] font-black pointer-events-auto transition-colors",
+                  isAtLiveEdge ? "bg-red-500/20 text-red-500" : "bg-gray-500/20 text-gray-500 hover:bg-red-500 hover:text-white"
+                )}
+               >
+                LIVE
+               </button>
+             </div>
              <span className={cn(
                "font-bold text-white truncate drop-shadow-md uppercase tracking-wider",
                isFullscreen ? "text-sm" : "text-[10px]"
