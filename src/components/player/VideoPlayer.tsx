@@ -18,6 +18,8 @@ type VideoPlayerProps = {
   onClose?: () => void;
 };
 
+type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'nw' | 'ne' | 'sw' | 'se' | null;
+
 export default function VideoPlayer({ 
   channel, 
   onStreamError, 
@@ -28,7 +30,6 @@ export default function VideoPlayer({
   onClose
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const playerRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -38,7 +39,7 @@ export default function VideoPlayer({
   const [pipWidth, setPipWidth] = useState(400); // Default PIP width
   
   const [isDragging, setIsDragging] = useState(false);
-  const [isResizing, setIsResizing] = useState(false);
+  const [resizeDir, setResizeDirection] = useState<ResizeDirection>(null);
   
   const interactionStart = useRef({ 
     mouseX: 0, 
@@ -48,16 +49,11 @@ export default function VideoPlayer({
     startWidth: 0 
   });
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e: React.MouseEvent, direction: ResizeDirection = null) => {
     if (!isPip || isMinimized || !containerRef.current) return;
     
     const rect = containerRef.current.getBoundingClientRect();
-    const borderThreshold = 15;
     
-    // Check if mouse is near the left or top edges for resizing
-    const isNearLeft = e.clientX - rect.left < borderThreshold;
-    const isNearTop = e.clientY - rect.top < borderThreshold;
-
     interactionStart.current = {
       mouseX: e.clientX,
       mouseY: e.clientY,
@@ -66,8 +62,8 @@ export default function VideoPlayer({
       startWidth: rect.width
     };
 
-    if (isNearLeft || isNearTop) {
-      setIsResizing(true);
+    if (direction) {
+      setResizeDirection(direction);
     } else {
       // Only drag if not clicking buttons
       const target = e.target as HTMLElement;
@@ -86,28 +82,47 @@ export default function VideoPlayer({
       const newX = interactionStart.current.startX + deltaX;
       const newY = interactionStart.current.startY + deltaY;
       
-      // Update DOM directly for max performance (no lag)
       containerRef.current.style.right = `${newX}px`;
       containerRef.current.style.bottom = `${newY}px`;
-    } else if (isResizing) {
-      const deltaX = interactionStart.current.mouseX - e.clientX;
-      const deltaY = interactionStart.current.mouseY - e.clientY;
+    } else if (resizeDir) {
+      const deltaX = e.clientX - interactionStart.current.mouseX;
+      const deltaY = e.clientY - interactionStart.current.mouseY;
       
-      // Since we're anchored to bottom-right, moving mouse left/up increases width/height
-      // We prioritize X delta for width and let aspect-ratio handle height
-      const newWidth = Math.max(280, interactionStart.current.startWidth + Math.max(deltaX, deltaY));
-      
-      containerRef.current.style.width = `${newWidth}px`;
+      let newWidth = interactionStart.current.startWidth;
+
+      // Logic based on which side is being pulled
+      if (resizeDir.includes('w') || resizeDir === 'nw' || resizeDir === 'sw') {
+        newWidth = interactionStart.current.startWidth - deltaX;
+      } else if (resizeDir.includes('e') || resizeDir === 'ne' || resizeDir === 'se') {
+        newWidth = interactionStart.current.startWidth + deltaX;
+        // Adjust position because we are anchored to the right
+        const posDelta = deltaX;
+        containerRef.current.style.right = `${interactionStart.current.startX - posDelta}px`;
+      }
+
+      if (resizeDir.includes('n') || resizeDir === 'nw' || resizeDir === 'ne') {
+        // Vertical dragging affects width to keep 16:9
+        const widthFromHeight = (interactionStart.current.startWidth * (interactionStart.current.startWidth / (interactionStart.current.startWidth / 1.77) - deltaY)) / (interactionStart.current.startWidth / 1.77);
+        newWidth = Math.max(newWidth, interactionStart.current.startWidth - deltaY * 1.77);
+      } else if (resizeDir.includes('s') || resizeDir === 'sw' || resizeDir === 'se') {
+        newWidth = Math.max(newWidth, interactionStart.current.startWidth + deltaY * 1.77);
+        // Adjust position because we are anchored to the bottom
+        const posDelta = deltaY;
+        containerRef.current.style.bottom = `${interactionStart.current.startY - posDelta}px`;
+      }
+
+      const finalWidth = Math.max(280, newWidth);
+      containerRef.current.style.width = `${finalWidth}px`;
     }
-  }, [isDragging, isResizing, isPip, isMinimized]);
+  }, [isDragging, resizeDir, isPip, isMinimized]);
 
   const handleMouseUp = useCallback(() => {
-    if ((isDragging || isResizing) && containerRef.current) {
+    if ((isDragging || resizeDir) && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const parentWidth = window.innerWidth;
       const parentHeight = window.innerHeight;
       
-      // Finalize position in state
+      // Finalize position and width in React state
       setPosition({
         x: parentWidth - rect.right,
         y: parentHeight - rect.bottom
@@ -115,14 +130,14 @@ export default function VideoPlayer({
       setPipWidth(rect.width);
     }
     setIsDragging(false);
-    setIsResizing(false);
-  }, [isDragging, isResizing]);
+    setResizeDirection(null);
+  }, [isDragging, resizeDir]);
 
   useEffect(() => {
-    if (isDragging || isResizing) {
+    if (isDragging || resizeDir) {
       window.addEventListener('mousemove', handleMouseMove, { passive: true });
       window.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = isResizing ? 'nwse-resize' : 'grabbing';
+      if (isDragging) document.body.style.cursor = 'grabbing';
     } else {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -133,19 +148,13 @@ export default function VideoPlayer({
       window.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = '';
     };
-  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
-
-  useEffect(() => {
-    if (!isPip) {
-      setIsMinimized(false);
-    }
-  }, [isPip]);
+  }, [isDragging, resizeDir, handleMouseMove, handleMouseUp]);
 
   useEffect(() => {
     if (!channel || !containerRef.current) return;
 
     const videoElement = document.createElement('video');
-    videoElement.className = 'video-js vjs-big-play-centered w-full h-full';
+    videoElement.className = 'video-js vjs-big-play-centered w-full h-full object-contain';
     videoElement.setAttribute('playsinline', 'true');
     
     const playerContainer = containerRef.current.querySelector('.video-container');
@@ -200,6 +209,12 @@ export default function VideoPlayer({
     }
   }, [isMuted, isPip]);
 
+  useEffect(() => {
+    if (!isPip) {
+      setIsMinimized(false);
+    }
+  }, [isPip]);
+
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!playerRef.current) return;
@@ -233,7 +248,7 @@ export default function VideoPlayer({
   return (
     <div 
       ref={containerRef}
-      onMouseDown={handleMouseDown}
+      onMouseDown={(e) => handleMouseDown(e)}
       style={isPip ? { 
         right: `${position.x}px`, 
         bottom: `${position.y}px`,
@@ -247,16 +262,24 @@ export default function VideoPlayer({
           ? "fixed z-[100] rounded-xl shadow-2xl border border-white/20 bg-black overflow-hidden group select-none flex flex-col items-center justify-center cursor-move"
           : "flex-1 flex flex-col bg-black relative w-full h-full",
         isDragging && "opacity-80 scale-[1.01] transition-none",
-        isResizing && "transition-none",
+        resizeDir && "transition-none",
         isMinimized && "hover:bg-slate-900"
       )}
     >
-      {/* Edge Resize Indicators (Invisible handles) */}
+      {/* 8-Way Edge Resize Handles */}
       {isPip && !isMinimized && (
         <>
-          <div className="absolute top-0 left-0 w-full h-3 cursor-ns-resize z-50 hover:bg-primary/10" />
-          <div className="absolute top-0 left-0 w-3 h-full cursor-ew-resize z-50 hover:bg-primary/10" />
-          <div className="absolute top-0 left-0 w-6 h-6 cursor-nwse-resize z-50 hover:bg-primary/20" />
+          {/* Edges */}
+          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'n'); }} className="absolute top-0 left-0 w-full h-2 cursor-ns-resize z-50 hover:bg-primary/20" />
+          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 's'); }} className="absolute bottom-0 left-0 w-full h-2 cursor-ns-resize z-50 hover:bg-primary/20" />
+          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'w'); }} className="absolute top-0 left-0 w-2 h-full cursor-ew-resize z-50 hover:bg-primary/20" />
+          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'e'); }} className="absolute top-0 right-0 w-2 h-full cursor-ew-resize z-50 hover:bg-primary/20" />
+          
+          {/* Corners */}
+          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'nw'); }} className="absolute top-0 left-0 w-4 h-4 cursor-nwse-resize z-[60]" />
+          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'ne'); }} className="absolute top-0 right-0 w-4 h-4 cursor-nesw-resize z-[60]" />
+          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'sw'); }} className="absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-[60]" />
+          <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'se'); }} className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-[60]" />
         </>
       )}
 
@@ -312,7 +335,7 @@ export default function VideoPlayer({
       )}
 
       {/* Video Container */}
-      <div className={cn("w-full h-full flex items-center justify-center bg-black video-container", (isPip && isMinimized) && "hidden")}>
+      <div className={cn("w-full h-full flex items-center justify-center bg-black video-container overflow-hidden", (isPip && isMinimized) && "hidden")}>
         {/* video element injected here via useEffect */}
       </div>
 
