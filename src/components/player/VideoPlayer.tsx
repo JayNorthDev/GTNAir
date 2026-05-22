@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import { Channel } from '@/lib/m3u-parser';
-import { MonitorPlay, Maximize2, X, Play, Pause, Minus, ArrowUpLeft, Maximize } from 'lucide-react';
+import { MonitorPlay, Maximize2, X, Play, Pause, Minus, ArrowUpLeft, Maximize, Minimize } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
