@@ -89,6 +89,11 @@ export default function VideoPlayer({
     controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3000);
   }, []);
 
+  const handleMouseLeave = useCallback(() => {
+    setShowControls(false);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+  }, []);
+
   useEffect(() => {
     const handleFsChange = () => {
       const isFs = !!(
@@ -418,6 +423,7 @@ export default function VideoPlayer({
       ref={containerRef}
       onMouseDown={(e) => handleMouseDown(e)}
       onMouseMove={handleMouseMoveActive}
+      onMouseLeave={handleMouseLeave}
       style={pipStyle}
       className={cn(
         "bg-black overflow-hidden group select-none flex flex-col items-center justify-center",
@@ -444,7 +450,7 @@ export default function VideoPlayer({
       {(isPip || isFullscreen) && (
         <div className={cn(
           "absolute top-0 left-0 right-0 z-40 p-2 flex items-center justify-between transition-opacity duration-300 bg-gradient-to-b from-black/80 to-transparent pointer-events-none",
-          (showControls || !isFullscreen) ? "opacity-100" : "opacity-0"
+          showControls ? "opacity-100" : "opacity-0"
         )}>
           <div className="flex items-center gap-2 overflow-hidden mr-2">
              <div className="flex items-center gap-1">
@@ -524,7 +530,7 @@ export default function VideoPlayer({
       {(isPip || isFullscreen) && !isMinimized && (
         <div className={cn(
           "absolute inset-0 z-30 flex items-center justify-center transition-opacity duration-300 pointer-events-none",
-          (showControls || !isFullscreen) ? "opacity-100" : "opacity-0"
+          showControls ? "opacity-100" : "opacity-0"
         )}>
           <button 
             onClick={togglePlay}
