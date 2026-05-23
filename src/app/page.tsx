@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, use } from "react";
 import { useChannels } from "@/hooks/useChannels";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -18,7 +17,16 @@ import { cn } from "@/lib/utils";
 import { GtnLogo } from "@/components/gtn-logo";
 import { Button } from "@/components/ui/button";
 
-export default function Home() {
+interface HomeProps {
+  params: Promise<any>;
+  searchParams: Promise<any>;
+}
+
+export default function Home(props: HomeProps) {
+  // In Next.js 15, Page props are Promises that must be unwrapped in Client Components using React.use()
+  const params = use(props.params);
+  const searchParams = use(props.searchParams);
+
   const { settings, updateSettings, isLoaded: settingsLoaded } = useSettings();
   const { 
     allChannels, 

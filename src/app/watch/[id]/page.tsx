@@ -1,4 +1,3 @@
-
 import { channels } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -9,14 +8,15 @@ type WatchPageProps = {
   params: Promise<{
     id: string;
   }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-export default async function WatchPage(props: WatchPageProps) {
-  // In Next.js 15, params is a Promise that must be awaited.
-  // We avoid destructuring in the function signature to prevent synchronous access warnings.
-  const params = await props.params;
-  const id = params.id;
+export default async function WatchPage({ params, searchParams }: WatchPageProps) {
+  // In Next.js 15, params and searchParams are Promises that must be awaited.
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   
+  const id = resolvedParams.id;
   const channel = channels.find(c => c.id === id);
 
   if (!channel) {
