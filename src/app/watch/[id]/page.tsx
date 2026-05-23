@@ -1,3 +1,4 @@
+
 import { channels } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -10,8 +11,12 @@ type WatchPageProps = {
   }>;
 };
 
-export default async function WatchPage({ params }: WatchPageProps) {
-  const { id } = await params;
+export default async function WatchPage(props: WatchPageProps) {
+  // In Next.js 15, params is a Promise that must be awaited.
+  // We avoid destructuring in the function signature to prevent synchronous access warnings.
+  const params = await props.params;
+  const id = params.id;
+  
   const channel = channels.find(c => c.id === id);
 
   if (!channel) {
@@ -19,7 +24,7 @@ export default async function WatchPage({ params }: WatchPageProps) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto p-4 md:p-8">
       <div className="mb-6">
         <Button variant="ghost" className="text-muted-foreground hover:text-foreground" asChild>
           <Link href="/">
