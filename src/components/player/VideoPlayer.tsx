@@ -162,31 +162,49 @@ export default function VideoPlayer({
       containerRef.current.style.right = `${newX}px`;
       containerRef.current.style.bottom = `${newY}px`;
     } else if (resizeDir) {
-      let newWidth = interactionStart.current.startWidth;
+      let finalWidth = interactionStart.current.startWidth;
+      const startWidth = interactionStart.current.startWidth;
+      const startHeight = startWidth / (16/9);
 
       if (resizeDir.includes('e')) {
-        newWidth = interactionStart.current.startWidth + deltaX;
-        const posDelta = deltaX;
-        containerRef.current.style.right = `${interactionStart.current.startX - posDelta}px`;
+        finalWidth = startWidth + deltaX;
       } else if (resizeDir.includes('w')) {
-        newWidth = interactionStart.current.startWidth - deltaX;
+        finalWidth = startWidth - deltaX;
       }
 
       if (resizeDir.includes('n')) {
-        const heightDelta = -deltaY;
-        const widthFromHeight = (interactionStart.current.startWidth / 1.77) + heightDelta;
-        newWidth = Math.max(newWidth, widthFromHeight * 1.77);
+        const widthFromY = (startHeight - deltaY) * (16/9);
+        if (resizeDir.length > 1) {
+          if (Math.abs(widthFromY - startWidth) > Math.abs(finalWidth - startWidth)) {
+            finalWidth = widthFromY;
+          }
+        } else {
+          finalWidth = widthFromY;
+        }
       } else if (resizeDir.includes('s')) {
-        const heightDelta = deltaY;
-        const widthFromHeight = (interactionStart.current.startWidth / 1.77) + heightDelta;
-        newWidth = Math.max(newWidth, widthFromHeight * 1.77);
-        const posDelta = deltaY;
-        containerRef.current.style.bottom = `${interactionStart.current.startY - posDelta}px`;
+        const widthFromY = (startHeight + deltaY) * (16/9);
+        if (resizeDir.length > 1) {
+          if (Math.abs(widthFromY - startWidth) > Math.abs(finalWidth - startWidth)) {
+            finalWidth = widthFromY;
+          }
+        } else {
+          finalWidth = widthFromY;
+        }
       }
 
-      const finalWidth = Math.max(280, newWidth);
+      finalWidth = Math.max(280, finalWidth);
+
+      if (resizeDir.includes('e')) {
+        const widthDiff = finalWidth - startWidth;
+        containerRef.current.style.right = `${interactionStart.current.startX - widthDiff}px`;
+      }
+      if (resizeDir.includes('s')) {
+        const heightDiff = (finalWidth / (16/9)) - startHeight;
+        containerRef.current.style.bottom = `${interactionStart.current.startY - heightDiff}px`;
+      }
+
       containerRef.current.style.width = `${finalWidth}px`;
-      containerRef.current.style.height = `${finalWidth / 1.77}px`;
+      containerRef.current.style.height = `${finalWidth / (16/9)}px`;
     }
   }, [isDragging, resizeDir, isPip, isMinimized, isFullscreen]);
 
@@ -387,7 +405,7 @@ export default function VideoPlayer({
     right: `${position.x}px`, 
     bottom: `${position.y}px`,
     width: isMinimized ? '180px' : `${pipWidth}px`,
-    height: isMinimized ? '44px' : `${pipWidth / 1.77}px`,
+    height: isMinimized ? '44px' : `${pipWidth / (16/9)}px`,
     position: 'fixed',
     transition: (isDragging || resizeDir) ? 'none' : 'all 0.3s ease-in-out'
   } : {
