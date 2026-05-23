@@ -24,42 +24,60 @@ export const defaultSettings: Settings = {
   selectedPlaylistId: '',
 };
 
+// Global state to sync between multiple hook instances
+let globalSettings: Settings = defaultSettings;
+let settingsLoaded = false;
+let subscribers: ((settings: Settings) => void)[] = [];
+
 export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [settings, setSettings] = useState<Settings>(globalSettings);
+  const [isLoaded, setIsLoaded] = useState(settingsLoaded);
 
   useEffect(() => {
-    try {
-      const item = window.localStorage.getItem(SETTINGS_KEY);
-      if (item) {
-        const savedSettings = JSON.parse(item);
-        const newSettings = { ...defaultSettings, ...savedSettings };
-        
-        if (newSettings.defaultView === 'settings' as any) {
-          newSettings.defaultView = 'home';
+    if (typeof window === 'undefined') return;
+
+    // Load from localStorage if not loaded yet
+    if (!settingsLoaded) {
+      try {
+        const item = window.localStorage.getItem(SETTINGS_KEY);
+        if (item) {
+          const savedSettings = JSON.parse(item);
+          globalSettings = { ...defaultSettings, ...savedSettings };
+          
+          if (globalSettings.defaultView === 'settings' as any) {
+            globalSettings.defaultView = 'home';
+          }
         }
-        setSettings(newSettings);
-      } else {
-        setSettings(defaultSettings);
+      } catch (error) {
+        console.error('Error reading settings from localStorage', error);
       }
-    } catch (error) {
-      console.error('Error reading settings from localStorage', error);
-      setSettings(defaultSettings);
-    } finally {
-        setIsLoaded(true);
+      settingsLoaded = true;
     }
+
+    setSettings(globalSettings);
+    setIsLoaded(true);
+
+    const sub = (newSettings: Settings) => setSettings(newSettings);
+    subscribers.push(sub);
+
+    return () => {
+      subscribers = subscribers.filter(s => s !== sub);
+    };
   }, []);
 
   const updateSettings = useCallback((newSettings: Partial<Settings>) => {
-    setSettings(prevSettings => {
-      const updated = { ...prevSettings, ...newSettings };
-      try {
-        window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
-      } catch (error) {
-        console.error('Error saving settings to localStorage', error);
+    globalSettings = { ...globalSettings, ...newSettings };
+    
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(globalSettings));
       }
-      return updated;
-    });
+    } catch (error) {
+      console.error('Error saving settings to localStorage', error);
+    }
+
+    // Notify all hook instances
+    subscribers.forEach(sub => sub(globalSettings));
   }, []);
 
   return { settings, updateSettings, isLoaded };

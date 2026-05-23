@@ -52,7 +52,6 @@ export default function VideoPlayer({
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isAtLiveEdge, setIsAtLiveEdge] = useState(true);
 
-  // Use refs for callbacks to avoid re-initializing the player
   const onStreamErrorRef = useRef(onStreamError);
   const autoSkipRef = useRef(autoSkip);
   const forceLiveEdgeRef = useRef(forceLiveEdge);
@@ -260,10 +259,8 @@ export default function VideoPlayer({
       }
     });
 
-    // Aggressive sync only when needed and Smart Sync is on
     player.on('waiting', () => {
       if (forceLiveEdgeRef.current && player.liveTracker && !player.liveTracker.atLiveEdge()) {
-        // Prevent frame repeat by checking if we actually need to seek
         const liveWindow = player.liveTracker.liveWindow();
         const currentTime = player.currentTime();
         if (liveWindow - currentTime > 2) {
@@ -272,12 +269,10 @@ export default function VideoPlayer({
       }
     });
 
-    // Background sync check every 5 seconds instead of 10 for better accuracy
     const syncInterval = setInterval(() => {
       if (forceLiveEdgeRef.current && player.liveTracker && !player.liveTracker.atLiveEdge() && !player.paused()) {
         const liveWindow = player.liveTracker.liveWindow();
         const currentTime = player.currentTime();
-        // Only seek if distance is more than 2 seconds to avoid stuttering/frame repeats
         if (liveWindow - currentTime > 2) {
           player.liveTracker.seekToLiveEdge();
         }
@@ -341,10 +336,7 @@ export default function VideoPlayer({
 
   const handleLiveToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Two-way trigger: updates settings which then flows back to this component
     onToggleLiveEdge?.();
-    
-    // Also trigger immediate sync if we just turned it on
     const player = playerRef.current;
     if (player && player.liveTracker) {
       player.liveTracker.seekToLiveEdge();
@@ -418,7 +410,6 @@ export default function VideoPlayer({
         isPip && !isMinimized && !isFullscreen && "cursor-move"
       )}
     >
-      {/* Universal Resize Handles */}
       {isPip && !isMinimized && !isFullscreen && (
         <>
           <div onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, 'n'); }} className="absolute top-0 left-0 w-full h-2 cursor-ns-resize z-50" />
