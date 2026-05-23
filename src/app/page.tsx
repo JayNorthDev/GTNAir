@@ -210,7 +210,10 @@ export default function Home() {
           />
         )}
 
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        <div className={cn(
+          "flex-1 flex flex-col min-w-0 relative",
+          view === 'player' ? "overflow-hidden" : ""
+        )}>
           {view === 'player' && (
             <Header
               selectedChannel={selectedChannel}
