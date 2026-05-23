@@ -91,6 +91,10 @@ export default function Home() {
     setView("player");
   };
 
+  const handleToggleLiveEdge = useCallback(() => {
+    updateSettings({ forceLiveEdge: !settings.forceLiveEdge });
+  }, [settings.forceLiveEdge, updateSettings]);
+
   if (error) {
     return (
       <div className="flex h-screen items-center justify-center text-foreground">
@@ -234,6 +238,7 @@ export default function Home() {
             autoSkip={settings.autoSkip}
             isMuted={settings.muteOnStartup}
             forceLiveEdge={settings.forceLiveEdge}
+            onToggleLiveEdge={handleToggleLiveEdge}
             isPip={view !== 'player'}
             onExpand={() => setView('player')}
             onClose={() => setSelectedChannel(null)}

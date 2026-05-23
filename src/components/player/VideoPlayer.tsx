@@ -13,8 +13,7 @@ import {
   Minus, 
   ArrowUpLeft, 
   Maximize, 
-  Minimize,
-  Radio
+  Minimize
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -25,6 +24,7 @@ type VideoPlayerProps = {
   autoSkip?: boolean;
   isMuted?: boolean;
   forceLiveEdge?: boolean;
+  onToggleLiveEdge?: () => void;
   isPip?: boolean;
   onExpand?: () => void;
   onClose?: () => void;
@@ -38,6 +38,7 @@ export default function VideoPlayer({
   autoSkip, 
   isMuted, 
   forceLiveEdge,
+  onToggleLiveEdge,
   isPip, 
   onExpand,
   onClose
@@ -51,6 +52,7 @@ export default function VideoPlayer({
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isAtLiveEdge, setIsAtLiveEdge] = useState(true);
 
+  // Use refs for callbacks to avoid re-initializing the player
   const onStreamErrorRef = useRef(onStreamError);
   const autoSkipRef = useRef(autoSkip);
   const forceLiveEdgeRef = useRef(forceLiveEdge);
@@ -258,17 +260,29 @@ export default function VideoPlayer({
       }
     });
 
+    // Aggressive sync only when needed and Smart Sync is on
     player.on('waiting', () => {
       if (forceLiveEdgeRef.current && player.liveTracker && !player.liveTracker.atLiveEdge()) {
-        player.liveTracker.seekToLiveEdge();
+        // Prevent frame repeat by checking if we actually need to seek
+        const liveWindow = player.liveTracker.liveWindow();
+        const currentTime = player.currentTime();
+        if (liveWindow - currentTime > 2) {
+          player.liveTracker.seekToLiveEdge();
+        }
       }
     });
 
+    // Background sync check every 5 seconds instead of 10 for better accuracy
     const syncInterval = setInterval(() => {
       if (forceLiveEdgeRef.current && player.liveTracker && !player.liveTracker.atLiveEdge() && !player.paused()) {
-        player.liveTracker.seekToLiveEdge();
+        const liveWindow = player.liveTracker.liveWindow();
+        const currentTime = player.currentTime();
+        // Only seek if distance is more than 2 seconds to avoid stuttering/frame repeats
+        if (liveWindow - currentTime > 2) {
+          player.liveTracker.seekToLiveEdge();
+        }
       }
-    }, 10000);
+    }, 5000);
 
     player.on('error', () => {
       if (!player.isDisposed()) {
@@ -325,8 +339,12 @@ export default function VideoPlayer({
     setIsMinimized(!isMinimized);
   };
 
-  const handleLiveSync = (e: React.MouseEvent) => {
+  const handleLiveToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // Two-way trigger: updates settings which then flows back to this component
+    onToggleLiveEdge?.();
+    
+    // Also trigger immediate sync if we just turned it on
     const player = playerRef.current;
     if (player && player.liveTracker) {
       player.liveTracker.seekToLiveEdge();
@@ -421,13 +439,19 @@ export default function VideoPlayer({
         )}>
           <div className="flex items-center gap-2 overflow-hidden mr-2">
              <div className="flex items-center gap-1">
-               <div className={cn("w-2 h-2 rounded-full animate-pulse shrink-0", isAtLiveEdge ? "bg-red-500" : "bg-gray-500")} />
+               <div className={cn(
+                 "w-2 h-2 rounded-full shrink-0", 
+                 isAtLiveEdge ? "bg-red-500 animate-pulse" : "bg-gray-500"
+               )} />
                <button 
-                onClick={handleLiveSync}
+                onClick={handleLiveToggle}
                 className={cn(
-                  "px-1.5 py-0.5 rounded text-[8px] font-black pointer-events-auto transition-colors",
-                  isAtLiveEdge ? "bg-red-500/20 text-red-500" : "bg-gray-500/20 text-gray-500 hover:bg-red-500 hover:text-white"
+                  "px-1.5 py-0.5 rounded text-[8px] font-black pointer-events-auto transition-all",
+                  forceLiveEdge 
+                    ? "bg-red-500 text-white shadow-[0_0_8px_rgba(239,68,68,0.5)]" 
+                    : "bg-gray-500/20 text-gray-500 hover:bg-gray-500/40"
                 )}
+                title={forceLiveEdge ? "Smart Sync: ON" : "Smart Sync: OFF"}
                >
                 LIVE
                </button>
