@@ -44,7 +44,8 @@ export default function Home(props: HomeProps) {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default to false as requested
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLibraryExpanded, setIsLibraryExpanded] = useState(false);
   const [view, setView] = useState<SettingsViewType>("home");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -66,11 +67,19 @@ export default function Home(props: HomeProps) {
     filterChannels(searchTerm, selectedCategory);
   }, [searchTerm, selectedCategory, filterChannels]);
 
+  // Reset expansion when sidebar is closed
+  useEffect(() => {
+    if (!isSidebarOpen) {
+      setIsLibraryExpanded(false);
+    }
+  }, [isSidebarOpen]);
+
   const handleChannelSelect = useCallback((channel: Channel) => {
     setSelectedChannel(channel);
     setFailCount(0); 
     setSkipError(false);
     setView("player");
+    setIsLibraryExpanded(false);
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
@@ -210,6 +219,8 @@ export default function Home(props: HomeProps) {
           <Sidebar
             isSidebarOpen={isSidebarOpen}
             setIsSidebarOpen={setIsSidebarOpen}
+            isExpanded={isLibraryExpanded}
+            setIsExpanded={setIsLibraryExpanded}
             displayChannels={displayChannels}
             selectedChannel={selectedChannel}
             handleChannelClick={handleChannelSelect}
