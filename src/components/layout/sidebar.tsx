@@ -39,7 +39,7 @@ export default function Sidebar({
   return (
     <aside className={cn(
       "z-40 bg-[#0a0a0a]/98 backdrop-blur-2xl border-r border-white/5 transition-all duration-500 ease-in-out flex flex-col overflow-hidden shrink-0",
-      isExpanded ? "absolute inset-0 w-full h-full" : "relative h-full",
+      isExpanded ? "absolute inset-0 w-full h-full z-50" : "relative h-full",
       isSidebarOpen ? (isExpanded ? "w-full" : "w-80") : "w-0 opacity-0 pointer-events-none"
     )}>
       {/* Content wrapper with width handling to prevent content jumping during animation */}
@@ -70,7 +70,7 @@ export default function Sidebar({
 
         {/* Search & Filter Section */}
         <div className={cn(
-            "p-6 pb-2 shrink-0 flex gap-4",
+            "p-6 pb-2 shrink-0 flex gap-4 transition-all duration-500",
             isExpanded ? "flex-row items-center" : "flex-col"
         )}>
           <div className="relative group flex-1">
@@ -84,7 +84,7 @@ export default function Sidebar({
             />
           </div>
 
-          <div className={cn("space-y-2", isExpanded ? "w-64" : "w-full")}>
+          <div className={cn("space-y-2 transition-all duration-500", isExpanded ? "w-64" : "w-full")}>
               <div className="flex items-center gap-2 text-slate-500 mb-1">
                   <Filter className="w-3 h-3" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Category</span>
@@ -109,22 +109,25 @@ export default function Sidebar({
         {/* Channel List / Grid */}
         <nav className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           {loading && displayChannels.length === 0 ? (
-            <div className={cn("gap-4", isExpanded ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6" : "space-y-4")}>
+            <div className={cn(
+              "grid gap-2 transition-all duration-500", 
+              isExpanded ? "grid-cols-2 md:grid-cols-4 lg:grid-cols-6" : "grid-cols-1"
+            )}>
               {[...Array(12)].map((_, i) => (
                 <div key={i} className={cn(
                     "rounded-2xl bg-white/5 animate-pulse",
-                    isExpanded ? "aspect-[16/10]" : "flex items-center gap-3 p-3"
+                    isExpanded ? "aspect-[16/10]" : "flex items-center gap-3 p-3 h-[60px]"
                 )}>
-                  <div className={cn("bg-white/10 rounded-xl", isExpanded ? "w-full h-full" : "w-12 h-12")} />
+                  <div className={cn("bg-white/10 rounded-xl", isExpanded ? "w-full h-full" : "w-11 h-11")} />
                 </div>
               ))}
             </div>
           ) : (
             <div className={cn(
-                "transition-all duration-500",
+                "grid transition-all duration-500 ease-in-out",
                 isExpanded 
-                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4" 
-                    : "flex flex-col gap-1.5"
+                    ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2" 
+                    : "grid-cols-1 gap-2"
             )}>
               {displayChannels.map((channel, index) => (
                 isExpanded ? (
@@ -171,7 +174,7 @@ export default function Sidebar({
                         className={cn(
                             "w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-300 group",
                             selectedChannel?.url === channel.url 
-                            ? "bg-[#299fff] text-white shadow-[0_0_20px_rgba(41,159,255,0.4)] scale-[1.02]" 
+                            ? "bg-[#299fff] text-white shadow-[0_0_20px_rgba(41,159,255,0.4)] scale-[1.01]" 
                             : "hover:bg-white/5 text-slate-300 hover:text-white"
                         )}
                     >
