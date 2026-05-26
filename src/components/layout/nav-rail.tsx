@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -28,31 +27,48 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
   };
 
   const handleSettingsToggle = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Stop bubbling to container so toggle logic works
+    e.stopPropagation();
     setIsSettingsOpen(!isSettingsOpen);
   };
 
   const handleRailClick = () => {
-    // Clicking anywhere within the rail container should close settings
     if (isSettingsOpen) {
       setIsSettingsOpen(false);
     }
   };
+
+  // 1. Background Gradients (Centred Top & Bottom)
+  const backgroundGlows = (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* Top Centered Glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] h-[40%] bg-[radial-gradient(circle_at_top,_rgba(41,159,255,0.2),_rgba(88,28,135,0.12),_transparent_75%)] opacity-90" />
+      
+      {/* Bottom Centered Glow */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[200%] h-[40%] bg-[radial-gradient(circle_at_bottom,_rgba(41,159,255,0.2),_rgba(88,28,135,0.12),_transparent_75%)] opacity-90" />
+    </div>
+  );
+
+  // Button Visual Styles
+  const buttonActiveStyles = "text-[#299fff] drop-shadow-[0_0_12px_rgba(41,159,255,0.8)]";
+  const activeIndicator = "bg-[#299fff]/10 border border-[#299fff]/30 shadow-[0_0_20px_rgba(41,159,255,0.3)]";
 
   return (
     <>
       {/* Desktop Nav Rail */}
       <aside 
         onClick={handleRailClick}
-        className="hidden md:flex flex-col items-center w-24 bg-black/20 backdrop-blur-lg border-r border-white/5 py-6 z-20"
+        className="hidden md:flex flex-col items-center w-24 bg-[#0a0a0a]/40 backdrop-blur-xl border-r border-white/5 py-6 z-20 relative overflow-hidden"
       >
-        <div className="mb-10">
+        {backgroundGlows}
+        
+        <div className="mb-10 relative z-10">
           <GtnLogo className="w-10 h-10 text-white" />
         </div>
-        <div className="flex-1 flex items-center">
+        
+        <div className="flex-1 flex items-center relative z-10">
           <nav 
             className="flex flex-col items-center gap-4 bg-black/20 p-2 rounded-full border border-white/10"
-            onClick={(e) => e.stopPropagation()} // Let button clicks bubble to aside normally but avoid inner nav clicks if not buttons
+            onClick={(e) => e.stopPropagation()}
           >
             {navItems.map((item) => {
               const isActive = view === item.id;
@@ -63,17 +79,17 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
                   title={item.label}
                   className={cn(
                     "relative flex flex-col items-center justify-center w-16 h-16 rounded-full transition-all duration-300 group",
-                    !isActive && "hover:bg-white/10"
+                    !isActive && "hover:bg-white/5"
                   )}
                 >
                   {isActive && (
-                    <div className="absolute inset-0 rounded-full bg-primary/10 border-2 border-primary/30 shadow-lg"></div>
+                    <div className={cn("absolute inset-0 rounded-full", activeIndicator)}></div>
                   )}
                   <item.icon
                     className={cn(
                       "w-8 h-8 transition-all duration-300 z-10",
                       isActive
-                        ? "text-primary drop-shadow-[0_0_10px_theme(colors.primary)]"
+                        ? buttonActiveStyles
                         : "text-slate-400 group-hover:text-slate-200"
                     )}
                   />
@@ -82,20 +98,21 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
             })}
           </nav>
         </div>
-        <div>
+        
+        <div className="relative z-10">
           <button
             onClick={handleSettingsToggle}
             title="Settings"
             className={cn(
               "relative flex items-center justify-center w-16 h-16 rounded-full transition-all duration-300 group",
-              isSettingsOpen ? "bg-primary/10 border-2 border-primary/30 shadow-lg" : "hover:bg-white/10"
+              isSettingsOpen ? activeIndicator : "hover:bg-white/5"
             )}
           >
             <Settings
               className={cn(
                 "w-8 h-8 transition-all duration-300 z-10",
                 isSettingsOpen
-                  ? "text-primary drop-shadow-[0_0_10px_theme(colors.primary)]"
+                  ? buttonActiveStyles
                   : "text-slate-400 group-hover:text-slate-200"
               )}
             />
@@ -106,35 +123,42 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
       {/* Mobile Bottom Bar */}
       <nav 
         onClick={handleRailClick}
-        className="md:hidden fixed bottom-4 inset-x-4 h-16 bg-black/20 backdrop-blur-lg border border-white/10 flex justify-around items-center z-50 rounded-full shadow-2xl"
+        className="md:hidden fixed bottom-4 inset-x-4 h-16 bg-[#0a0a0a]/60 backdrop-blur-xl border border-white/10 flex justify-around items-center z-50 rounded-full shadow-2xl overflow-hidden"
       >
+        {backgroundGlows}
         {navItems.map((item) => {
           const isActive = view === item.id;
           return (
             <button
               key={item.id}
               onClick={() => handleNavClick(item.id)}
-              className="flex flex-col items-center justify-center h-full w-full rounded-full"
+              className="flex flex-col items-center justify-center h-full w-full rounded-full relative z-10"
             >
-               <div className={cn("flex items-center justify-center w-10 h-10 rounded-full transition-colors", isActive ? 'bg-primary/20' : '')}>
+               <div className={cn(
+                 "flex items-center justify-center w-10 h-10 rounded-full transition-all", 
+                 isActive ? "bg-[#299fff]/10 shadow-[0_0_15px_rgba(41,159,255,0.2)]" : ""
+               )}>
                 <item.icon
-                    className={cn("w-6 h-6", isActive ? "text-primary" : "text-slate-400")}
+                    className={cn("w-6 h-6", isActive ? buttonActiveStyles : "text-slate-400")}
                 />
                </div>
-              <span className={cn("text-[10px] -mt-1", isActive ? "text-primary" : "text-slate-400")}>{item.label}</span>
+              <span className={cn("text-[10px] -mt-1", isActive ? "text-[#299fff] font-bold" : "text-slate-400")}>{item.label}</span>
             </button>
           );
         })}
         <button
           onClick={handleSettingsToggle}
-          className="flex flex-col items-center justify-center h-full w-full rounded-full"
+          className="flex flex-col items-center justify-center h-full w-full rounded-full relative z-10"
         >
-          <div className={cn("flex items-center justify-center w-10 h-10 rounded-full transition-colors", isSettingsOpen ? 'bg-primary/20' : '')}>
+          <div className={cn(
+            "flex items-center justify-center w-10 h-10 rounded-full transition-all", 
+            isSettingsOpen ? "bg-[#299fff]/10 shadow-[0_0_15px_rgba(41,159,255,0.2)]" : ""
+          )}>
             <Settings
-                className={cn("w-6 h-6", isSettingsOpen ? "text-primary" : "text-slate-400")}
+                className={cn("w-6 h-6", isSettingsOpen ? buttonActiveStyles : "text-slate-400")}
             />
           </div>
-          <span className={cn("text-[10px] -mt-1", isSettingsOpen ? 'text-primary' : 'text-slate-400')}>Settings</span>
+          <span className={cn("text-[10px] -mt-1", isSettingsOpen ? "text-[#299fff] font-bold" : "text-slate-400")}>Settings</span>
         </button>
       </nav>
     </>

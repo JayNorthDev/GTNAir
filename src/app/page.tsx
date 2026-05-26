@@ -23,7 +23,6 @@ interface HomeProps {
 }
 
 export default function Home(props: HomeProps) {
-  // In Next.js 15, Page props are Promises that must be unwrapped in Client Components using React.use()
   const params = use(props.params);
   const searchParams = use(props.searchParams);
 
@@ -273,23 +272,23 @@ export default function Home(props: HomeProps) {
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/60 backdrop-blur-md animate-in fade-in duration-700">
           <div className="flex flex-col items-center gap-10">
             <div className="relative">
-              <div className="absolute -inset-10 bg-primary/20 blur-3xl rounded-full animate-pulse" />
-              <GtnLogo className="w-20 h-20 text-primary relative z-10 drop-shadow-[0_0_15px_rgba(0,174,239,0.8)]" />
+              <div className="absolute -inset-10 bg-[#299fff]/20 blur-3xl rounded-full animate-pulse" />
+              <GtnLogo className="w-20 h-20 text-[#299fff] relative z-10 drop-shadow-[0_0_15px_rgba(41,159,255,0.8)]" />
             </div>
             <div className="flex items-center gap-3">
               {[0, 1, 2, 3].map((i) => (
                 <div 
                   key={i}
-                  className="w-4 h-4 bg-primary/90 rounded-[2px] shadow-[0_0_12px_rgba(0,174,239,0.5)] animate-pulse"
+                  className="w-4 h-4 bg-[#299fff]/90 rounded-[2px] shadow-[0_0_12px_rgba(41,159,255,0.5)] animate-pulse spinner"
                   style={{ animationDelay: `${i * 200}ms`, animationDuration: '1.5s' }}
                 />
               ))}
             </div>
             <div className="flex flex-col items-center gap-2">
-              <span className="text-sm font-bold tracking-[0.4em] text-white/80 uppercase animate-pulse">
+              <span className="text-sm font-bold tracking-[0.4em] text-[#299fff] uppercase animate-pulse word">
                 Initializing Channels
               </span>
-              <div className="h-[1px] w-16 bg-primary/30" />
+              <div className="h-[1px] w-16 bg-[#299fff]/30" />
             </div>
           </div>
         </div>

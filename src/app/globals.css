@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,7 +10,7 @@
     --card-foreground: 215 28% 90%;
     --popover: 222 47% 11%;
     --popover-foreground: 215 28% 90%;
-    --primary: 200 92% 60%; /* sky-400 */
+    --primary: 200 100% 58%; /* #299fff */
     --primary-foreground: 222 83% 5%;
     --secondary: 215 39% 17%; /* slate-800 */
     --secondary-foreground: 215 28% 90%;
@@ -23,7 +22,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 215 28% 26%; /* slate-700 */
     --input: 215 28% 26%;
-    --ring: 200 92% 60%;
+    --ring: 200 100% 58%;
     --radius: 0rem;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -32,12 +31,12 @@
     --chart-5: 27 87% 67%;
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 215 28% 90%;
-    --sidebar-primary: 200 92% 60%;
+    --sidebar-primary: 200 100% 58%;
     --sidebar-primary-foreground: 222 83% 5%;
     --sidebar-accent: 215 39% 17%;
     --sidebar-accent-foreground: 215 28% 90%;
     --sidebar-border: 215 28% 26%;
-    --sidebar-ring: 200 92% 60%;
+    --sidebar-ring: 200 100% 58%;
   }
 
   .dark {
@@ -47,7 +46,7 @@
     --card-foreground: 215 28% 90%;
     --popover: 222 47% 11%;
     --popover-foreground: 215 28% 90%;
-    --primary: 200 92% 60%; /* sky-400 */
+    --primary: 200 100% 58%; /* #299fff */
     --primary-foreground: 222 83% 5%;
     --secondary: 215 39% 17%; /* slate-800 */
     --secondary-foreground: 215 28% 90%;
@@ -59,7 +58,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 215 28% 26%; /* slate-700 */
     --input: 215 28% 26%;
-    --ring: 200 92% 60%;
+    --ring: 200 100% 58%;
     --radius: 0rem;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -68,12 +67,12 @@
     --chart-5: 340 75% 55%;
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 215 28% 90%;
-    --sidebar-primary: 200 92% 60%;
+    --sidebar-primary: 200 100% 58%;
     --sidebar-primary-foreground: 222 83% 5%;
     --sidebar-accent: 215 39% 17%;
     --sidebar-accent-foreground: 215 28% 90%;
     --sidebar-border: 215 28% 26%;
-    --sidebar-ring: 200 92% 60%;
+    --sidebar-ring: 200 100% 58%;
   }
 }
 
@@ -109,4 +108,13 @@
   ::-webkit-scrollbar-thumb:hover {
     background-color: hsl(var(--muted-foreground));
   }
+}
+
+/* NavRail Visual Effects & Color Palette */
+.spinner {
+  border-right-color: #299fff !important;
+}
+
+.word {
+  color: #299fff !important;
 }
