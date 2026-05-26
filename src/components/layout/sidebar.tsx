@@ -1,7 +1,8 @@
 "use client";
-import { Search, Tv, X } from 'lucide-react';
+import { Search, Tv, X, ListVideo, Filter, LayoutGrid } from 'lucide-react';
 import { Channel } from '@/lib/m3u-parser';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 type SidebarProps = {
   isSidebarOpen: boolean;
@@ -31,53 +32,74 @@ export default function Sidebar({
   loading,
 }: SidebarProps) {
   return (
-    <aside className={`absolute md:relative z-20 h-full bg-sidebar/80 backdrop-blur-lg border-r border-border/20 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-80' : 'w-0'} overflow-hidden flex flex-col`}>
-      <div className="flex items-center justify-between p-4 h-16 border-b border-border/20 shrink-0">
-        <div className={`flex items-center gap-2`}>
-          <Tv className="w-8 h-8 text-primary" />
-          <h1 className="text-xl font-bold">369Player</h1>
+    <aside className={cn(
+      "absolute left-0 top-0 h-full z-40 bg-[#0a0a0a]/95 backdrop-blur-2xl border-r border-white/5 transition-all duration-500 ease-in-out flex flex-col shadow-[25px_0_50px_-20px_rgba(0,0,0,0.8)] overflow-hidden",
+      isSidebarOpen ? "w-80 opacity-100 translate-x-0" : "w-80 opacity-0 -translate-x-full pointer-events-none"
+    )}>
+      {/* Sidebar Header */}
+      <div className="flex items-center justify-between p-6 h-16 border-b border-white/5 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-[#299fff]/10 border border-[#299fff]/20">
+            <ListVideo className="w-5 h-5 text-[#299fff]" />
+          </div>
+          <div>
+            <h1 className="text-sm font-black text-white uppercase tracking-[0.2em]">Channel Library</h1>
+            <p className="text-[10px] text-slate-500 font-bold uppercase">{displayChannels.length} Streams Available</p>
+          </div>
         </div>
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-full hover:bg-sidebar-accent md:hidden">
-          {isSidebarOpen ? <X /> : null}
+        <button 
+          onClick={() => setIsSidebarOpen(false)} 
+          className="p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors md:hidden"
+        >
+          <X className="w-5 h-5" />
         </button>
       </div>
 
-      <div className={`p-4 shrink-0`}>
-        <div className="relative">
-          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground`} />
+      {/* Search & Filter Section */}
+      <div className="p-6 pb-2 shrink-0 space-y-4">
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-[#299fff] transition-colors" />
           <input
             type="text"
-            placeholder="Search channels..."
-            className={`w-full bg-card/50 border border-input rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary`}
+            placeholder="Search for channels..."
+            className="w-full bg-white/5 border border-white/5 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#299fff]/30 focus:border-[#299fff]/50 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
+        <div className="space-y-2">
+            <div className="flex items-center gap-2 text-slate-500 mb-1">
+                <Filter className="w-3 h-3" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Filter by Category</span>
+            </div>
+            <div className="relative">
+                <select
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    value={selectedCategory}
+                    className="w-full bg-white/5 border border-white/5 text-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#299fff]/30 backdrop-blur-md appearance-none cursor-pointer hover:bg-white/10 transition-all"
+                >
+                    {categories.map(category => (
+                        <option key={category} value={category} className="bg-[#1a1a1a] text-white">{category}</option>
+                    ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                    <LayoutGrid className="w-3 h-3" />
+                </div>
+            </div>
+        </div>
       </div>
 
-      <div className={`px-4 pb-2`}>
-        <p className="text-sm text-muted-foreground font-semibold mb-2">Categories</p>
-        <select
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          value={selectedCategory}
-          className="w-full bg-slate-900/60 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary backdrop-blur-md"
-        >
-          {categories.map(category => (
-            <option key={category} value={category} className="bg-slate-900 text-white">{category}</option>
-          ))}
-        </select>
-      </div>
-
-      <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-        <h3 className={`text-lg font-semibold mb-4`}>{selectedCategory} Channels</h3>
+      {/* Channel List */}
+      <nav className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
         {loading && displayChannels.length === 0 ? (
-          <div className="space-y-2">
-            {[...Array(15)].map((_, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-lg">
-                <Skeleton className="w-10 h-10 rounded-md bg-white/5" />
+          <div className="space-y-3">
+            {[...Array(10)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 animate-pulse">
+                <div className="w-12 h-12 rounded-xl bg-white/10" />
                 <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-3/4 bg-white/5" />
-                  <Skeleton className="h-3 w-1/2 bg-white/5" />
+                  <div className="h-3 w-3/4 bg-white/10 rounded" />
+                  <div className="h-2 w-1/2 bg-white/10 rounded" />
                 </div>
               </div>
             ))}
@@ -88,18 +110,49 @@ export default function Sidebar({
               <button
                 key={`${channel.url}-${index}`}
                 onClick={() => handleChannelClick(channel)}
-                className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all ${selectedChannel?.url === channel.url ? 'bg-primary/20 text-white shadow-lg' : 'hover:bg-secondary'}`}
+                className={cn(
+                  "w-full flex items-center gap-4 p-3 rounded-2xl text-left transition-all duration-300 group",
+                  selectedChannel?.url === channel.url 
+                    ? "bg-[#299fff] text-white shadow-[0_0_20px_rgba(41,159,255,0.4)] scale-[1.02]" 
+                    : "hover:bg-white/5 text-slate-300 hover:text-white"
+                )}
               >
-                {channel.tvg.logo ? <img src={channel.tvg.logo} alt={channel.name} className="w-10 h-10 object-contain rounded-md bg-black/20 shrink-0" onError={(e) => {(e.target as HTMLImageElement).style.display='none';}}/> : <div className="w-10 h-10 flex items-center justify-center bg-card rounded-md shrink-0"><Tv className="w-5 h-5 text-muted-foreground" /></div>}
-                <div className={`flex-1 overflow-hidden`}>
-                  <p className="font-semibold truncate text-slate-200">{channel.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{channel.group.title || "No Group"}</p>
+                <div className="relative shrink-0">
+                    <div className={cn(
+                        "w-12 h-12 rounded-xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center transition-all",
+                        selectedChannel?.url === channel.url ? "border-white/20" : "group-hover:border-white/10"
+                    )}>
+                        {channel.tvg.logo ? (
+                            <img 
+                                src={channel.tvg.logo} 
+                                alt="" 
+                                className="w-full h-full object-contain p-1" 
+                                onError={(e) => {(e.target as HTMLImageElement).style.display='none';}}
+                            />
+                        ) : (
+                            <Tv className="w-6 h-6 opacity-20" />
+                        )}
+                    </div>
+                    {selectedChannel?.url === channel.url && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full border-2 border-[#299fff] animate-pulse" />
+                    )}
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <p className="font-bold text-xs truncate uppercase tracking-tight">{channel.name}</p>
+                  <p className={cn(
+                      "text-[10px] truncate font-medium uppercase tracking-tighter opacity-60",
+                      selectedChannel?.url === channel.url ? "text-white" : "text-slate-400"
+                  )}>
+                    {channel.group.title || "Uncategorized"}
+                  </p>
                 </div>
               </button>
             ))}
             {displayChannels.length === 0 && searchTerm && (
-              <div className={`text-center py-8 text-muted-foreground`}>
-                <p>No channels found for "{searchTerm}".</p>
+              <div className="text-center py-20 px-4">
+                <LayoutGrid className="w-12 h-12 text-slate-700 mx-auto mb-4 opacity-20" />
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">No Channels Found</p>
+                <p className="text-[10px] text-slate-600 font-medium mt-1">Try a different search term or category</p>
               </div>
             )}
           </>
