@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, use } from "react";
@@ -43,7 +44,7 @@ export default function Home(props: HomeProps) {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default to false as requested
   const [view, setView] = useState<SettingsViewType>("home");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 

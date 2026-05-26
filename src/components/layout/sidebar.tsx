@@ -1,3 +1,4 @@
+
 "use client";
 import { Search, Tv, X, ListVideo, Filter, LayoutGrid } from 'lucide-react';
 import { Channel } from '@/lib/m3u-parser';
@@ -33,13 +34,13 @@ export default function Sidebar({
 }: SidebarProps) {
   return (
     <aside className={cn(
-      "absolute left-0 top-0 h-full z-40 bg-[#0a0a0a]/95 backdrop-blur-2xl border-r border-white/5 transition-all duration-500 ease-in-out flex flex-col shadow-[25px_0_50px_-20px_rgba(0,0,0,0.8)] overflow-hidden",
+      "absolute left-0 top-0 h-full z-40 bg-[#0a0a0a]/98 backdrop-blur-2xl border-r border-white/5 transition-all duration-500 ease-in-out flex flex-col shadow-[40px_0_100px_rgba(0,0,0,0.9)] overflow-hidden",
       isSidebarOpen ? "w-80 opacity-100 translate-x-0" : "w-80 opacity-0 -translate-x-full pointer-events-none"
     )}>
       {/* Sidebar Header */}
-      <div className="flex items-center justify-between p-6 h-16 border-b border-white/5 shrink-0">
+      <div className="flex items-center justify-between p-6 h-20 border-b border-white/5 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-[#299fff]/10 border border-[#299fff]/20">
+          <div className="p-2.5 rounded-2xl bg-[#299fff]/10 border border-[#299fff]/20">
             <ListVideo className="w-5 h-5 text-[#299fff]" />
           </div>
           <div>
@@ -49,7 +50,7 @@ export default function Sidebar({
         </div>
         <button 
           onClick={() => setIsSidebarOpen(false)} 
-          className="p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors md:hidden"
+          className="p-2 rounded-xl hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -62,7 +63,7 @@ export default function Sidebar({
           <input
             type="text"
             placeholder="Search for channels..."
-            className="w-full bg-white/5 border border-white/5 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#299fff]/30 focus:border-[#299fff]/50 transition-all"
+            className="w-full bg-white/5 border border-white/5 rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#299fff]/30 focus:border-[#299fff]/50 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -77,7 +78,7 @@ export default function Sidebar({
                 <select
                     onChange={(e) => setSelectedCategory(e.target.value)}
                     value={selectedCategory}
-                    className="w-full bg-white/5 border border-white/5 text-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#299fff]/30 backdrop-blur-md appearance-none cursor-pointer hover:bg-white/10 transition-all"
+                    className="w-full bg-white/5 border border-white/5 text-slate-200 rounded-2xl px-4 py-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#299fff]/30 backdrop-blur-md appearance-none cursor-pointer hover:bg-white/10 transition-all"
                 >
                     {categories.map(category => (
                         <option key={category} value={category} className="bg-[#1a1a1a] text-white">{category}</option>
@@ -119,7 +120,7 @@ export default function Sidebar({
               >
                 <div className="relative shrink-0">
                     <div className={cn(
-                        "w-12 h-12 rounded-xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center transition-all",
+                        "w-12 h-12 rounded-2xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center transition-all",
                         selectedChannel?.url === channel.url ? "border-white/20" : "group-hover:border-white/10"
                     )}>
                         {channel.tvg.logo ? (
