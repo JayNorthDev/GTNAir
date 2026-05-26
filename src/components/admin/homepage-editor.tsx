@@ -47,11 +47,11 @@ export function HomepageEditor() {
         fetchData();
 
         const heroChannel = supabase.channel('hero_slides_changes')
-            .on('postgres_changes', { event: '*', table: 'hero_slides' }, () => fetchData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'hero_slides' }, () => fetchData())
             .subscribe();
 
         const serviceChannel = supabase.channel('services_changes')
-            .on('postgres_changes', { event: '*', table: 'services' }, () => fetchData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, () => fetchData())
             .subscribe();
 
         return () => {

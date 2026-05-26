@@ -5,6 +5,29 @@ description: Develop AI-powered applications using Genkit in Node.js/TypeScript.
 
 # Genkit JS
 
+---
+
+## ⛔ CRITICAL WORKFLOW — Mandatory Pre-Flight Check
+
+> **This section is NON-NEGOTIABLE. Violations will result in re-introduced bugs.**
+
+**Before starting ANY new feature development, bug fix, or code modification in this project, you MUST:**
+
+1. **Read and analyze** the full [Common Errors & Pitfalls](references/common-errors.md) file — including both the Genkit API section AND the GTNPlay Application bugs section.
+2. **Cross-check your proposed changes** against every documented bug (BUG-001 through BUG-008) to ensure you are not re-introducing any of them.
+3. **Explicitly avoid** the following anti-patterns:
+   - ❌ **Proxy routing for media/HLS streams** — Never route video segments through `/api/proxy` or any server-side relay. Always use direct M3U8 URLs.
+   - ❌ **Conditional rendering of `<VideoPlayer>`** — The player component must ALWAYS remain mounted. Use the `isPip` prop to toggle visual mode, never `{condition && <VideoPlayer>}`.
+   - ❌ **Reading React state inside `window.addEventListener` handlers** — Use `useRef` for any value accessed in window-level event handlers to prevent stale closures.
+   - ❌ **Calling video.js methods without `isDisposed()` guard** — Every `playerRef.current.*()` call must be preceded by a null check and `!isDisposed()` check.
+   - ❌ **Using object references in `useEffect` dependency arrays** — Use primitive values (e.g., `channel?.url`) for expensive effects like player creation.
+   - ❌ **Omitting `player.dispose()` in cleanup** — Every `useEffect` that creates a video.js player MUST dispose it in the cleanup return.
+4. **Always preserve working code.** Do not refactor, remove, or restructure functional patterns without explicit user approval. If a pattern looks unusual, check `common-errors.md` — it likely exists to prevent a specific documented bug.
+
+**Failure to follow this protocol has historically caused critical regressions: background audio leaks, datacenter IP blocking, PIP player destruction, and stale state navigation bugs.**
+
+---
+
 ## Prerequisites
 
 Ensure the `genkit` CLI is available.

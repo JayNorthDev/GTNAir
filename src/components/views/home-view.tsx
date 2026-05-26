@@ -17,9 +17,12 @@ interface HomeViewProps {
   onChannelSelect: (channel: Channel) => void;
   loadMore?: () => void;
   hasMore?: boolean;
+  selectedChannelUrl?: string;
+  favoriteUrls?: string[];
+  onToggleFavorite?: (channel: Channel) => void;
 }
 
-export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeViewProps) {
+export function HomeView({ channels, onChannelSelect, loadMore, hasMore, selectedChannelUrl, favoriteUrls, onToggleFavorite }: HomeViewProps) {
   const [heroSlides, setHeroSlides] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,11 +50,11 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
     fetchData();
 
     const heroChannel = supabase.channel('hero_slides_public')
-        .on('postgres_changes', { event: '*', table: 'hero_slides' }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'hero_slides' }, () => fetchData())
         .subscribe();
     
     const serviceChannel = supabase.channel('services_public')
-        .on('postgres_changes', { event: '*', table: 'services' }, () => fetchData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, () => fetchData())
         .subscribe();
 
     return () => {
@@ -205,8 +208,11 @@ export function HomeView({ channels, onChannelSelect, loadMore, hasMore }: HomeV
         <HomeGrid 
           items={itemsWithAds} 
           onChannelSelect={onChannelSelect} 
-          loadMore={loadMore} 
-          hasMore={hasMore} 
+          loadMore={loadMore}
+          hasMore={hasMore}
+          selectedChannelUrl={selectedChannelUrl}
+          favoriteUrls={favoriteUrls}
+          onToggleFavorite={onToggleFavorite}
         />
       </div>
 

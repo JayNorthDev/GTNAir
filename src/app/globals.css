@@ -124,3 +124,38 @@
 .word {
   color: #299fff !important;
 }
+
+/* Smooth Dropdown Animation matching Settings Panel physics */
+.smooth-dropdown {
+  transform-origin: top;
+}
+
+.smooth-dropdown[data-state="open"] {
+  animation: dropdownSlideDown 500ms ease-in-out forwards;
+}
+
+.smooth-dropdown[data-state="closed"] {
+  animation: dropdownSlideUp 500ms ease-in-out forwards;
+}
+
+@keyframes dropdownSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropdownSlideUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+}

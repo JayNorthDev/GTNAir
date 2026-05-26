@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, use } from "react";
+import { useState, useEffect, useMemo, useCallback, use, useRef } from "react";
 import { useChannels } from "@/hooks/useChannels";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -42,7 +42,8 @@ export default function Home(props: HomeProps) {
   const { settings, updateSettings, isLoaded: settingsLoaded } = useSettings();
   const { 
     allChannels, 
-    displayChannels, 
+    filteredChannels, // Full list for Sidebar
+    displayChannels, // Sliced list for Home
     categories, 
     loading, 
     error, 
@@ -61,9 +62,29 @@ export default function Home(props: HomeProps) {
   const [isLibraryExpanded, setIsLibraryExpanded] = useState(false);
   const [view, setView] = useState<SettingsViewType>("home");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isStopped, setIsStopped] = useState(false);
+  const [channelToConfirm, setChannelToConfirm] = useState<Channel | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
 
   const [failCount, setFailCount] = useState(0);
   const [skipError, setSkipError] = useState(false);
+
+  const allChannelsRef = useRef(allChannels);
+  useEffect(() => {
+    allChannelsRef.current = allChannels;
+  }, [allChannels]);
+
+  const failCountRef = useRef(failCount);
+  useEffect(() => { failCountRef.current = failCount; }, [failCount]);
+
+  const skipErrorRef = useRef(skipError);
+  useEffect(() => { skipErrorRef.current = skipError; }, [skipError]);
+
+  const selectedChannelRef = useRef(selectedChannel);
+  useEffect(() => { selectedChannelRef.current = selectedChannel; }, [selectedChannel]);
+
+  const isStoppedRef = useRef(isStopped);
+  useEffect(() => { isStoppedRef.current = isStopped; }, [isStopped]);
 
   // Apple Hello Loader State
   const [greetingIndex, setGreetingIndex] = useState(0);
@@ -78,6 +99,15 @@ export default function Home(props: HomeProps) {
       setView(settings.defaultView);
     }
   }, [settingsLoaded, settings.defaultView]);
+
+  // Sync document title with the currently playing channel
+  useEffect(() => {
+    if (selectedChannel) {
+      document.title = `GTNPlay — ${selectedChannel.name}`;
+    } else {
+      document.title = 'GTNPlay';
+    }
+  }, [selectedChannel]);
 
   useEffect(() => {
     filterChannels(searchTerm, selectedCategory);
@@ -95,9 +125,15 @@ export default function Home(props: HomeProps) {
   }, [loading, allChannels.length, settingsLoaded]);
 
   const handleChannelSelect = useCallback((channel: Channel) => {
+    if (isStoppedRef.current && selectedChannelRef.current?.url === channel.url) {
+      setChannelToConfirm(channel);
+      return;
+    }
+
     setSelectedChannel(channel);
     setFailCount(0); 
     setSkipError(false);
+    setIsStopped(false);
     setView("player");
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
@@ -105,22 +141,51 @@ export default function Home(props: HomeProps) {
   }, []);
 
   const handleNextChannel = useCallback(() => {
-    if (!selectedChannel || skipError) return;
+    const currentChannel = selectedChannelRef.current;
+    if (!currentChannel || skipErrorRef.current) return;
 
-    if (failCount >= 10) {
+    if (failCountRef.current >= 9) {
       setSkipError(true);
       return;
     }
 
     setTimeout(() => {
-      const currentIndex = displayChannels.findIndex(c => c.url === selectedChannel.url);
+      const channels = allChannelsRef.current;
+      const currentIndex = channels.findIndex(c => c.url === currentChannel.url);
       if (currentIndex !== -1) {
-        const nextIndex = (currentIndex + 1) % displayChannels.length;
-        setSelectedChannel(displayChannels[nextIndex]);
+        const nextIndex = (currentIndex + 1) % channels.length;
+        setSelectedChannel(channels[nextIndex]);
         setFailCount(prev => prev + 1);
       }
     }, 2000);
-  }, [selectedChannel, displayChannels, failCount, skipError]);
+  }, []);
+
+  // Instant channel navigation — used by CH+/CH- buttons and keyboard
+  const handleManualNextChannel = useCallback(() => {
+    if (!selectedChannel) return;
+    const channels = allChannelsRef.current;
+    const currentIndex = channels.findIndex(c => c.url === selectedChannel.url);
+    if (currentIndex !== -1) {
+      const nextIndex = (currentIndex + 1) % channels.length;
+      setSelectedChannel(channels[nextIndex]);
+      setFailCount(0);
+      setSkipError(false);
+      setIsStopped(false);
+    }
+  }, [selectedChannel]);
+
+  const handleManualPrevChannel = useCallback(() => {
+    if (!selectedChannel) return;
+    const channels = allChannelsRef.current;
+    const currentIndex = channels.findIndex(c => c.url === selectedChannel.url);
+    if (currentIndex !== -1) {
+      const prevIndex = (currentIndex - 1 + channels.length) % channels.length;
+      setSelectedChannel(channels[prevIndex]);
+      setFailCount(0);
+      setSkipError(false);
+      setIsStopped(false);
+    }
+  }, [selectedChannel]);
 
   const handlePlaylistSelect = (playlistId: string) => {
     updateSettings({ selectedPlaylistId: playlistId });
@@ -130,6 +195,10 @@ export default function Home(props: HomeProps) {
   const handleToggleLiveEdge = useCallback(() => {
     updateSettings({ forceLiveEdge: !settings.forceLiveEdge });
   }, [settings.forceLiveEdge, updateSettings]);
+
+  const handleToggleChannelStrip = useCallback(() => {
+    updateSettings({ showChannelStrip: !settings.showChannelStrip });
+  }, [settings.showChannelStrip, updateSettings]);
 
   if (error) {
     return (
@@ -150,8 +219,11 @@ export default function Home(props: HomeProps) {
           <HomeView 
             channels={displayChannels} 
             onChannelSelect={handleChannelSelect} 
-            loadMore={loadMore} 
-            hasMore={hasMore} 
+            loadMore={loadMore}
+            hasMore={hasMore}
+            selectedChannelUrl={selectedChannel?.url}
+            favoriteUrls={favoriteUrls}
+            onToggleFavorite={toggleFavorite}
           />
         );
       case "categories":
@@ -162,24 +234,24 @@ export default function Home(props: HomeProps) {
           />
         );
       case "favorites":
-        if (favoriteChannels.length === 0) {
-          return (
-            <div className="flex flex-col items-center justify-center h-full text-slate-400 animate-in fade-in duration-700">
-              <Heart className="w-24 h-24 mb-4 text-slate-600" />
-              <h2 className="text-2xl font-semibold">No Favorites Yet</h2>
-              <p>Click the heart on a channel in the player to add it here.</p>
-            </div>
-          );
-        }
         return (
-          <div className="p-4 md:p-8 space-y-12 animate-in fade-in duration-700">
-            <header className="space-y-2 border-b border-white/5 pb-8">
+          <div className="p-4 md:p-8 flex flex-col h-full animate-in fade-in duration-700">
+            <header className="space-y-2 border-b border-white/5 pb-8 shrink-0">
               <h1 className="text-4xl md:text-5xl font-bold tracking-tighter text-white">Your Favorites</h1>
               <p className="text-muted-foreground text-lg max-w-2xl">
                 Quickly access your most-watched channels.
               </p>
             </header>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            
+            {favoriteChannels.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-slate-400 text-center pb-20">
+                <Heart className="w-24 h-24 mb-4 text-slate-600" />
+                <h2 className="text-2xl font-semibold mb-2">No Favorites Yet</h2>
+                <p>Click the heart on a channel in the player to add it here.</p>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto min-h-0 pt-8 pb-20">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {favoriteChannels.map((channel, index) => (
                     <div
                         key={`${channel.url}-${index}`}
@@ -211,7 +283,9 @@ export default function Home(props: HomeProps) {
                         </div>
                     </div>
                 ))}
+              </div>
             </div>
+            )}
           </div>
         );
       default:
@@ -240,21 +314,22 @@ export default function Home(props: HomeProps) {
           )}
         >
           <Sidebar
-            isSidebarOpen={isSidebarOpen}
-            setIsSidebarOpen={setIsSidebarOpen}
-            isExpanded={isLibraryExpanded}
-            setIsExpanded={setIsLibraryExpanded}
-            displayChannels={displayChannels}
-            totalChannels={totalFiltered}
-            selectedChannel={selectedChannel}
-            handleChannelClick={handleChannelSelect}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-            categories={categories}
-            loading={loading}
-          />
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
+          isExpanded={isLibraryExpanded}
+          setIsExpanded={setIsLibraryExpanded}
+          displayChannels={filteredChannels}
+          totalChannels={totalFiltered}
+          selectedChannel={selectedChannel}
+          handleChannelClick={handleChannelSelect}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          categories={categories}
+          loading={loading}
+          isStopped={isStopped}
+        />
         </div>
 
         {/* Player / Content Stage */}
@@ -287,6 +362,7 @@ export default function Home(props: HomeProps) {
           <VideoPlayer 
             channel={selectedChannel}
             onStreamError={handleNextChannel}
+            onStreamSuccess={() => setFailCount(0)}
             autoSkip={settings.autoSkip}
             isMuted={settings.muteOnStartup}
             forceLiveEdge={settings.forceLiveEdge}
@@ -294,6 +370,13 @@ export default function Home(props: HomeProps) {
             isPip={view !== 'player'}
             onExpand={() => setView('player')}
             onClose={() => setSelectedChannel(null)}
+            onPrevChannel={handleManualNextChannel}
+            onNextChannel={handleManualPrevChannel}
+            onSelectChannel={setSelectedChannel}
+            channelList={allChannels}
+            showChannelStrip={settings.showChannelStrip}
+            onToggleChannelStrip={handleToggleChannelStrip}
+            retryTrigger={retryTrigger}
           />
         </div>
         
@@ -305,7 +388,82 @@ export default function Home(props: HomeProps) {
                 <h2 className="text-2xl font-bold">Auto-skip Paused</h2>
                 <p className="text-muted-foreground">Too many dead channels detected (10+). Please select a channel manually.</p>
               </div>
-              <Button onClick={() => setSkipError(false)} className="px-8">Dismiss</Button>
+              <div className="flex items-center gap-4">
+                <Button 
+                  onClick={() => {
+                    setSkipError(false);
+                    setFailCount(0);
+                    setIsStopped(true);
+                    if (window.innerWidth >= 768) {
+                      setIsSidebarOpen(true);
+                    } else {
+                      setView("home");
+                    }
+                  }} 
+                  variant="outline" 
+                  className="px-6"
+                >
+                  Select Manually
+                </Button>
+                <Button onClick={handleManualNextChannel} className="px-6">Try Next Channel</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!!channelToConfirm && (
+          <div className="absolute inset-0 z-[110] flex items-center justify-center bg-background/90 backdrop-blur-md">
+            <div className="bg-card border border-border rounded-xl text-center relative overflow-hidden">
+              
+              {/* Ghost content to force EXACT SAME SIZE as Auto-skip Paused popup */}
+              <div className="invisible flex flex-col items-center gap-6 p-8" aria-hidden="true">
+                <AlertCircle className="w-16 h-16" />
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold">Auto-skip Paused</h2>
+                  <p className="text-muted-foreground">Too many dead channels detected (10+). Please select a channel manually.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <Button variant="outline" className="px-6">Select Manually</Button>
+                  <Button className="px-6">Try Next Channel</Button>
+                </div>
+              </div>
+
+              {/* Visible Content */}
+              <div className="absolute inset-0 flex flex-col items-center gap-6 p-8">
+                <AlertCircle className="w-16 h-16 text-destructive" />
+                <div className="space-y-2">
+                  <h2 className="text-2xl font-bold">Play this channel again?</h2>
+                  <p className="text-muted-foreground">
+                    This channel failed to load. Do you want to try playing it again?
+                  </p>
+                </div>
+                <div className="flex items-center justify-center gap-4 mt-auto">
+                  <Button 
+                    onClick={() => setChannelToConfirm(null)} 
+                    variant="outline" 
+                    className="px-6"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setSelectedChannel(channelToConfirm);
+                      setRetryTrigger(prev => prev + 1);
+                      setFailCount(9);
+                      setSkipError(false);
+                      setIsStopped(false);
+                      setView("player");
+                      if (window.innerWidth < 768) {
+                        setIsSidebarOpen(false);
+                      }
+                      setChannelToConfirm(null);
+                    }} 
+                    className="px-6 bg-[#299fff] hover:bg-[#299fff]/80 text-white"
+                  >
+                    Play Anyway
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -363,6 +521,7 @@ export default function Home(props: HomeProps) {
           </div>
         </div>
       )}
+
     </div>
   );
 }

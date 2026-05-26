@@ -13,6 +13,7 @@ export type Settings = {
   defaultView: View;
   customPlaylistUrl: string;
   selectedPlaylistId: string;
+  showChannelStrip: boolean;
 };
 
 export const defaultSettings: Settings = {
@@ -22,6 +23,7 @@ export const defaultSettings: Settings = {
   defaultView: 'home',
   customPlaylistUrl: '',
   selectedPlaylistId: '',
+  showChannelStrip: true,
 };
 
 // Global state to sync between multiple hook instances

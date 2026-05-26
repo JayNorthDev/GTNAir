@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Channel } from "@/hooks/useChannels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "../ui/button";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Heart, Play } from "lucide-react";
 
 type Ad = {
   type: 'ad';
@@ -19,13 +19,16 @@ type HomeGridProps = {
   onChannelSelect: (channel: Channel) => void;
   loadMore?: () => void;
   hasMore?: boolean;
+  selectedChannelUrl?: string;
+  favoriteUrls?: string[];
+  onToggleFavorite?: (channel: Channel) => void;
 };
 
 function isChannel(item: GridItem): item is Channel {
     return (item as Channel).url !== undefined;
 }
 
-export function HomeGrid({ items, onChannelSelect, loadMore, hasMore }: HomeGridProps) {
+export function HomeGrid({ items, onChannelSelect, loadMore, hasMore, selectedChannelUrl, favoriteUrls = [], onToggleFavorite }: HomeGridProps) {
 
   return (
     <div className="space-y-8">
@@ -33,13 +36,18 @@ export function HomeGrid({ items, onChannelSelect, loadMore, hasMore }: HomeGrid
         {items.map((item, index) => {
           if (isChannel(item)) {
             const channel = item;
+            const isPlaying = channel.url === selectedChannelUrl;
+            const isFav = favoriteUrls.includes(channel.url);
             return (
               <div
                 key={`${channel.url}-${index}`}
                 onClick={() => onChannelSelect(channel)}
                 className={cn(
-                  "group relative aspect-[16/10] cursor-pointer overflow-hidden rounded-md bg-slate-900/50 border border-transparent",
-                  "transition-all duration-300 ease-in-out hover:z-10 hover:scale-105 hover:shadow-2xl hover:shadow-black/50 hover:ring-2 hover:ring-primary focus:z-10 focus:scale-105 focus:shadow-2xl focus:ring-2 focus:ring-primary"
+                  "group relative aspect-[16/10] cursor-pointer overflow-hidden rounded-md bg-slate-900/50 border",
+                  "transition-all duration-300 ease-in-out hover:z-10 hover:scale-105 hover:shadow-2xl hover:shadow-black/50",
+                  isPlaying
+                    ? "border-[#299fff]/60 ring-2 ring-[#299fff]/40 scale-[1.03] z-10 shadow-[0_0_20px_rgba(41,159,255,0.3)]"
+                    : "border-transparent hover:ring-2 hover:ring-primary focus:z-10 focus:scale-105 focus:shadow-2xl focus:ring-2 focus:ring-primary"
                 )}
               >
                 <img
@@ -54,6 +62,31 @@ export function HomeGrid({ items, onChannelSelect, loadMore, hasMore }: HomeGrid
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+
+                {/* Now Playing badge */}
+                {isPlaying && (
+                  <div className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#299fff] text-white text-[9px] font-black uppercase tracking-widest shadow-lg">
+                    <Play className="w-2 h-2 fill-white" />
+                    Live
+                  </div>
+                )}
+
+                {/* Favorite toggle button */}
+                {onToggleFavorite && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onToggleFavorite(channel); }}
+                    className={cn(
+                      "absolute top-2 right-2 p-1.5 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100",
+                      isFav
+                        ? "bg-red-500/20 text-red-500 opacity-100"
+                        : "bg-black/40 text-white/60 hover:text-red-400 hover:bg-red-500/10"
+                    )}
+                    title={isFav ? "Remove from Favorites" : "Add to Favorites"}
+                  >
+                    <Heart className={cn("w-3.5 h-3.5 transition-all", isFav && "fill-current")} />
+                  </button>
+                )}
+
                 <div className="absolute bottom-0 left-0 right-0 p-3">
                   <h3 className="truncate font-semibold text-white">
                     {channel.name}

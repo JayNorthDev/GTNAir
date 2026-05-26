@@ -17,17 +17,35 @@ export default function Header({ selectedChannel, isSidebarOpen, setIsSidebarOpe
   return (
     <header className="flex items-center justify-between h-20 px-6 bg-[#0a0a0a]/30 backdrop-blur-xl border-b border-white/5 shrink-0 z-30">
       <div className="flex items-center gap-6 flex-1 overflow-hidden">
-        {/* Browse Library Button */}
-        <Button
+        {/* Browse Library Button - Vista Aero Style */}
+        <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className={cn(
-            "group flex items-center gap-3 px-6 py-6 rounded-2xl transition-all duration-300 shrink-0",
-            "bg-[#299fff] hover:bg-[#299fff]/90 text-white shadow-lg shadow-[#299fff]/20"
+            "group relative flex items-center justify-center h-[52px] px-8 rounded-2xl transition-colors duration-300 outline-none cursor-pointer shrink-0 overflow-hidden",
+            "bg-[#0d1b2a] border border-[#299fff]/30 hover:border-[#299fff]/70"
           )}
         >
-          <Search className="w-5 h-5" />
-          <span className="text-xs font-black uppercase tracking-[0.2em]">Browse Library</span>
-        </Button>
+          {/* Inner inset highlights */}
+          <div className="absolute inset-0 shadow-[inset_0_1px_1px_rgba(41,159,255,0.15),inset_0_-1px_2px_rgba(0,0,0,0.5)] group-hover:shadow-[inset_0_1px_1px_rgba(41,159,255,0.3),inset_0_-1px_2px_rgba(0,0,0,0.5)] transition-shadow duration-300 pointer-events-none z-[5]" />
+          
+          {/* Aero Glass Top Half Reflection */}
+          <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+          
+          {/* Aero Glass Bottom Half Overlay */}
+          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-black/30 pointer-events-none" />
+
+          {/* Hover Glow (contained by overflow-hidden) */}
+          <div className="absolute inset-x-0 bottom-0 h-[150%] bg-[radial-gradient(ellipse_at_bottom,_rgba(41,159,255,0.4)_0%,_transparent_60%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+          {/* Bottom Edge Highlight */}
+          <div className="absolute inset-x-[15%] bottom-0 h-[1px] bg-gradient-to-r from-transparent via-[#299fff] to-transparent opacity-30 group-hover:opacity-80 transition-opacity duration-300 pointer-events-none" />
+
+          {/* Content */}
+          <div className="relative z-10 flex items-center gap-3 text-slate-300 group-hover:text-white transition-colors duration-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+            <Search className="w-5 h-5" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em]">Browse Library</span>
+          </div>
+        </button>
 
         <div className="h-10 w-[1px] bg-white/10 mx-2 shrink-0" />
 

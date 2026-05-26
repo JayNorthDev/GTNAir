@@ -40,7 +40,7 @@ export function ChannelList({ onRefreshing, forcedPlaylistUrl }: ChannelListProp
     const [activeFilters, setActiveFilters] = useState<string[]>([]);
     
     const containerRef = useRef<HTMLDivElement>(null);
-    const observerTarget = useRef<HTMLDivElement>(null);
+    const observerTarget = useRef<HTMLTableRowElement>(null);
 
     useEffect(() => {
         onRefreshing?.(isRefreshing);

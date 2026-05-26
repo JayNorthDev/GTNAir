@@ -3,9 +3,10 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { manualParse, Channel } from '@/lib/m3u-parser';
+import { manualParse, type Channel } from '@/lib/m3u-parser';
 import { usePlaylists } from './usePlaylists';
 
+export type { Channel };
 export type VisibilityMap = { [key: string]: boolean };
 
 const INITIAL_PAGE_SIZE = 100;
@@ -141,7 +142,7 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
       channels = channels.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     setFilteredChannels(channels);
-    setVisibleCount(INITIAL_PAGE_SIZE); 
+    setVisibleCount(INITIAL_PAGE_SIZE);
   }, [allChannels]);
 
   const displayChannels = useMemo(() => {
@@ -156,7 +157,8 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
 
   return { 
     allChannels, 
-    displayChannels, 
+    filteredChannels, // Full list for Sidebar
+    displayChannels,  // Sliced list for Home
     categories, 
     loading, 
     error, 

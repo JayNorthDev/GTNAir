@@ -35,12 +35,23 @@ export function SettingsView({ isOpen, onClose }: SettingsViewProps) {
 
   useEffect(() => {
     const handler = () => {
-      setIsFullScreen(!!(
-        document.fullscreenElement || 
+      const fsElement = document.fullscreenElement || 
         (document as any).webkitFullscreenElement || 
         (document as any).mozFullScreenElement || 
-        (document as any).msFullscreenElement
-      ));
+        (document as any).msFullscreenElement;
+      
+      const isAppFullscreen = fsElement === document.documentElement;
+      setIsFullScreen(isAppFullscreen);
+
+      if (isAppFullscreen) {
+        if ('keyboard' in navigator && (navigator as any).keyboard?.lock) {
+          (navigator as any).keyboard.lock(['Escape']).catch(() => {});
+        }
+      } else {
+        if ('keyboard' in navigator && (navigator as any).keyboard?.unlock) {
+          (navigator as any).keyboard.unlock();
+        }
+      }
     };
 
     document.addEventListener('fullscreenchange', handler);
