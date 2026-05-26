@@ -1,6 +1,6 @@
 
 "use client";
-import { Search, Tv, X, ListVideo, Filter, LayoutGrid, Maximize2, Minimize2 } from 'lucide-react';
+import { Search, Tv, ListVideo, Filter, LayoutGrid, Maximize2, Minimize2 } from 'lucide-react';
 import { Channel } from '@/lib/m3u-parser';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -109,7 +109,7 @@ export default function Sidebar({
         {/* Channel List / Grid */}
         <nav className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           {loading && displayChannels.length === 0 ? (
-            <div className={cn("gap-3", isExpanded ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6" : "space-y-3")}>
+            <div className={cn("gap-4", isExpanded ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6" : "space-y-4")}>
               {[...Array(12)].map((_, i) => (
                 <div key={i} className={cn(
                     "rounded-2xl bg-white/5 animate-pulse",
@@ -123,8 +123,8 @@ export default function Sidebar({
             <div className={cn(
                 "transition-all duration-500",
                 isExpanded 
-                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6" 
-                    : "flex flex-col gap-2"
+                    ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4" 
+                    : "flex flex-col gap-4"
             )}>
               {displayChannels.map((channel, index) => (
                 isExpanded ? (
