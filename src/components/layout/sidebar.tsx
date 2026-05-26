@@ -124,7 +124,7 @@ export default function Sidebar({
                 "transition-all duration-500",
                 isExpanded 
                     ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4" 
-                    : "flex flex-col gap-4"
+                    : "flex flex-col gap-1.5"
             )}>
               {displayChannels.map((channel, index) => (
                 isExpanded ? (
@@ -169,7 +169,7 @@ export default function Sidebar({
                         key={`${channel.url}-${index}`}
                         onClick={() => handleChannelClick(channel)}
                         className={cn(
-                            "w-full flex items-center gap-4 p-3 rounded-2xl text-left transition-all duration-300 group",
+                            "w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-300 group",
                             selectedChannel?.url === channel.url 
                             ? "bg-[#299fff] text-white shadow-[0_0_20px_rgba(41,159,255,0.4)] scale-[1.02]" 
                             : "hover:bg-white/5 text-slate-300 hover:text-white"
@@ -177,7 +177,7 @@ export default function Sidebar({
                     >
                         <div className="relative shrink-0">
                             <div className={cn(
-                                "w-12 h-12 rounded-2xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center transition-all",
+                                "w-11 h-11 rounded-2xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center transition-all",
                                 selectedChannel?.url === channel.url ? "border-white/20" : "group-hover:border-white/10"
                             )}>
                                 {channel.tvg.logo ? (
@@ -188,11 +188,11 @@ export default function Sidebar({
                                         onError={(e) => {(e.target as HTMLImageElement).style.display='none';}}
                                     />
                                 ) : (
-                                    <Tv className="w-6 h-6 opacity-20" />
+                                    <Tv className="w-5 h-5 opacity-20" />
                                 )}
                             </div>
                             {selectedChannel?.url === channel.url && (
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full border-2 border-[#299fff] animate-pulse" />
+                                <div className="absolute -top-1 -right-1 w-2.5 h-3 bg-white rounded-full border-2 border-[#299fff] animate-pulse" />
                             )}
                         </div>
                         <div className="flex-1 overflow-hidden">
