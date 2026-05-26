@@ -70,10 +70,11 @@ export default function Sidebar({
 
         {/* Search & Filter Section */}
         <div className={cn(
-            "p-6 pb-2 shrink-0 flex gap-4 transition-all duration-500",
-            isExpanded ? "flex-row items-center" : "flex-col"
+            "p-6 pb-2 shrink-0 transition-all duration-500",
+            isExpanded ? "space-y-6" : "space-y-4"
         )}>
-          <div className="relative group flex-1">
+          {/* Top: Search Bar */}
+          <div className="relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-[#299fff] transition-colors" />
             <input
               type="text"
@@ -84,7 +85,28 @@ export default function Sidebar({
             />
           </div>
 
-          <div className={cn("space-y-2 transition-all duration-500", isExpanded ? "w-64" : "w-full")}>
+          {/* Bottom: Category Selection */}
+          {isExpanded ? (
+            /* Horizontal Scrollable Categories for Expanded Mode */
+            <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none no-scrollbar -mx-2 px-2">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={cn(
+                    "px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all border shrink-0",
+                    selectedCategory === category
+                      ? "bg-[#299fff] border-[#299fff] text-white shadow-[0_0_20px_rgba(41,159,255,0.4)] scale-105"
+                      : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
+                  )}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          ) : (
+            /* Compact Select for Normal Mode */
+            <div className="space-y-2">
               <div className="flex items-center gap-2 text-slate-500 mb-1">
                   <Filter className="w-3 h-3" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Category</span>
@@ -103,11 +125,12 @@ export default function Sidebar({
                       <LayoutGrid className="w-3 h-3" />
                   </div>
               </div>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Channel List / Grid */}
-        <nav className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        <nav className="flex-1 overflow-y-auto p-6 pt-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           {loading && displayChannels.length === 0 ? (
             <div className={cn(
               "grid gap-2 transition-all duration-500", 
@@ -118,7 +141,8 @@ export default function Sidebar({
                     "rounded-2xl bg-white/5 animate-pulse",
                     isExpanded ? "aspect-[16/10]" : "flex items-center gap-3 p-3 h-[60px]"
                 )}>
-                  <div className={cn("bg-white/10 rounded-xl", isExpanded ? "w-full h-full" : "w-11 h-11")} />
+                  {!isExpanded && <div className="bg-white/10 rounded-xl w-11 h-11 shrink-0" />}
+                  <div className={cn("bg-white/10 rounded-xl flex-1", isExpanded ? "h-full" : "h-4")} />
                 </div>
               ))}
             </div>
@@ -126,8 +150,8 @@ export default function Sidebar({
             <div className={cn(
                 "grid transition-all duration-500 ease-in-out",
                 isExpanded 
-                    ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2" 
-                    : "grid-cols-1 gap-2"
+                    ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3" 
+                    : "grid-cols-1 gap-1.5"
             )}>
               {displayChannels.map((channel, index) => (
                 isExpanded ? (
