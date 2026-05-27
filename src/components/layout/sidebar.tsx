@@ -38,13 +38,12 @@ export default function Sidebar({
 }: SidebarProps) {
   return (
     <aside className={cn(
-      "z-40 bg-[#0a0a0a]/98 backdrop-blur-2xl border-r border-white/5 transition-all duration-500 ease-in-out flex flex-col overflow-hidden shrink-0",
-      isExpanded ? "absolute inset-0 w-full h-full z-50" : "relative h-full",
-      isSidebarOpen ? (isExpanded ? "w-full" : "w-80") : "w-0 opacity-0 pointer-events-none"
+      "h-full flex flex-col overflow-hidden bg-transparent transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+      isExpanded ? "w-full" : "w-80"
     )}>
-      {/* Content wrapper with width handling to prevent content jumping during animation */}
+      {/* Content wrapper */}
       <div className={cn(
-        "h-full flex flex-col transition-all duration-500",
+        "h-full flex flex-col transition-all duration-700",
         isExpanded ? "w-full" : "w-80"
       )}>
         {/* Sidebar Header */}
@@ -73,7 +72,7 @@ export default function Sidebar({
             "p-6 pb-2 shrink-0 transition-all duration-500",
             isExpanded ? "space-y-6" : "space-y-4"
         )}>
-          {/* Top: Search Bar */}
+          {/* Search Bar */}
           <div className="relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-[#299fff] transition-colors" />
             <input
@@ -85,10 +84,9 @@ export default function Sidebar({
             />
           </div>
 
-          {/* Bottom: Category Selection */}
+          {/* Category Selection */}
           {isExpanded ? (
-            /* Horizontal Scrollable Categories for Expanded Mode */
-            <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none no-scrollbar -mx-2 px-2">
+            <div className="flex items-center gap-2 overflow-x-auto pt-2 pb-4 scrollbar-none no-scrollbar -mx-2 px-2">
               {categories.map((category) => (
                 <button
                   key={category}
@@ -96,7 +94,7 @@ export default function Sidebar({
                   className={cn(
                     "px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all border shrink-0",
                     selectedCategory === category
-                      ? "bg-[#299fff] border-[#299fff] text-white shadow-[0_0_20px_rgba(41,159,255,0.4)] scale-105"
+                      ? "bg-[#299fff] border-[#299fff] text-white shadow-[0_4px_12px_rgba(41,159,255,0.2)] scale-105"
                       : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
                   )}
                 >
@@ -105,11 +103,10 @@ export default function Sidebar({
               ))}
             </div>
           ) : (
-            /* Compact Select for Normal Mode */
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-slate-500 mb-1">
                   <Filter className="w-3 h-3" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Category</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Filter by Category</span>
               </div>
               <div className="relative">
                   <select
@@ -133,7 +130,7 @@ export default function Sidebar({
         <nav className="flex-1 overflow-y-auto p-6 pt-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           {loading && displayChannels.length === 0 ? (
             <div className={cn(
-              "grid gap-2 transition-all duration-500", 
+              "grid gap-4", 
               isExpanded ? "grid-cols-2 md:grid-cols-4 lg:grid-cols-6" : "grid-cols-1"
             )}>
               {[...Array(12)].map((_, i) => (
@@ -148,14 +145,13 @@ export default function Sidebar({
             </div>
           ) : (
             <div className={cn(
-                "grid transition-all duration-500 ease-in-out",
+                "grid transition-all duration-700 ease-in-out gap-4",
                 isExpanded 
-                    ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3" 
-                    : "grid-cols-1 gap-1.5"
+                    ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" 
+                    : "grid-cols-1"
             )}>
               {displayChannels.map((channel, index) => (
                 isExpanded ? (
-                    // GRID BOX VIEW
                     <div
                         key={`${channel.url}-${index}`}
                         onClick={() => handleChannelClick(channel)}
@@ -191,14 +187,13 @@ export default function Sidebar({
                         )}
                     </div>
                 ) : (
-                    // VERTICAL LIST VIEW
                     <button
                         key={`${channel.url}-${index}`}
                         onClick={() => handleChannelClick(channel)}
                         className={cn(
                             "w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-300 group",
                             selectedChannel?.url === channel.url 
-                            ? "bg-[#299fff] text-white shadow-[0_0_20px_rgba(41,159,255,0.4)] scale-[1.01]" 
+                            ? "bg-[#299fff] text-white shadow-[0_4px_12px_rgba(41,159,255,0.2)] scale-[1.01]" 
                             : "hover:bg-white/5 text-slate-300 hover:text-white"
                         )}
                     >
@@ -218,9 +213,6 @@ export default function Sidebar({
                                     <Tv className="w-5 h-5 opacity-20" />
                                 )}
                             </div>
-                            {selectedChannel?.url === channel.url && (
-                                <div className="absolute -top-1 -right-1 w-2.5 h-3 bg-white rounded-full border-2 border-[#299fff] animate-pulse" />
-                            )}
                         </div>
                         <div className="flex-1 overflow-hidden">
                             <p className="font-bold text-xs truncate uppercase tracking-tight">{channel.name}</p>
@@ -228,19 +220,12 @@ export default function Sidebar({
                                 "text-[10px] truncate font-medium uppercase tracking-tighter opacity-60",
                                 selectedChannel?.url === channel.url ? "text-white" : "text-slate-400"
                             )}>
-                            {channel.group.title || "Uncategorized"}
+                            {channel.group.title || "General"}
                             </p>
                         </div>
                     </button>
                 )
               ))}
-              {displayChannels.length === 0 && searchTerm && (
-                <div className="text-center py-20 px-4 w-full">
-                  <LayoutGrid className="w-12 h-12 text-slate-700 mx-auto mb-4 opacity-20" />
-                  <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">No Channels Found</p>
-                  <p className="text-[10px] text-slate-600 font-medium mt-1">Try a different search term or category</p>
-                </div>
-              )}
             </div>
           )}
         </nav>

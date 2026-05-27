@@ -67,19 +67,11 @@ export default function Home(props: HomeProps) {
     filterChannels(searchTerm, selectedCategory);
   }, [searchTerm, selectedCategory, filterChannels]);
 
-  // Reset expansion when sidebar is closed
-  useEffect(() => {
-    if (!isSidebarOpen) {
-      setIsLibraryExpanded(false);
-    }
-  }, [isSidebarOpen]);
-
   const handleChannelSelect = useCallback((channel: Channel) => {
     setSelectedChannel(channel);
     setFailCount(0); 
     setSkipError(false);
     setView("player");
-    setIsLibraryExpanded(false);
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
@@ -211,11 +203,15 @@ export default function Home(props: HomeProps) {
         setIsSettingsOpen={setIsSettingsOpen}
       />
       
-      <main className={cn(
-        "flex-1 flex min-w-0 relative bg-background",
-        view === 'player' ? "overflow-hidden" : "flex-col overflow-y-auto"
-      )}>
-        {view === 'player' && (
+      <main className="flex-1 relative overflow-hidden bg-background">
+        {/* Sidebar Cinematic Push Container */}
+        <div 
+          className={cn(
+            "fixed inset-y-0 left-24 z-40 bg-[#0a0a0a] border-r border-white/5 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full",
+            isLibraryExpanded ? "w-[calc(100vw-6rem)]" : "w-80"
+          )}
+        >
           <Sidebar
             isSidebarOpen={isSidebarOpen}
             setIsSidebarOpen={setIsSidebarOpen}
@@ -231,12 +227,17 @@ export default function Home(props: HomeProps) {
             categories={categories}
             loading={loading}
           />
-        )}
+        </div>
 
-        <div className={cn(
-          "flex-1 flex flex-col min-w-0 relative",
-          view === 'player' ? "overflow-hidden" : ""
-        )}>
+        {/* Player / Content Cinematic Push Container */}
+        <div 
+          className={cn(
+            "absolute inset-y-0 right-0 left-0 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+            isSidebarOpen 
+              ? (isLibraryExpanded ? "translate-x-full" : "translate-x-80") 
+              : "translate-x-0"
+          )}
+        >
           {view === 'player' && (
             <Header
               selectedChannel={selectedChannel}

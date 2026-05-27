@@ -17,7 +17,7 @@ export default function Header({ selectedChannel, isSidebarOpen, setIsSidebarOpe
   return (
     <header className="flex items-center justify-between h-20 px-6 bg-[#0a0a0a]/30 backdrop-blur-xl border-b border-white/5 shrink-0 z-30">
       <div className="flex items-center gap-6 flex-1 overflow-hidden">
-        {/* Browse Library Button - Styled as per screenshot */}
+        {/* Browse Library Button */}
         <Button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className={cn(
