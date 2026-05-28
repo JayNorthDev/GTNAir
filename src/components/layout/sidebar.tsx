@@ -125,8 +125,8 @@ export default function Sidebar({
                       <Filter className="w-3 h-3" />
                       <span className="text-[10px] font-black uppercase tracking-widest">Filter by Category</span>
                   </div>
-                  <div className="px-2 py-0.5 rounded-lg bg-[#299fff]/10 border border-[#299fff]/20">
-                    <span className="text-[10px] font-black text-[#299fff]">{totalChannels}</span>
+                  <div className="px-3 py-0.5 rounded-full bg-[#299fff]/10 border border-[#299fff]/20 shadow-[0_0_12px_rgba(41,159,255,0.1)]">
+                    <span className="text-[10px] font-black text-[#299fff] tracking-tighter">{totalChannels}</span>
                   </div>
               </div>
               
