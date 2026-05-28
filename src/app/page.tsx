@@ -207,7 +207,7 @@ export default function Home(props: HomeProps) {
         {/* Sidebar Container */}
         <div 
           className={cn(
-            "absolute inset-y-0 left-0 z-30 transition-all duration-600 ease-[cubic-bezier(0.23,1,0.32,1)] border-r border-white/5",
+            "absolute inset-y-0 left-0 z-30 transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] border-r border-white/5",
             isSidebarOpen ? "translate-x-0" : "-translate-x-full",
             isLibraryExpanded ? "w-full" : "w-80"
           )}
@@ -233,7 +233,7 @@ export default function Home(props: HomeProps) {
         {/* Player / Content Stage */}
         <div 
           className={cn(
-            "absolute inset-y-0 right-0 flex flex-col transition-all duration-600 ease-[cubic-bezier(0.23,1,0.32,1)] z-10",
+            "absolute inset-y-0 right-0 flex flex-col transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] z-10",
             isSidebarOpen 
               ? (isLibraryExpanded ? "left-0 translate-x-full" : "left-80 translate-x-0") 
               : "left-0 translate-x-0"
