@@ -204,7 +204,7 @@ export default function Home(props: HomeProps) {
       />
       
       <main className="flex-1 relative overflow-hidden bg-background">
-        {/* Sidebar Cinematic Push Container - Positioned Absolutely within the flex-1 main to avoid NavRail overlap */}
+        {/* Sidebar Container - Stays locked to the right of NavRail */}
         <div 
           className={cn(
             "absolute inset-y-0 left-0 z-30 bg-[#0a0a0a] border-r border-white/5 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
@@ -229,7 +229,7 @@ export default function Home(props: HomeProps) {
           />
         </div>
 
-        {/* Player / Content Cinematic Push Container */}
+        {/* Player / Content Stage - Slides away from NavRail correctly */}
         <div 
           className={cn(
             "absolute inset-y-0 right-0 left-0 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-10",

@@ -1,10 +1,10 @@
 
 "use client";
-import { Search, Tv, ListVideo, Filter, LayoutGrid, Maximize2, Minimize2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Search, Tv, ListVideo, Filter, Maximize2, Minimize2, ChevronDown, Check } from 'lucide-react';
 import { Channel } from '@/lib/m3u-parser';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type SidebarProps = {
   isSidebarOpen: boolean;
@@ -37,12 +37,25 @@ export default function Sidebar({
   categories,
   loading,
 }: SidebarProps) {
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <aside className={cn(
       "h-full flex flex-col overflow-hidden bg-transparent transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
       isExpanded ? "w-full" : "w-80"
     )}>
-      {/* Content wrapper - fixed width for normal mode to avoid layout shifts during transitions */}
       <div className={cn(
         "h-full flex flex-col transition-all duration-700",
         isExpanded ? "w-full" : "w-80"
@@ -58,7 +71,6 @@ export default function Sidebar({
               <p className="text-[10px] text-slate-500 font-bold uppercase">{displayChannels.length} Streams Available</p>
             </div>
           </div>
-          {/* Expansion Toggle Button */}
           <button 
             onClick={() => setIsExpanded(!isExpanded)} 
             className="p-2 rounded-xl hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
@@ -109,18 +121,43 @@ export default function Sidebar({
                   <Filter className="w-3 h-3" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Filter by Category</span>
               </div>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-full bg-white/5 border-white/5 text-slate-200 rounded-2xl h-12 px-4 focus:ring-[#299fff]/30">
-                  <SelectValue placeholder="Select Category" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1a1a1a] border-white/10 text-white max-h-80">
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category} className="focus:bg-[#299fff] focus:text-white">
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              
+              {/* Custom Inline Dropdown (Avoids Portal Positioning Issues) */}
+              <div className="relative" ref={dropdownRef}>
+                <button 
+                  onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+                  className={cn(
+                    "w-full flex items-center justify-between bg-white/5 border border-white/5 text-slate-200 rounded-2xl h-12 px-4 focus:ring-2 focus:ring-[#299fff]/30 transition-all",
+                    showCategoryDropdown && "border-[#299fff]/50 ring-2 ring-[#299fff]/20"
+                  )}
+                >
+                  <span className="truncate text-sm font-medium">{selectedCategory}</span>
+                  <ChevronDown className={cn("w-4 h-4 opacity-50 transition-transform duration-300", showCategoryDropdown && "rotate-180")} />
+                </button>
+                
+                {showCategoryDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                    {categories.map(category => (
+                      <button
+                        key={category}
+                        onClick={() => {
+                          setSelectedCategory(category);
+                          setShowCategoryDropdown(false);
+                        }}
+                        className={cn(
+                          "w-full text-left px-4 py-3 text-sm flex items-center justify-between transition-all border-b border-white/5 last:border-0",
+                          selectedCategory === category 
+                            ? "bg-[#299fff]/10 text-[#299fff] font-bold" 
+                            : "text-slate-400 hover:bg-white/5 hover:text-white"
+                        )}
+                      >
+                        <span className="truncate">{category}</span>
+                        {selectedCategory === category && <Check className="w-4 h-4" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
