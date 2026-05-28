@@ -203,7 +203,7 @@ export default function Sidebar({
                         onClick={() => handleChannelClick(channel)}
                         className={cn(
                             "group relative aspect-[16/10] cursor-pointer overflow-hidden rounded-2xl bg-white/5 border border-transparent transition-all duration-200 ease-out transform-gpu will-change-transform",
-                            isActive && "bg-white/10 border-white/20 shadow-xl scale-[1.03]"
+                            isActive && "bg-transparent border-white/20 shadow-xl scale-[1.03]"
                         )}
                     >
                         <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/20">
@@ -240,7 +240,7 @@ export default function Sidebar({
                         className={cn(
                             "relative w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-200 group border border-transparent transform-gpu will-change-transform",
                             isActive 
-                            ? "bg-white/10 border-white/20 text-white shadow-xl scale-[1.02]" 
+                            ? "bg-transparent border-white/20 text-white shadow-xl scale-[1.02]" 
                             : "hover:bg-white/5 text-slate-300 hover:text-white"
                         )}
                     >
