@@ -1,7 +1,7 @@
 
 "use client";
 import { useState, useRef, useEffect } from 'react';
-import { Search, Tv, ListVideo, Filter, Maximize2, Minimize2, ChevronDown, Check } from 'lucide-react';
+import { Search, Tv, ListVideo, Filter, Maximize2, Minimize2, ChevronDown, Check, Play } from 'lucide-react';
 import { Channel } from '@/lib/m3u-parser';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -122,7 +122,6 @@ export default function Sidebar({
                   <span className="text-[10px] font-black uppercase tracking-widest">Filter by Category</span>
               </div>
               
-              {/* Custom Inline Dropdown (Avoids Portal Positioning Issues) */}
               <div className="relative" ref={dropdownRef}>
                 <button 
                   onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
@@ -186,15 +185,16 @@ export default function Sidebar({
                     ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" 
                     : "grid-cols-1"
             )}>
-              {displayChannels.map((channel, index) => (
-                isExpanded ? (
+              {displayChannels.map((channel, index) => {
+                const isActive = selectedChannel?.url === channel.url;
+                return isExpanded ? (
                     <div
                         key={`${channel.url}-${index}`}
                         onClick={() => handleChannelClick(channel)}
                         className={cn(
                             "group relative aspect-[16/10] cursor-pointer overflow-hidden rounded-2xl bg-white/5 border border-white/5",
-                            "transition-all duration-300 ease-in-out hover:z-10 hover:scale-105 hover:shadow-2xl hover:shadow-black/50 hover:ring-2 hover:ring-[#299fff] focus:ring-2 focus:ring-[#299fff]",
-                            selectedChannel?.url === channel.url && "ring-2 ring-[#299fff] bg-[#299fff]/10"
+                            "transition-all duration-300 ease-in-out hover:z-10 hover:scale-105 hover:shadow-2xl hover:shadow-black/50 hover:ring-1 hover:ring-white/20 focus:ring-1 focus:ring-white/20",
+                            isActive && "bg-white/10 backdrop-blur-md border-white/20 shadow-2xl"
                         )}
                     >
                         <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/20">
@@ -218,8 +218,10 @@ export default function Sidebar({
                                 {channel.group.title}
                             </p>
                         </div>
-                        {selectedChannel?.url === channel.url && (
-                             <div className="absolute top-3 right-3 w-2 h-2 bg-[#299fff] rounded-full shadow-[0_0_10px_rgba(41,159,255,1)] animate-pulse" />
+                        {isActive && (
+                             <div className="absolute top-3 right-3 p-1.5 rounded-full bg-[#299fff]/20 backdrop-blur-sm border border-[#299fff]/30">
+                                <Play className="w-2.5 h-2.5 text-[#299fff] fill-current" />
+                             </div>
                         )}
                     </div>
                 ) : (
@@ -227,16 +229,16 @@ export default function Sidebar({
                         key={`${channel.url}-${index}`}
                         onClick={() => handleChannelClick(channel)}
                         className={cn(
-                            "w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-300 group",
-                            selectedChannel?.url === channel.url 
-                            ? "bg-[#299fff] text-white shadow-[0_4px_12px_rgba(41,159,255,0.2)] scale-[1.01]" 
+                            "relative w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-300 group",
+                            isActive 
+                            ? "bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-2xl scale-[1.02]" 
                             : "hover:bg-white/5 text-slate-300 hover:text-white"
                         )}
                     >
                         <div className="relative shrink-0">
                             <div className={cn(
                                 "w-11 h-11 rounded-2xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center transition-all",
-                                selectedChannel?.url === channel.url ? "border-white/20" : "group-hover:border-white/10"
+                                isActive ? "border-white/20" : "group-hover:border-white/10"
                             )}>
                                 {channel.tvg.logo ? (
                                     <img 
@@ -254,14 +256,17 @@ export default function Sidebar({
                             <p className="font-bold text-xs truncate uppercase tracking-tight">{channel.name}</p>
                             <p className={cn(
                                 "text-[10px] truncate font-medium uppercase tracking-tighter opacity-60",
-                                selectedChannel?.url === channel.url ? "text-white" : "text-slate-400"
+                                isActive ? "text-white" : "text-slate-400"
                             )}>
                             {channel.group.title || "General"}
                             </p>
                         </div>
+                        {isActive && (
+                            <Play className="absolute top-2.5 right-3.5 w-3 h-3 text-[#299fff] fill-current" />
+                        )}
                     </button>
                 )
-              ))}
+              })}
             </div>
           )}
         </nav>
