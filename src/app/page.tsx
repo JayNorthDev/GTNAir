@@ -229,13 +229,13 @@ export default function Home(props: HomeProps) {
           />
         </div>
 
-        {/* Player / Content Stage - Slides away from NavRail correctly */}
+        {/* Player / Content Stage - Adjusts width dynamically when sidebar is open */}
         <div 
           className={cn(
-            "absolute inset-y-0 right-0 left-0 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-10",
+            "absolute inset-y-0 right-0 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-10",
             isSidebarOpen 
-              ? (isLibraryExpanded ? "translate-x-full" : "translate-x-80") 
-              : "translate-x-0"
+              ? (isLibraryExpanded ? "left-0 translate-x-full" : "left-80 translate-x-0") 
+              : "left-0 translate-x-0"
           )}
         >
           {view === 'player' && (
