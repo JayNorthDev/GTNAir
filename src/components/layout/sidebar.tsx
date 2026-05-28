@@ -1,4 +1,3 @@
-
 "use client";
 import { useState, useRef, useEffect } from 'react';
 import { Search, Tv, ListVideo, Filter, Maximize2, Minimize2, ChevronDown, Check, Play } from 'lucide-react';
@@ -53,7 +52,7 @@ export default function Sidebar({
 
   return (
     <aside className={cn(
-      "h-full flex flex-col overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] relative",
+      "h-full flex flex-col overflow-hidden transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] relative",
       "bg-gradient-to-b from-[#0a0a0a] via-[#111827] to-[#0a0a0a]",
       isExpanded ? "w-full" : "w-80"
     )}>
@@ -61,7 +60,7 @@ export default function Sidebar({
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_left,_rgba(41,159,255,0.05),_transparent_40%)]" />
 
       <div className={cn(
-        "h-full flex flex-col transition-all duration-700 relative z-10",
+        "h-full flex flex-col transition-all duration-400 relative z-10",
         isExpanded ? "w-full" : "w-80"
       )}>
         {/* Sidebar Header */}
@@ -85,7 +84,7 @@ export default function Sidebar({
 
         {/* Search & Filter Section */}
         <div className={cn(
-            "p-6 pb-2 shrink-0 transition-all duration-500",
+            "p-6 pb-2 shrink-0 transition-all duration-400",
             isExpanded ? "space-y-6" : "space-y-4"
         )}>
           {/* Search Bar */}
