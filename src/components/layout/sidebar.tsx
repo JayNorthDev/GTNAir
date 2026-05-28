@@ -1,4 +1,3 @@
-
 "use client";
 import { useState, useRef, useEffect } from 'react';
 import { Search, Tv, ListVideo, Filter, Maximize2, Minimize2, ChevronDown, Check, Play } from 'lucide-react';
@@ -12,6 +11,7 @@ type SidebarProps = {
   isExpanded: boolean;
   setIsExpanded: (expanded: boolean) => void;
   displayChannels: Channel[];
+  totalChannels: number;
   selectedChannel: Channel | null;
   handleChannelClick: (channel: Channel) => void;
   searchTerm: string;
@@ -28,6 +28,7 @@ export default function Sidebar({
   isExpanded,
   setIsExpanded,
   displayChannels,
+  totalChannels,
   selectedChannel,
   handleChannelClick,
   searchTerm,
@@ -71,7 +72,6 @@ export default function Sidebar({
             </div>
             <div>
               <h1 className="text-sm font-black text-white uppercase tracking-[0.2em]">Channel Library</h1>
-              <p className="text-[10px] text-slate-500 font-bold uppercase">{displayChannels.length} Streams Available</p>
             </div>
           </div>
           <button 
@@ -120,9 +120,14 @@ export default function Sidebar({
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-slate-500 mb-1">
-                  <Filter className="w-3 h-3" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Filter by Category</span>
+              <div className="flex items-center justify-between text-slate-500 mb-1">
+                  <div className="flex items-center gap-2">
+                      <Filter className="w-3 h-3" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Filter by Category</span>
+                  </div>
+                  <div className="px-2 py-0.5 rounded-lg bg-[#299fff]/10 border border-[#299fff]/20">
+                    <span className="text-[10px] font-black text-[#299fff]">{totalChannels}</span>
+                  </div>
               </div>
               
               <div className="relative" ref={dropdownRef}>
@@ -231,7 +236,7 @@ export default function Sidebar({
                         key={`${channel.url}-${index}`}
                         onClick={() => handleChannelClick(channel)}
                         className={cn(
-                            "relative w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-200 ease-out group border border-transparent transform-gpu will-change-transform",
+                            "relative w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-200 group border border-transparent transform-gpu will-change-transform",
                             isActive 
                             ? "bg-white/10 border-white/20 text-white shadow-xl scale-[1.01]" 
                             : "hover:bg-white/5 text-slate-300 hover:text-white"

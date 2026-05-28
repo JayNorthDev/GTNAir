@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, use } from "react";
@@ -36,7 +35,8 @@ export default function Home(props: HomeProps) {
     error, 
     filterChannels,
     loadMore,
-    hasMore
+    hasMore,
+    totalFiltered
   } = useChannels(settings.customPlaylistUrl, settings.selectedPlaylistId);
   
   const { favoriteUrls, toggleFavorite, isFavorite } = useFavorites();
@@ -204,7 +204,7 @@ export default function Home(props: HomeProps) {
       />
       
       <main className="flex-1 relative overflow-hidden bg-background">
-        {/* Sidebar Container - Stays locked to the right of NavRail */}
+        {/* Sidebar Container */}
         <div 
           className={cn(
             "absolute inset-y-0 left-0 z-30 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] border-r border-white/5",
@@ -218,6 +218,7 @@ export default function Home(props: HomeProps) {
             isExpanded={isLibraryExpanded}
             setIsExpanded={setIsLibraryExpanded}
             displayChannels={displayChannels}
+            totalChannels={totalFiltered}
             selectedChannel={selectedChannel}
             handleChannelClick={handleChannelSelect}
             searchTerm={searchTerm}
@@ -229,7 +230,7 @@ export default function Home(props: HomeProps) {
           />
         </div>
 
-        {/* Player / Content Stage - Adjusts width dynamically when sidebar is open */}
+        {/* Player / Content Stage */}
         <div 
           className={cn(
             "absolute inset-y-0 right-0 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-10",
