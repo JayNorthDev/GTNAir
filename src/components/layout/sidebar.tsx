@@ -123,10 +123,12 @@ export default function Sidebar({
               <div className="flex items-center justify-between text-slate-500 mb-1">
                   <div className="flex items-center gap-2">
                       <Filter className="w-3 h-3" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Filter by Category</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest leading-none">Filter by Category</span>
                   </div>
-                  <div className="px-3 py-0.5 rounded-full bg-[#299fff]/10 border border-[#299fff]/20 shadow-[0_0_12px_rgba(41,159,255,0.1)]">
-                    <span className="text-[10px] font-black text-[#299fff] tracking-tighter">{totalChannels}</span>
+                  <div className="px-3 rounded-full bg-[#299fff]/10 border border-[#299fff]/30 shadow-[0_0_12px_rgba(41,159,255,0.1)] flex items-center justify-center h-6">
+                    <span className="text-[9px] font-black text-[#299fff] tracking-[0.1em] leading-none uppercase whitespace-nowrap">
+                      {totalChannels} STREAMS
+                    </span>
                   </div>
               </div>
               
@@ -238,7 +240,7 @@ export default function Sidebar({
                         className={cn(
                             "relative w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-200 group border border-transparent transform-gpu will-change-transform",
                             isActive 
-                            ? "bg-white/10 border-white/20 text-white shadow-xl scale-[1.01]" 
+                            ? "bg-white/10 border-white/20 text-white shadow-xl scale-[1.02]" 
                             : "hover:bg-white/5 text-slate-300 hover:text-white"
                         )}
                     >
@@ -269,7 +271,7 @@ export default function Sidebar({
                             </p>
                         </div>
                         {isActive && (
-                             <div className="absolute top-2.5 right-3.5 p-1 rounded-full bg-[#299fff]/10 border border-[#299fff]/20">
+                             <div className="absolute top-2.5 right-3.5 p-1 rounded-full bg-[#299fff]/10 border border-[#299fff]/20 shadow-[0_0_8px_rgba(41,159,255,0.3)]">
                                 <Play className="w-2.5 h-2.5 text-[#299fff] fill-current" />
                              </div>
                         )}
