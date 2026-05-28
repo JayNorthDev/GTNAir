@@ -40,7 +40,6 @@ export default function Sidebar({
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -54,7 +53,7 @@ export default function Sidebar({
   return (
     <aside className={cn(
       "h-full flex flex-col overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] relative",
-      "bg-gradient-to-b from-[#0a0a0a] via-[#111827] to-[#0a0a0a]", // Deep premium gradient
+      "bg-gradient-to-b from-[#0a0a0a] via-[#111827] to-[#0a0a0a]",
       isExpanded ? "w-full" : "w-80"
     )}>
       {/* Subtle Blue Glow Overlay */}
@@ -111,7 +110,7 @@ export default function Sidebar({
                   className={cn(
                     "px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all border shrink-0",
                     selectedCategory === category
-                      ? "bg-[#299fff]/10 border-[#299fff]/40 text-white shadow-[0_4px_12px_rgba(41,159,255,0.2)] scale-105"
+                      ? "bg-[#299fff]/10 border-[#299fff]/40 text-white shadow-[0_4px_12px_rgba(41,159,255,0.1)] scale-105"
                       : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
                   )}
                 >
@@ -184,7 +183,7 @@ export default function Sidebar({
             </div>
           ) : (
             <div className={cn(
-                "grid transition-all duration-700 ease-in-out gap-4",
+                "grid gap-4",
                 isExpanded 
                     ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" 
                     : "grid-cols-1"
@@ -196,8 +195,8 @@ export default function Sidebar({
                         key={`${channel.url}-${index}`}
                         onClick={() => handleChannelClick(channel)}
                         className={cn(
-                            "group relative aspect-[16/10] cursor-pointer overflow-hidden rounded-2xl bg-white/5 border border-transparent transition-all duration-500 ease-in-out transform-gpu",
-                            isActive && "bg-white/10 backdrop-blur-md border-white/20 shadow-2xl scale-105"
+                            "group relative aspect-[16/10] cursor-pointer overflow-hidden rounded-2xl bg-white/5 border border-transparent transition-all duration-200 ease-out transform-gpu will-change-transform",
+                            isActive && "bg-white/10 border-white/20 shadow-xl scale-[1.03]"
                         )}
                     >
                         <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/20">
@@ -222,7 +221,7 @@ export default function Sidebar({
                             </p>
                         </div>
                         {isActive && (
-                             <div className="absolute top-3 right-3 p-1.5 rounded-full bg-[#299fff]/20 backdrop-blur-sm border border-[#299fff]/30">
+                             <div className="absolute top-3 right-3 p-1.5 rounded-full bg-[#299fff]/20 border border-[#299fff]/30">
                                 <Play className="w-2.5 h-2.5 text-[#299fff] fill-current" />
                              </div>
                         )}
@@ -232,15 +231,15 @@ export default function Sidebar({
                         key={`${channel.url}-${index}`}
                         onClick={() => handleChannelClick(channel)}
                         className={cn(
-                            "relative w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-500 group border border-transparent transform-gpu",
+                            "relative w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-200 ease-out group border border-transparent transform-gpu will-change-transform",
                             isActive 
-                            ? "bg-white/10 backdrop-blur-md border-white/20 text-white shadow-2xl scale-[1.02]" 
+                            ? "bg-white/10 border-white/20 text-white shadow-xl scale-[1.01]" 
                             : "hover:bg-white/5 text-slate-300 hover:text-white"
                         )}
                     >
                         <div className="relative shrink-0">
                             <div className={cn(
-                                "w-11 h-11 rounded-2xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center transition-all",
+                                "w-11 h-11 rounded-2xl overflow-hidden bg-black/40 border border-white/5 flex items-center justify-center transition-all duration-200",
                                 isActive ? "border-white/20" : "group-hover:border-white/10"
                             )}>
                                 {channel.tvg.logo ? (
@@ -265,7 +264,7 @@ export default function Sidebar({
                             </p>
                         </div>
                         {isActive && (
-                             <div className="absolute top-2.5 right-3.5 p-1 rounded-full bg-[#299fff]/10 backdrop-blur-sm border border-[#299fff]/20">
+                             <div className="absolute top-2.5 right-3.5 p-1 rounded-full bg-[#299fff]/10 border border-[#299fff]/20">
                                 <Play className="w-2.5 h-2.5 text-[#299fff] fill-current" />
                              </div>
                         )}
