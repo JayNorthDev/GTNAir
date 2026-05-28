@@ -138,7 +138,7 @@ export default function Sidebar({
                 </button>
                 
                 {showCategoryDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl z-50 max-h-[65vh] overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
                     {categories.map(category => (
                       <button
                         key={category}
