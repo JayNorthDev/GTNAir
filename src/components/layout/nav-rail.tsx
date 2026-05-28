@@ -64,7 +64,7 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
         
         <div className="flex-1 flex items-center relative z-10">
           <nav 
-            className="flex flex-col items-center gap-4 bg-black/20 p-2 rounded-full border border-white/10"
+            className="flex flex-col items-center gap-4 bg-black/20 p-2 rounded-full border border-white/5"
             onClick={(e) => e.stopPropagation()}
           >
             {navItems.map((item) => {
@@ -104,33 +104,35 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
         </div>
         
         <div className="relative z-10">
-          <button
-            onClick={handleSettingsToggle}
-            className={cn(
-              "relative flex flex-col items-center justify-center w-14 h-14 rounded-full transition-all duration-500 group",
-              isSettingsOpen ? "scale-110" : "hover:bg-white/10 active:scale-90"
-            )}
-          >
-            {/* Active Ambient Glow Background */}
-            {isSettingsOpen && (
-              <div className="absolute inset-0 rounded-full bg-[#299fff]/10 border border-[#299fff]/30 shadow-[0_0_25px_rgba(41,159,255,0.4)] animate-in zoom-in-75 duration-500" />
-            )}
-
-            {/* Icon with Dynamic Glow */}
-            <Settings
+          <div className="bg-black/20 p-2 rounded-full border border-white/5">
+            <button
+              onClick={handleSettingsToggle}
               className={cn(
-                "w-7 h-7 transition-all duration-500 z-10",
-                isSettingsOpen
-                  ? "text-[#299fff] drop-shadow-[0_0_12px_rgba(41,159,255,1)]"
-                  : "text-slate-400 group-hover:text-slate-100 group-hover:scale-110"
+                "relative flex flex-col items-center justify-center w-14 h-14 rounded-full transition-all duration-500 group",
+                isSettingsOpen ? "scale-110" : "hover:bg-white/10 active:scale-90"
               )}
-            />
+            >
+              {/* Active Ambient Glow Background */}
+              {isSettingsOpen && (
+                <div className="absolute inset-0 rounded-full bg-[#299fff]/10 border border-[#299fff]/30 shadow-[0_0_25px_rgba(41,159,255,0.4)] animate-in zoom-in-75 duration-500" />
+              )}
 
-            {/* Floating Tooltip Label (Desktop only) */}
-            <span className="absolute left-24 px-4 py-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-xs font-bold opacity-0 translate-x-[-15px] pointer-events-none transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap z-[60]">
-              Settings
-            </span>
-          </button>
+              {/* Icon with Dynamic Glow */}
+              <Settings
+                className={cn(
+                  "w-7 h-7 transition-all duration-500 z-10",
+                  isSettingsOpen
+                    ? "text-[#299fff] drop-shadow-[0_0_12px_rgba(41,159,255,1)]"
+                    : "text-slate-400 group-hover:text-slate-100 group-hover:scale-110"
+                )}
+              />
+
+              {/* Floating Tooltip Label (Desktop only) */}
+              <span className="absolute left-24 px-4 py-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-xs font-bold opacity-0 translate-x-[-15px] pointer-events-none transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap z-[60]">
+                Settings
+              </span>
+            </button>
+          </div>
         </div>
       </aside>
 
