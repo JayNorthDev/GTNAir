@@ -204,12 +204,12 @@ export default function Home(props: HomeProps) {
       />
       
       <main className="flex-1 relative overflow-hidden bg-background">
-        {/* Sidebar Cinematic Push Container */}
+        {/* Sidebar Cinematic Push Container - Positioned Absolutely within the flex-1 main to avoid NavRail overlap */}
         <div 
           className={cn(
-            "fixed inset-y-0 left-24 z-40 bg-[#0a0a0a] border-r border-white/5 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+            "absolute inset-y-0 left-0 z-30 bg-[#0a0a0a] border-r border-white/5 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
             isSidebarOpen ? "translate-x-0" : "-translate-x-full",
-            isLibraryExpanded ? "w-[calc(100vw-6rem)]" : "w-80"
+            isLibraryExpanded ? "w-full" : "w-80"
           )}
         >
           <Sidebar
@@ -232,7 +232,7 @@ export default function Home(props: HomeProps) {
         {/* Player / Content Cinematic Push Container */}
         <div 
           className={cn(
-            "absolute inset-y-0 right-0 left-0 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+            "absolute inset-y-0 right-0 left-0 flex flex-col transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-10",
             isSidebarOpen 
               ? (isLibraryExpanded ? "translate-x-full" : "translate-x-80") 
               : "translate-x-0"

@@ -4,6 +4,7 @@ import { Search, Tv, ListVideo, Filter, LayoutGrid, Maximize2, Minimize2 } from 
 import { Channel } from '@/lib/m3u-parser';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type SidebarProps = {
   isSidebarOpen: boolean;
@@ -41,7 +42,7 @@ export default function Sidebar({
       "h-full flex flex-col overflow-hidden bg-transparent transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
       isExpanded ? "w-full" : "w-80"
     )}>
-      {/* Content wrapper */}
+      {/* Content wrapper - fixed width for normal mode to avoid layout shifts during transitions */}
       <div className={cn(
         "h-full flex flex-col transition-all duration-700",
         isExpanded ? "w-full" : "w-80"
@@ -103,25 +104,23 @@ export default function Sidebar({
               ))}
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center gap-2 text-slate-500 mb-1">
                   <Filter className="w-3 h-3" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Filter by Category</span>
               </div>
-              <div className="relative">
-                  <select
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      value={selectedCategory}
-                      className="w-full bg-white/5 border border-white/5 text-slate-200 rounded-2xl px-4 py-3 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#299fff]/30 backdrop-blur-md appearance-none cursor-pointer hover:bg-white/10 transition-all"
-                  >
-                      {categories.map(category => (
-                          <option key={category} value={category} className="bg-[#1a1a1a] text-white">{category}</option>
-                      ))}
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
-                      <LayoutGrid className="w-3 h-3" />
-                  </div>
-              </div>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-full bg-white/5 border-white/5 text-slate-200 rounded-2xl h-12 px-4 focus:ring-[#299fff]/30">
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1a1a1a] border-white/10 text-white max-h-80">
+                  {categories.map(category => (
+                    <SelectItem key={category} value={category} className="focus:bg-[#299fff] focus:text-white">
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
         </div>

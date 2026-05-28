@@ -54,7 +54,7 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
       {/* Desktop Nav Rail */}
       <aside 
         onClick={handleRailClick}
-        className="hidden md:flex flex-col items-center w-24 bg-[#0a0a0a]/40 backdrop-blur-xl border-r border-white/5 py-6 z-20 relative overflow-hidden"
+        className="hidden md:flex flex-col items-center w-24 bg-[#0a0a0a]/40 backdrop-blur-xl border-r border-white/5 py-6 z-50 relative overflow-hidden"
       >
         {backgroundGlows}
         
@@ -94,7 +94,7 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
                   />
 
                   {/* Floating Tooltip Label (Desktop only) */}
-                  <span className="absolute left-24 px-4 py-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-xs font-bold opacity-0 translate-x-[-15px] pointer-events-none transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap z-50">
+                  <span className="absolute left-24 px-4 py-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-xs font-bold opacity-0 translate-x-[-15px] pointer-events-none transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap z-[60]">
                     {item.label}
                   </span>
                 </button>
@@ -127,7 +127,7 @@ export function NavRail({ view, setView, isSettingsOpen, setIsSettingsOpen }: Na
             />
 
             {/* Floating Tooltip Label (Desktop only) */}
-            <span className="absolute left-24 px-4 py-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-xs font-bold opacity-0 translate-x-[-15px] pointer-events-none transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap z-50">
+            <span className="absolute left-24 px-4 py-2 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-xs font-bold opacity-0 translate-x-[-15px] pointer-events-none transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap z-[60]">
               Settings
             </span>
           </button>
