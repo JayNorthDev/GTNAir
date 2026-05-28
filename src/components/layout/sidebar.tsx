@@ -1,3 +1,4 @@
+
 "use client";
 import { useState, useRef, useEffect } from 'react';
 import { Search, Tv, ListVideo, Filter, Maximize2, Minimize2, ChevronDown, Check, Play } from 'lucide-react';
@@ -52,7 +53,7 @@ export default function Sidebar({
 
   return (
     <aside className={cn(
-      "h-full flex flex-col overflow-hidden transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] relative",
+      "h-full flex flex-col overflow-hidden transition-all duration-[800ms] ease-[cubic-bezier(0.23,1,0.32,1)] relative",
       "bg-gradient-to-b from-[#0a0a0a] via-[#111827] to-[#0a0a0a]",
       isExpanded ? "w-full" : "w-80"
     )}>
@@ -60,7 +61,7 @@ export default function Sidebar({
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_left,_rgba(41,159,255,0.05),_transparent_40%)]" />
 
       <div className={cn(
-        "h-full flex flex-col transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)] relative z-10",
+        "h-full flex flex-col transition-all duration-[800ms] ease-[cubic-bezier(0.23,1,0.32,1)] relative z-10",
         isExpanded ? "w-full" : "w-80"
       )}>
         {/* Sidebar Header */}
@@ -84,7 +85,7 @@ export default function Sidebar({
 
         {/* Search & Filter Section */}
         <div className={cn(
-            "p-6 pb-2 shrink-0 transition-all duration-1000 ease-[cubic-bezier(0.23,1,0.32,1)]",
+            "p-6 pb-2 shrink-0 transition-all duration-[800ms] ease-[cubic-bezier(0.23,1,0.32,1)]",
             isExpanded ? "space-y-6" : "space-y-4"
         )}>
           {/* Search Bar */}
@@ -124,7 +125,7 @@ export default function Sidebar({
                       <Filter className="w-3 h-3" />
                       <span className="text-[10px] font-black uppercase tracking-widest leading-none">Filter by Category</span>
                   </div>
-                  <div className="px-3 rounded-full bg-[#299fff]/10 border border-[#299fff]/30 shadow-[0_0_12px_rgba(41,159,255,0.1)] flex items-center justify-center h-6">
+                  <div className="px-3 rounded-full bg-[#299fff]/10 border border-[#299fff]/5 shadow-[0_0_12px_rgba(41,159,255,0.1)] flex items-center justify-center h-6">
                     <span className="text-[9px] font-black text-[#299fff] tracking-[0.1em] leading-none uppercase whitespace-nowrap">
                       {totalChannels} STREAMS
                     </span>
