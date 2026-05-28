@@ -207,7 +207,7 @@ export default function Home(props: HomeProps) {
         {/* Sidebar Container - Stays locked to the right of NavRail */}
         <div 
           className={cn(
-            "absolute inset-y-0 left-0 z-30 bg-[#0a0a0a] border-r border-white/5 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+            "absolute inset-y-0 left-0 z-30 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] border-r border-white/5",
             isSidebarOpen ? "translate-x-0" : "-translate-x-full",
             isLibraryExpanded ? "w-full" : "w-80"
           )}

@@ -53,11 +53,15 @@ export default function Sidebar({
 
   return (
     <aside className={cn(
-      "h-full flex flex-col overflow-hidden bg-transparent transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]",
+      "h-full flex flex-col overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] relative",
+      "bg-gradient-to-b from-[#0a0a0a] via-[#111827] to-[#0a0a0a]", // Deep premium gradient
       isExpanded ? "w-full" : "w-80"
     )}>
+      {/* Subtle Blue Glow Overlay */}
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_left,_rgba(41,159,255,0.05),_transparent_40%)]" />
+
       <div className={cn(
-        "h-full flex flex-col transition-all duration-700",
+        "h-full flex flex-col transition-all duration-700 relative z-10",
         isExpanded ? "w-full" : "w-80"
       )}>
         {/* Sidebar Header */}
@@ -107,7 +111,7 @@ export default function Sidebar({
                   className={cn(
                     "px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all border shrink-0",
                     selectedCategory === category
-                      ? "bg-[#299fff] border-[#299fff] text-white shadow-[0_4px_12px_rgba(41,159,255,0.2)] scale-105"
+                      ? "bg-[#299fff]/10 border-[#299fff]/40 text-white shadow-[0_4px_12px_rgba(41,159,255,0.2)] scale-105"
                       : "bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
                   )}
                 >
@@ -192,9 +196,8 @@ export default function Sidebar({
                         key={`${channel.url}-${index}`}
                         onClick={() => handleChannelClick(channel)}
                         className={cn(
-                            "group relative aspect-[16/10] cursor-pointer overflow-hidden rounded-2xl bg-white/5 border border-white/5",
-                            "transition-all duration-300 ease-in-out hover:z-10 hover:scale-105 hover:shadow-2xl hover:shadow-black/50 hover:ring-1 hover:ring-white/20 focus:ring-1 focus:ring-white/20",
-                            isActive && "bg-white/10 backdrop-blur-md border-white/20 shadow-2xl"
+                            "group relative aspect-[16/10] cursor-pointer overflow-hidden rounded-2xl bg-white/5 border border-transparent transition-all duration-500 ease-in-out transform-gpu",
+                            isActive && "bg-white/10 backdrop-blur-md border-white/20 shadow-2xl scale-105"
                         )}
                     >
                         <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/20">
@@ -229,9 +232,9 @@ export default function Sidebar({
                         key={`${channel.url}-${index}`}
                         onClick={() => handleChannelClick(channel)}
                         className={cn(
-                            "relative w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-300 group",
+                            "relative w-full flex items-center gap-4 py-2 px-3 rounded-2xl text-left transition-all duration-500 group border border-transparent transform-gpu",
                             isActive 
-                            ? "bg-white/10 backdrop-blur-md border border-white/20 text-white shadow-2xl scale-[1.02]" 
+                            ? "bg-white/10 backdrop-blur-md border-white/20 text-white shadow-2xl scale-[1.02]" 
                             : "hover:bg-white/5 text-slate-300 hover:text-white"
                         )}
                     >
@@ -262,7 +265,9 @@ export default function Sidebar({
                             </p>
                         </div>
                         {isActive && (
-                            <Play className="absolute top-2.5 right-3.5 w-3 h-3 text-[#299fff] fill-current" />
+                             <div className="absolute top-2.5 right-3.5 p-1 rounded-full bg-[#299fff]/10 backdrop-blur-sm border border-[#299fff]/20">
+                                <Play className="w-2.5 h-2.5 text-[#299fff] fill-current" />
+                             </div>
                         )}
                     </button>
                 )
