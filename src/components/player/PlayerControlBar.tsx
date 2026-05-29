@@ -8,9 +8,9 @@ import {
   Volume2, 
   VolumeX, 
   Settings, 
-  Activity,
   Zap,
-  Monitor
+  Monitor,
+  Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
@@ -49,19 +49,27 @@ export function PlayerControlBar({
     if (!player) return;
 
     const updateStats = () => {
-      const qualityLevels = player.qualityLevels ? player.qualityLevels() : null;
-      if (qualityLevels && qualityLevels.selectedIndex !== -1) {
-        const level = qualityLevels[qualityLevels.selectedIndex];
-        setStats({
-          resolution: `${level.height}p`,
-          bitrate: `${Math.round(level.bitrate / 1000)} kbps`
-        });
-      } else {
-        setStats({
-          resolution: player.videoHeight() ? `${player.videoHeight()}p` : 'HD',
-          bitrate: 'Auto-Sync'
-        });
+      // Basic quality check from video element
+      const height = player.videoHeight();
+      const res = height ? `${height}p` : 'HD';
+      
+      // Basic bitrate estimation for VHS tech if available
+      let br = 'Auto-Sync';
+      try {
+        if (player.tech() && player.tech().vhs) {
+          const playlist = player.tech().vhs.playlists.master;
+          if (playlist && playlist.attributes && playlist.attributes.BANDWIDTH) {
+             br = `${Math.round(playlist.attributes.BANDWIDTH / 1000)} kbps`;
+          }
+        }
+      } catch (e) {
+        // Silently ignore stats fetch errors
       }
+
+      setStats({
+        resolution: res,
+        bitrate: br
+      });
     };
 
     const interval = setInterval(updateStats, 3000);
@@ -79,58 +87,61 @@ export function PlayerControlBar({
   };
 
   return (
-    <div className="w-full h-24 bg-black/40 backdrop-blur-3xl border-t border-white/5 flex items-center px-8 relative overflow-hidden group/bar transition-all duration-500">
-      {/* Dynamic Background Glow */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#299fff]/5 via-transparent to-transparent pointer-events-none" />
+    <div className="w-full h-24 bg-[#050505]/80 backdrop-blur-2xl border-t border-white/5 flex items-center px-8 relative overflow-hidden group/bar transition-all duration-500">
+      {/* Premium Surface Highlight */}
+      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
       
-      {/* Left Section: Brand & Channel */}
+      {/* Left: Broadcast Presence */}
       <div className="flex items-center gap-6 flex-1 min-w-0 z-10">
         <div className="relative shrink-0">
-          <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 p-2 flex items-center justify-center overflow-hidden transition-transform duration-500 group-hover/bar:scale-105">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/10 p-2 flex items-center justify-center overflow-hidden transition-all duration-500 group-hover/bar:scale-105 shadow-2xl shadow-black/50">
             {channelLogo ? (
               <img src={channelLogo} alt="" className="w-full h-full object-contain" />
             ) : (
               <Monitor className="w-6 h-6 text-white/20" />
             )}
           </div>
-          {/* Live Badge Overlay */}
-          <div className="absolute -top-1 -right-1 flex items-center gap-1 bg-red-600 px-2 py-0.5 rounded-full border-2 border-[#0a0a0a] shadow-lg">
+          {/* Elite Live Badge */}
+          <div className="absolute -top-1.5 -right-1.5 flex items-center gap-1.5 bg-[#FF0000] px-2.5 py-0.5 rounded-full border-2 border-[#050505] shadow-[0_0_15px_rgba(255,0,0,0.5)]">
              <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-             <span className="text-[8px] font-black text-white uppercase tracking-tighter">LIVE</span>
+             <span className="text-[9px] font-black text-white uppercase tracking-tighter">LIVE</span>
           </div>
         </div>
 
         <div className="flex flex-col min-w-0">
-          <span className="text-[10px] font-black text-[#299fff] uppercase tracking-[0.3em] mb-0.5 opacity-80">Now Broadcasting</span>
-          <h3 className="text-xl font-black text-white truncate uppercase tracking-tight leading-none">
+          <span className="text-[9px] font-black text-[#299fff] uppercase tracking-[0.4em] mb-1 opacity-90 drop-shadow-[0_0_8px_rgba(41,159,255,0.6)]">Signal Active</span>
+          <h3 className="text-2xl font-black text-white truncate uppercase tracking-tight leading-none font-headline">
             {channelName}
           </h3>
         </div>
       </div>
 
-      {/* Center Section: Main Controls */}
-      <div className="flex items-center gap-8 px-8 z-10">
-        {/* Play/Pause */}
+      {/* Center: Playback Core */}
+      <div className="flex items-center gap-10 px-8 z-10">
+        {/* Play/Pause Command Button */}
         <button 
           onClick={onTogglePlay}
-          className="w-14 h-14 rounded-full bg-white/5 hover:bg-[#299fff] border border-white/10 hover:border-[#299fff] flex items-center justify-center transition-all duration-300 group/play shadow-xl hover:shadow-[#299fff]/20"
+          className={cn(
+            "w-16 h-16 rounded-full bg-white/5 hover:bg-[#299fff] border border-white/10 hover:border-[#299fff] flex items-center justify-center transition-all duration-300 group/play shadow-2xl",
+            "hover:shadow-[0_0_40px_rgba(41,159,255,0.4)] active:scale-95"
+          )}
         >
           {isPlaying ? (
-            <Pause className="w-6 h-6 text-white transition-transform group-active/play:scale-90" />
+            <Pause className="w-7 h-7 text-white transition-transform group-hover/play:scale-110" />
           ) : (
-            <Play className="w-6 h-6 text-white fill-current transition-transform group-active/play:scale-90" />
+            <Play className="w-7 h-7 text-white fill-current transition-transform group-hover/play:scale-110 ml-1" />
           )}
         </button>
 
-        {/* Volume System */}
+        {/* Dynamic Volume Interface */}
         <div className="flex items-center gap-4 group/volume">
           <button 
             onClick={onToggleMute}
-            className="text-white/60 hover:text-white transition-colors"
+            className="text-white/40 hover:text-[#299fff] transition-all duration-300"
           >
             {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
           </button>
-          <div className="w-24 h-1 bg-white/10 rounded-full relative overflow-hidden cursor-pointer">
+          <div className="w-28 h-1 bg-white/10 rounded-full relative overflow-hidden cursor-pointer group-hover/volume:h-1.5 transition-all duration-300">
             <input 
               type="range" 
               min="0" 
@@ -140,61 +151,69 @@ export function PlayerControlBar({
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             />
             <div 
-              className="absolute left-0 top-0 h-full bg-[#299fff] transition-all duration-200" 
+              className="absolute left-0 top-0 h-full bg-gradient-to-r from-[#299fff] to-[#55b4ff] transition-all duration-200" 
               style={{ width: `${isMuted ? 0 : volume}%` }}
-            />
+            >
+                <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-white shadow-[0_0_12px_white]" />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Right Section: Intelligence & Settings */}
-      <div className="flex items-center gap-6 flex-1 justify-end z-10">
-        {/* Stream Intelligence */}
-        <div className="hidden md:flex items-center gap-4 bg-white/5 rounded-2xl px-5 py-3 border border-white/5">
+      {/* Right: Technical Command */}
+      <div className="flex items-center gap-8 flex-1 justify-end z-10">
+        {/* Intelligence Block */}
+        <div className="hidden lg:flex items-center gap-6 bg-white/[0.04] rounded-2xl px-6 py-3 border border-white/5 backdrop-blur-md">
           <div className="flex flex-col items-end">
-            <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Resolution</span>
-            <div className="flex items-center gap-1.5">
+            <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-0.5">Stream Meta</span>
+            <div className="flex items-center gap-2">
               <span className="text-sm font-black text-white uppercase tracking-tighter">{stats.resolution}</span>
-              <div className="w-1 h-1 rounded-full bg-[#299fff]" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[#299fff] shadow-[0_0_10px_rgba(41,159,255,1)]" />
             </div>
           </div>
-          <div className="w-px h-6 bg-white/10" />
+          <div className="w-px h-8 bg-white/10" />
           <div className="flex flex-col items-end">
-            <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Efficiency</span>
-            <div className="flex items-center gap-1.5">
-              <Zap className="w-3 h-3 text-[#299fff]" />
+            <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.2em] mb-0.5">Throughput</span>
+            <div className="flex items-center gap-2">
+              <Activity className="w-3 h-3 text-[#299fff]" />
               <span className="text-sm font-black text-white uppercase tracking-tighter">{stats.bitrate.split(' ')[0]}</span>
             </div>
           </div>
         </div>
 
-        {/* Quality Gear */}
+        {/* Contextual Settings */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-12 h-12 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-all">
-              <Settings className="w-5 h-5 text-white/60 group-hover:text-white" />
+            <button className="w-12 h-12 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-all group/settings shadow-lg">
+              <Settings className="w-5 h-5 text-white/40 group-hover/settings:text-white group-hover/settings:rotate-90 transition-all duration-700" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white w-56 rounded-2xl p-2 shadow-2xl">
-            <div className="px-3 py-2 text-[10px] font-black text-[#299fff] uppercase tracking-[0.2em] opacity-80 border-b border-white/5 mb-1">Stream Engine</div>
-            {['1080p', '720p', '480p', 'Auto Sync'].map((q) => (
+          <DropdownMenuContent align="end" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white w-64 rounded-[2rem] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.7)]">
+            <div className="px-4 py-3 text-[10px] font-black text-[#299fff] uppercase tracking-[0.35em] opacity-80 border-b border-white/5 mb-2">Signal Engine</div>
+            {['1080p Ultra', '720p HD', '480p SD', 'Auto Dynamic'].map((q) => (
               <DropdownMenuItem 
                 key={q} 
-                className="hover:bg-[#299fff] hover:text-white focus:bg-[#299fff] rounded-xl cursor-pointer transition-colors px-3 py-2"
+                className="hover:bg-[#299fff]/20 hover:text-[#299fff] focus:bg-[#299fff]/20 focus:text-[#299fff] rounded-2xl cursor-pointer transition-all px-4 py-3 mb-1 last:mb-0 group/item"
                 onClick={() => setStats(prev => ({ ...prev, resolution: q }))}
               >
                 <div className="flex items-center justify-between w-full font-bold uppercase text-[10px] tracking-widest">
                   <span>{q}</span>
-                  {stats.resolution === q && <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,1)]" />}
+                  {stats.resolution.includes(q.split(' ')[0]) && (
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#299fff] shadow-[0_0_15px_rgba(41,159,255,1)]" />
+                  )}
                 </div>
               </DropdownMenuItem>
             ))}
+            <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between px-4">
+                <span className="text-[8px] font-black uppercase tracking-widest text-white/40">Latency</span>
+                <span className="text-[8px] font-black text-[#299fff]">OPTIMAL</span>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      {/* Decorative Brand Line */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#299fff]/20 to-transparent opacity-50" />
+      {/* Finishing Premium Accent Line */}
+      <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-[#299fff]/40 to-transparent opacity-50 blur-[0.5px]" />
     </div>
   );
 }
