@@ -21,8 +21,8 @@ import {
   Share2,
   ExternalLink,
   PictureInPicture2,
-  Lock,
-  Unlock,
+  LockKeyhole,
+  LockKeyholeOpen,
   RefreshCw
 } from 'lucide-react';
 import {
@@ -446,7 +446,7 @@ export default function VideoPlayer({
                   )}
                   title={isLocked ? "Unlock Screen" : "Lock Screen"}
                >
-                 {isLocked ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
+                 {isLocked ? <LockKeyhole className="w-5 h-5" /> : <LockKeyholeOpen className="w-5 h-5" />}
                </button>
                {!isLocked && <X className="w-4 h-4 text-white/40 cursor-pointer hover:text-white transition-colors" onClick={onClose} />}
             </div>
