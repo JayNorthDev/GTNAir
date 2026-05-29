@@ -14,7 +14,7 @@ import {
   Settings,
   Maximize,
   Minimize,
-  Subtitles,
+  Captions,
   RotateCcw,
   RotateCw,
   X
@@ -50,6 +50,7 @@ export default function VideoPlayer({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [volume, setVolume] = useState(1);
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
   
   // Real-time functioning states
   const [currentTime, setCurrentTime] = useState('00:00');
@@ -212,6 +213,19 @@ export default function VideoPlayer({
     }
   };
 
+  const handleToggleCaptions = () => {
+    if (!playerRef.current) return;
+    const tracks = playerRef.current.textTracks();
+    const newState = !captionsEnabled;
+    
+    for (let i = 0; i < tracks.length; i++) {
+      if (tracks[i].kind === 'captions' || tracks[i].kind === 'subtitles') {
+        tracks[i].mode = newState ? 'showing' : 'disabled';
+      }
+    }
+    setCaptionsEnabled(newState);
+  };
+
   if (!channel) return null;
 
   return (
@@ -354,7 +368,16 @@ export default function VideoPlayer({
               </div>
 
               <div className="flex items-center gap-6">
-                <button className="text-white/60 hover:text-white transition-colors"><Subtitles className="w-5 h-5" /></button>
+                <button 
+                  onClick={handleToggleCaptions}
+                  className={cn(
+                    "transition-all duration-300 p-1.5 rounded-lg",
+                    captionsEnabled ? "text-[#299fff] bg-[#299fff]/10 shadow-[0_0_10px_rgba(41,159,255,0.3)]" : "text-white/60 hover:text-white"
+                  )}
+                  title="Toggle Subtitles"
+                >
+                  <Captions className="w-5 h-5" />
+                </button>
                 <button className="text-white/60 hover:text-white transition-colors"><Settings className="w-5 h-5" /></button>
                 <button onClick={handleFullScreen} className="text-white/60 hover:text-white transition-colors">
                   {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
