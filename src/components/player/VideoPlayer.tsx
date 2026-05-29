@@ -1,4 +1,3 @@
-
 "use client";
 import { useEffect, useRef, useState, useCallback } from 'react';
 import videojs from 'video.js';
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { PlayerControlBar } from './PlayerControlBar';
 
 type VideoPlayerProps = {
   channel: Channel | null;
@@ -36,7 +36,7 @@ export default function VideoPlayer({
   channel, 
   onStreamError, 
   autoSkip, 
-  isMuted, 
+  isMuted: initialIsMuted, 
   forceLiveEdge,
   onToggleLiveEdge,
   isPip, 
@@ -46,6 +46,7 @@ export default function VideoPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(!!initialIsMuted);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(false);
@@ -123,7 +124,7 @@ export default function VideoPlayer({
     if (!isPip || isMinimized || isFullscreen || !containerRef.current) return;
     
     const target = e.target as HTMLElement;
-    if (target.closest('button')) return;
+    if (target.closest('button') || target.closest('input')) return;
 
     const rect = containerRef.current.getBoundingClientRect();
     
@@ -327,7 +328,7 @@ export default function VideoPlayer({
   useEffect(() => {
     const player = playerRef.current;
     if (player && !player.isDisposed()) {
-      player.muted(!!isMuted);
+      player.muted(isMuted);
     }
   }, [isMuted]);
 
@@ -335,8 +336,8 @@ export default function VideoPlayer({
     if (!isPip) setIsMinimized(false);
   }, [isPip]);
 
-  const togglePlay = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const togglePlay = useCallback((e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     const player = playerRef.current;
     if (!player || player.isDisposed()) return;
     if (player.paused()) {
@@ -344,7 +345,12 @@ export default function VideoPlayer({
     } else {
       player.pause();
     }
-  };
+  }, []);
+
+  const toggleMute = useCallback((e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setIsMuted(prev => !prev);
+  }, []);
 
   const handleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -550,6 +556,21 @@ export default function VideoPlayer({
 
       <div className={cn("w-full h-full flex items-center justify-center bg-black video-container overflow-hidden", (isPip && isMinimized) && "hidden")}>
       </div>
+
+      {/* Broadcast Style Control Bar - Only visible in non-PIP/Fullscreen or Large stages */}
+      {!isPip && !isFullscreen && (
+        <div className="w-full shrink-0 z-40">
+           <PlayerControlBar 
+              player={playerRef.current}
+              channelName={channel.name}
+              channelLogo={channel.tvg.logo}
+              isPlaying={isPlaying}
+              isMuted={isMuted}
+              onTogglePlay={() => togglePlay()}
+              onToggleMute={() => toggleMute()}
+           />
+        </div>
+      )}
 
       {(isPip && isMinimized) && (
         <div 
