@@ -250,7 +250,11 @@ export default function Home(props: HomeProps) {
             />
           )}
 
-          <div className={cn("flex-1", view === 'player' ? "hidden" : "block")}>
+          {/* This container handles scrolling for all non-player views */}
+          <div className={cn(
+            "flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent", 
+            view === 'player' ? "hidden" : "block"
+          )}>
             {renderContent()}
           </div>
 
