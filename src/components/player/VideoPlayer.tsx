@@ -559,14 +559,12 @@ export default function VideoPlayer({
                   </div>
 
                   <div className="flex items-center gap-2 sm:gap-4">
-                    {/* Integrated Quality Control Pill */}
+                    {/* Normalized Quality Control Trigger */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all outline-none group">
-                          <Settings2 className="w-4 h-4 text-[#299fff]" />
-                          <span className="text-[10px] font-black text-white/40 group-hover:text-white/60 transition-colors uppercase tracking-widest hidden xs:inline">Quality</span>
-                          <div className="h-3 w-[1px] bg-white/10 mx-0.5 hidden xs:inline" />
-                          <span className="text-[10px] font-black text-[#299fff] uppercase tracking-widest">
+                        <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5 flex items-center gap-2">
+                          <Settings2 className="w-5 h-5" />
+                          <span className="text-[10px] font-bold uppercase tracking-tight hidden sm:inline">
                             {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Auto'}
                           </span>
                         </button>
@@ -591,14 +589,12 @@ export default function VideoPlayer({
                       </DropdownMenuContent>
                     </DropdownMenu>
 
-                    {/* Integrated Speed Control Pill */}
+                    {/* Normalized Speed Control Trigger */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all outline-none group">
-                          <Timer className="w-4 h-4 text-purple-500" />
-                          <span className="text-[10px] font-black text-white/40 group-hover:text-white/60 transition-colors uppercase tracking-widest hidden xs:inline">Speed</span>
-                          <div className="h-3 w-[1px] bg-white/10 mx-0.5 hidden xs:inline" />
-                          <span className="text-[10px] font-black text-purple-500 uppercase tracking-widest">
+                        <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5 flex items-center gap-2">
+                          <Timer className="w-5 h-5" />
+                          <span className="text-[10px] font-bold uppercase tracking-tight hidden sm:inline">
                             {playbackRate === '1' ? '1X' : `${playbackRate}X`}
                           </span>
                         </button>
