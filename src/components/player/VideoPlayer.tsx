@@ -470,7 +470,7 @@ export default function VideoPlayer({
                   </div>
                   <button 
                     onClick={handleToggleMute} 
-                    className="w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center hover:bg-white/10 transition-all"
+                    className="text-white/60 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/5 flex items-center justify-center"
                   >
                     {isMuted || volume === 0 ? <VolumeX className="w-5 h-5 text-red-500" /> : <Volume2 className="w-5 h-5 text-[#299fff]" />}
                   </button>
@@ -559,13 +559,13 @@ export default function VideoPlayer({
                   </div>
 
                   <div className="flex items-center gap-2 sm:gap-4">
-                    {/* Normalized Quality Control Trigger */}
+                    {/* Quality Button */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5 flex items-center gap-2">
                           <Settings2 className="w-5 h-5" />
                           <span className="text-[10px] font-bold uppercase tracking-tight hidden sm:inline">
-                            {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Auto'}
+                            Quality: {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Auto'}
                           </span>
                         </button>
                       </DropdownMenuTrigger>
@@ -589,13 +589,13 @@ export default function VideoPlayer({
                       </DropdownMenuContent>
                     </DropdownMenu>
 
-                    {/* Normalized Speed Control Trigger */}
+                    {/* Speed Button */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5 flex items-center gap-2">
                           <Timer className="w-5 h-5" />
                           <span className="text-[10px] font-bold uppercase tracking-tight hidden sm:inline">
-                            {playbackRate === '1' ? '1X' : `${playbackRate}X`}
+                            Speed: {playbackRate === '1' ? '1X' : `${playbackRate}X`}
                           </span>
                         </button>
                       </DropdownMenuTrigger>
@@ -606,7 +606,7 @@ export default function VideoPlayer({
                               <DropdownMenuRadioItem 
                                 key={rate} 
                                 value={rate}
-                                className="py-2.5 px-3 rounded-xl focus:bg-purple-600 transition-colors cursor-pointer text-xs font-bold"
+                                className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
                               >
                                 {rate === '1' ? 'Normal (1X)' : `${rate}X`}
                               </DropdownMenuRadioItem>
