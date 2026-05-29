@@ -145,6 +145,24 @@ export default function VideoPlayer({
 
     playerRef.current = player;
 
+    const levels = player.qualityLevels();
+    
+    const updateQualityLevels = () => {
+      const newLevels: any[] = [];
+      for (let i = 0; i < levels.length; i++) {
+        newLevels.push({
+          index: i,
+          label: levels[i].height ? `${levels[i].height}p` : 'Source',
+          height: levels[i].height,
+          bitrate: levels[i].bitrate
+        });
+      }
+      setQualityLevels(newLevels.sort((a, b) => (b.height || 0) - (a.height || 0)));
+    };
+
+    levels.on('addqualitylevel', updateQualityLevels);
+    levels.on('removequalitylevel', updateQualityLevels);
+
     player.on('play', () => {
       setIsPlaying(true);
       resetControlsTimer();
@@ -164,22 +182,7 @@ export default function VideoPlayer({
       } else {
         setTotalTime('LIVE');
       }
-
-      // Fetch Quality Levels from VHS
-      const qualityLevels = player.qualityLevels ? player.qualityLevels() : null;
-      if (qualityLevels) {
-        const levels: any[] = [];
-        for (let i = 0; i < qualityLevels.length; i++) {
-          levels.push({
-            index: i,
-            label: qualityLevels[i].height ? `${qualityLevels[i].height}p` : 'Source',
-            height: qualityLevels[i].height,
-            bitrate: qualityLevels[i].bitrate
-          });
-        }
-        // Sort levels by height descending
-        setQualityLevels(levels.sort((a, b) => (b.height || 0) - (a.height || 0)));
-      }
+      updateQualityLevels();
     });
 
     player.on('timeupdate', () => {
@@ -345,7 +348,7 @@ export default function VideoPlayer({
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
                 <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">
-                  {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || '4K UHD'}
+                  {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Loading...'}
                 </span>
                 <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">60 FPS</span>
               </div>
@@ -370,7 +373,7 @@ export default function VideoPlayer({
               </div>
 
               <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center text-[10px] font-bold">
-                JD
+                GTN
               </div>
             </div>
           </div>
@@ -409,7 +412,7 @@ export default function VideoPlayer({
             <div className="space-y-1">
               <h2 className="text-2xl font-bold tracking-tight">{channel.name}</h2>
               <p className="text-sm italic text-white/60">
-                Automotive Innovation • {channel.group.title || 'Cinematic Documentary Series'}
+                Live Broadcast • {channel.group.title || 'General'}
               </p>
             </div>
 
@@ -472,7 +475,7 @@ export default function VideoPlayer({
                             Auto (Adjustable)
                           </DropdownMenuRadioItem>
                           <DropdownMenuSeparator className="bg-white/5 mx-2" />
-                          {qualityLevels.map((level) => (
+                          {qualityLevels.length > 0 ? qualityLevels.map((level) => (
                             <DropdownMenuRadioItem 
                               key={level.index} 
                               value={level.index.toString()}
@@ -480,7 +483,9 @@ export default function VideoPlayer({
                             >
                               {level.label}
                             </DropdownMenuRadioItem>
-                          ))}
+                          )) : (
+                            <div className="py-2 px-3 text-xs text-slate-500 italic">No levels detected</div>
+                          )}
                         </DropdownMenuRadioGroup>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
