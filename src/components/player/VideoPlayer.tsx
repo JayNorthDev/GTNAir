@@ -11,14 +11,29 @@ import {
   Play, 
   Volume2, 
   VolumeX,
-  Settings,
+  Settings as SettingsIcon,
   Maximize,
   Minimize,
   Captions,
   RotateCcw,
   RotateCw,
-  X
+  X,
+  Check,
+  Zap
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type VideoPlayerProps = {
   channel: Channel | null;
@@ -52,6 +67,11 @@ export default function VideoPlayer({
   const [volume, setVolume] = useState(1);
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   
+  // Quality & Speed States
+  const [qualityLevels, setQualityLevels] = useState<any[]>([]);
+  const [selectedQuality, setSelectedQuality] = useState<string>('auto');
+  const [playbackRate, setPlaybackRate] = useState<string>('1');
+
   // Real-time functioning states
   const [currentTime, setCurrentTime] = useState('00:00');
   const [totalTime, setTotalTime] = useState('00:00');
@@ -90,6 +110,9 @@ export default function VideoPlayer({
     setCurrentTime('00:00');
     setTotalTime('00:00');
     setProgress(0);
+    setQualityLevels([]);
+    setSelectedQuality('auto');
+    setPlaybackRate('1');
 
     const videoElement = document.createElement('video');
     videoElement.className = 'video-js vjs-big-play-centered w-full h-full object-contain';
@@ -113,7 +136,9 @@ export default function VideoPlayer({
       }],
       html5: {
         vhs: {
-          overrideNative: true
+          overrideNative: true,
+          enableLowInitialPlaylist: true,
+          fastQualityChangeHtml5: true
         }
       }
     });
@@ -130,6 +155,7 @@ export default function VideoPlayer({
     });
     player.on('waiting', () => setIsLoading(true));
     player.on('playing', () => setIsLoading(false));
+    
     player.on('loadedmetadata', () => {
       setIsLoading(false);
       const duration = player.duration();
@@ -137,6 +163,22 @@ export default function VideoPlayer({
         setTotalTime(formatTime(duration));
       } else {
         setTotalTime('LIVE');
+      }
+
+      // Fetch Quality Levels from VHS
+      const qualityLevels = player.qualityLevels ? player.qualityLevels() : null;
+      if (qualityLevels) {
+        const levels: any[] = [];
+        for (let i = 0; i < qualityLevels.length; i++) {
+          levels.push({
+            index: i,
+            label: qualityLevels[i].height ? `${qualityLevels[i].height}p` : 'Source',
+            height: qualityLevels[i].height,
+            bitrate: qualityLevels[i].bitrate
+          });
+        }
+        // Sort levels by height descending
+        setQualityLevels(levels.sort((a, b) => (b.height || 0) - (a.height || 0)));
       }
     });
 
@@ -226,6 +268,30 @@ export default function VideoPlayer({
     setCaptionsEnabled(newState);
   };
 
+  const handleQualityChange = (val: string) => {
+    setSelectedQuality(val);
+    const levels = playerRef.current?.qualityLevels();
+    if (!levels) return;
+
+    if (val === 'auto') {
+      for (let i = 0; i < levels.length; i++) {
+        levels[i].enabled = true;
+      }
+    } else {
+      const index = parseInt(val);
+      for (let i = 0; i < levels.length; i++) {
+        levels[i].enabled = i === index;
+      }
+    }
+  };
+
+  const handlePlaybackRateChange = (val: string) => {
+    setPlaybackRate(val);
+    if (playerRef.current) {
+      playerRef.current.playbackRate(parseFloat(val));
+    }
+  };
+
   if (!channel) return null;
 
   return (
@@ -278,7 +344,9 @@ export default function VideoPlayer({
             
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
-                <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">4K UHD</span>
+                <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">
+                  {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || '4K UHD'}
+                </span>
                 <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">60 FPS</span>
               </div>
 
@@ -378,7 +446,73 @@ export default function VideoPlayer({
                 >
                   <Captions className="w-5 h-5" />
                 </button>
-                <button className="text-white/60 hover:text-white transition-colors"><Settings className="w-5 h-5" /></button>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="text-white/60 hover:text-white transition-colors outline-none">
+                      <SettingsIcon className="w-5 h-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64 bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2">
+                    <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Streaming Settings</DropdownMenuLabel>
+                    
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="flex items-center justify-between py-3 px-3 rounded-xl hover:bg-white/5 focus:bg-white/5 transition-colors cursor-pointer group">
+                        <div className="flex items-center gap-3">
+                          <Zap className="w-4 h-4 text-[#299fff]" />
+                          <span className="text-sm font-bold">Video Quality</span>
+                        </div>
+                        <span className="text-[10px] font-black text-[#299fff] opacity-60">
+                          {selectedQuality === 'auto' ? 'AUTO' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label}
+                        </span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[180px]">
+                        <DropdownMenuRadioGroup value={selectedQuality} onValueChange={handleQualityChange}>
+                          <DropdownMenuRadioItem value="auto" className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold uppercase tracking-widest">
+                            Auto (Adjustable)
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuSeparator className="bg-white/5 mx-2" />
+                          {qualityLevels.map((level) => (
+                            <DropdownMenuRadioItem 
+                              key={level.index} 
+                              value={level.index.toString()}
+                              className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
+                            >
+                              {level.label}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="flex items-center justify-between py-3 px-3 rounded-xl hover:bg-white/5 focus:bg-white/5 transition-colors cursor-pointer group">
+                        <div className="flex items-center gap-3">
+                          <Play className="w-4 h-4 text-purple-500" />
+                          <span className="text-sm font-bold">Playback Speed</span>
+                        </div>
+                        <span className="text-[10px] font-black text-purple-500 opacity-60">
+                          {playbackRate}X
+                        </span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[140px]">
+                        <DropdownMenuRadioGroup value={playbackRate} onValueChange={handlePlaybackRateChange}>
+                          {['0.5', '0.75', '1', '1.25', '1.5', '2'].map((rate) => (
+                            <DropdownMenuRadioItem 
+                              key={rate} 
+                              value={rate}
+                              className="py-2.5 px-3 rounded-xl focus:bg-purple-600 transition-colors cursor-pointer text-xs font-bold"
+                            >
+                              {rate === '1' ? 'Normal' : `${rate}X`}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 <button onClick={handleFullScreen} className="text-white/60 hover:text-white transition-colors">
                   {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
                 </button>
