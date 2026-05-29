@@ -7,12 +7,17 @@ import { Channel } from '@/lib/m3u-parser';
 import { cn } from '@/lib/utils';
 import { 
   Loader2, 
-  SkipBack, 
-  SkipForward, 
   Pause, 
   Play, 
-  Plus,
-  User
+  Volume2, 
+  VolumeX,
+  Settings,
+  Maximize,
+  Minimize,
+  Subtitles,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from 'lucide-react';
 
 type VideoPlayerProps = {
@@ -44,13 +49,12 @@ export default function VideoPlayer({
   const [showControls, setShowControls] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [volume, setVolume] = useState(1);
   
   // Real-time functioning states
   const [currentTime, setCurrentTime] = useState('00:00');
   const [totalTime, setTotalTime] = useState('00:00');
   const [progress, setProgress] = useState(0);
-  const [adCountdown, setAdCountdown] = useState(15);
-  const [showAdNotice, setShowAdNotice] = useState(true);
 
   const controlsTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -77,27 +81,14 @@ export default function VideoPlayer({
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
-  // Ad countdown logic
-  useEffect(() => {
-    if (adCountdown > 0 && showAdNotice) {
-      const timer = setTimeout(() => setAdCountdown(adCountdown - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (adCountdown === 0) {
-      setShowAdNotice(false);
-    }
-  }, [adCountdown, showAdNotice]);
-
   useEffect(() => {
     if (!channel?.url || !containerRef.current) return;
 
     setError(null);
     setIsLoading(true);
-    // Reset functioning states for new channel
     setCurrentTime('00:00');
     setTotalTime('00:00');
     setProgress(0);
-    setAdCountdown(15);
-    setShowAdNotice(true);
 
     const videoElement = document.createElement('video');
     videoElement.className = 'video-js vjs-big-play-centered w-full h-full object-contain';
@@ -148,7 +139,6 @@ export default function VideoPlayer({
       }
     });
 
-    // Real-time timeupdate listener
     player.on('timeupdate', () => {
       const current = player.currentTime();
       const duration = player.duration();
@@ -159,10 +149,14 @@ export default function VideoPlayer({
         setProgress(prog);
         setTotalTime(formatTime(duration));
       } else {
-        // For live streams, we can show a moving bar based on buffer or just stay full
         setProgress(100); 
         setTotalTime('LIVE');
       }
+    });
+
+    player.on('volumechange', () => {
+      setVolume(player.volume());
+      setIsMuted(player.muted());
     });
     
     player.on('error', () => {
@@ -184,6 +178,24 @@ export default function VideoPlayer({
     };
   }, [channel?.url, autoSkip, onStreamError, resetControlsTimer]);
 
+  const handleTogglePlay = () => {
+    if (isPlaying) playerRef.current?.pause();
+    else playerRef.current?.play();
+  };
+
+  const handleToggleMute = () => {
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    playerRef.current?.muted(newMuted);
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    setVolume(val);
+    playerRef.current?.volume(val);
+    playerRef.current?.muted(val === 0);
+  };
+
   const handleFullScreen = () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
@@ -192,12 +204,6 @@ export default function VideoPlayer({
       document.exitFullscreen();
     }
   };
-
-  const PlusIconBox = () => (
-    <div className="w-8 h-8 flex items-center justify-center border border-white/20 rounded bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-      <Plus className="w-4 h-4 text-white" />
-    </div>
-  );
 
   if (!channel) return null;
 
@@ -216,14 +222,14 @@ export default function VideoPlayer({
       <div className="flex-1 relative bg-black">
         {isLoading && !error && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <Loader2 className="w-10 h-10 text-white animate-spin" />
+            <Loader2 className="w-10 h-10 text-[#299fff] animate-spin" />
           </div>
         )}
 
         {error ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-4">
              <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-2">
-               <span className="text-2xl">!</span>
+               <span className="text-2xl text-red-500">!</span>
             </div>
             <p className="text-white/60 text-sm font-medium">{error}</p>
           </div>
@@ -231,97 +237,111 @@ export default function VideoPlayer({
           <div className="video-container w-full h-full" />
         )}
 
-        {/* --- Image-based Overlay UI --- */}
+        {/* --- Cinematic Overlay UI --- */}
         <div className={cn(
-          "absolute inset-0 z-20 flex flex-col p-6 transition-opacity duration-500 bg-black/40",
-          showControls ? "opacity-100" : "opacity-0 pointer-events-none"
+          "absolute inset-0 z-20 flex flex-col p-6 transition-opacity duration-500",
+          showControls ? "opacity-100 bg-black/40" : "opacity-0 pointer-events-none"
         )}>
           
           {/* Top Section */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-blue-100/20 border border-white/10 flex items-center justify-center overflow-hidden">
-                {channel.tvg.logo ? (
-                  <img src={channel.tvg.logo} alt="" className="w-full h-full object-contain p-2" />
-                ) : (
-                  <User className="w-6 h-6 text-white/40" />
-                )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-[#299fff] flex items-center justify-center shadow-lg shadow-[#299fff]/20">
+                <span className="text-xl font-black italic">V</span>
               </div>
-              <div className="flex flex-col">
-                <h2 className="text-2xl font-bold tracking-tight uppercase">{channel.name}</h2>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="px-1 py-0.5 text-[8px] font-bold border border-white/40 rounded-sm opacity-60">AD</span>
-                  <span className="text-xs font-bold uppercase opacity-60">{channel.group.title || 'SPONSOR'}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg font-bold tracking-tight">CinemaPro</span>
+                <X className="w-4 h-4 text-white/40 cursor-pointer hover:text-white transition-colors" onClick={onClose} />
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">4K UHD</span>
+                <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">60 FPS</span>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center text-[10px] font-bold">
+                JD
+              </div>
+            </div>
+          </div>
+
+          {/* Middle Section - Large Center Play Button */}
+          <div className="flex-1 flex items-center justify-center">
+            {!isPlaying && (
+              <button 
+                onClick={handleTogglePlay}
+                className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-xl border border-white/30 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/play"
+              >
+                <Play className="w-10 h-10 fill-white ml-1 text-white group-hover/play:drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
+              </button>
+            )}
+          </div>
+
+          {/* Bottom Section - Metadata & Controls */}
+          <div className="space-y-4">
+            {/* Metadata */}
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold tracking-tight">{channel.name}</h2>
+              <p className="text-sm italic text-white/60">
+                Automotive Innovation • {channel.group.title || 'Cinematic Documentary Series'}
+              </p>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="relative group/progress cursor-pointer">
+              <div className="absolute -top-4 inset-x-0 h-10 z-10" /> {/* Larger hit area */}
+              <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden relative">
+                <div 
+                  className="absolute inset-y-0 left-0 bg-[#299fff] transition-all duration-300 ease-linear shadow-[0_0_10px_rgba(41,159,255,0.8)]"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              {/* Scrubber Thumb */}
+              <div 
+                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg scale-0 group-hover/progress:scale-100 transition-transform duration-200 z-20"
+                style={{ left: `calc(${progress}% - 8px)` }}
+              />
+            </div>
+
+            {/* Controls Bar */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <button onClick={handleTogglePlay} className="hover:text-[#299fff] transition-colors">
+                  {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
+                </button>
+                <div className="flex items-center gap-4">
+                  <button className="text-white/60 hover:text-white transition-colors"><ChevronLeft className="w-5 h-5" /></button>
+                  <button className="text-white/60 hover:text-white transition-colors"><ChevronRight className="w-5 h-5" /></button>
+                </div>
+                <div className="flex items-center gap-3 group/volume">
+                  <button onClick={handleToggleMute} className="hover:text-[#299fff] transition-colors">
+                    {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                  </button>
+                  <input 
+                    type="range" min="0" max="1" step="0.05"
+                    value={isMuted ? 0 : volume}
+                    onChange={handleVolumeChange}
+                    className="w-0 group-hover/volume:w-20 transition-all duration-300 h-1 bg-white/20 rounded-full appearance-none cursor-pointer accent-[#299fff] overflow-hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-8">
+                <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
+                  {currentTime} <span className="text-white/20 mx-1">/</span> {totalTime}
+                </div>
+                
+                <div className="flex items-center gap-6">
+                  <button className="text-white/60 hover:text-white transition-colors"><Subtitles className="w-5 h-5" /></button>
+                  <button className="text-white/60 hover:text-white transition-colors"><Settings className="w-5 h-5" /></button>
+                  <button onClick={handleFullScreen} className="text-white/60 hover:text-white transition-colors">
+                    {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                  </button>
                 </div>
               </div>
             </div>
-            
-            <div className="flex items-center gap-3">
-              <PlusIconBox />
-              <PlusIconBox />
-              <PlusIconBox />
-            </div>
           </div>
-
-          {/* Middle Section - Big Controls */}
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex items-center gap-16 md:gap-24">
-              <button className="text-white/80 hover:text-white transition-all transform active:scale-90">
-                <SkipBack className="w-12 h-12 fill-current" />
-              </button>
-              
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isPlaying) playerRef.current?.pause();
-                  else playerRef.current?.play();
-                }}
-                className="text-white transform transition-all hover:scale-110 active:scale-95"
-              >
-                {isPlaying ? (
-                  <div className="flex gap-2">
-                    <div className="w-4 h-16 bg-white rounded-sm" />
-                    <div className="w-4 h-16 bg-white rounded-sm" />
-                  </div>
-                ) : (
-                  <Play className="w-20 h-20 fill-current" />
-                )}
-              </button>
-
-              <button className="text-white/80 hover:text-white transition-all transform active:scale-90">
-                <SkipForward className="w-12 h-12 fill-current" />
-              </button>
-            </div>
-          </div>
-
-          {/* Lower Middle - Ad Notice (Functional Countdown) */}
-          {showAdNotice && (
-            <div className="flex justify-center mb-6">
-              <div className="px-5 py-2 bg-black/80 backdrop-blur-md rounded-full border border-white/5 flex items-center gap-2">
-                <span className="text-sm font-medium text-white/90">This video will start to play in</span>
-                <span className="text-sm font-bold text-green-400">{adCountdown}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Bottom Section - Progress & Time (Accurate Real-time) */}
-          <div className="flex items-center gap-6">
-            <span className="text-sm font-bold tracking-tighter opacity-80">{currentTime}</span>
-            <div className="flex-1 relative h-1.5 bg-white/20 rounded-full overflow-hidden">
-              <div 
-                className="absolute inset-y-0 left-0 bg-white transition-all duration-300 ease-linear"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <span className="text-sm font-bold tracking-tighter opacity-80">{totalTime}</span>
-            
-            <div className="flex items-center gap-3">
-              <PlusIconBox />
-              <PlusIconBox />
-              <PlusIconBox />
-            </div>
-          </div>
-
         </div>
       </div>
     </div>
