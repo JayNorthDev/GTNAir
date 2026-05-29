@@ -18,8 +18,13 @@ import {
   RotateCcw,
   RotateCw,
   X,
-  Check,
-  Zap
+  Zap,
+  RefreshCw,
+  Share2,
+  ExternalLink,
+  PictureInPicture2,
+  MoreVertical,
+  ChevronRight
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -34,6 +39,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useToast } from '@/hooks/use-toast';
 
 type VideoPlayerProps = {
   channel: Channel | null;
@@ -58,6 +64,8 @@ export default function VideoPlayer({
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
+  const { toast } = useToast();
+  
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(!!initialIsMuted);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -66,6 +74,7 @@ export default function VideoPlayer({
   const [isLoading, setIsLoading] = useState(true);
   const [volume, setVolume] = useState(1);
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const [isPipActive, setIsPipActive] = useState(false);
   
   // Quality & Speed States
   const [qualityLevels, setQualityLevels] = useState<any[]>([]);
@@ -236,6 +245,13 @@ export default function VideoPlayer({
     resetControlsTimer();
   };
 
+  const handleReplay = () => {
+    if (!playerRef.current) return;
+    playerRef.current.currentTime(0);
+    playerRef.current.play();
+    resetControlsTimer();
+  };
+
   const handleToggleMute = () => {
     const newMuted = !isMuted;
     setIsMuted(newMuted);
@@ -292,6 +308,44 @@ export default function VideoPlayer({
     setPlaybackRate(val);
     if (playerRef.current) {
       playerRef.current.playbackRate(parseFloat(val));
+    }
+  };
+
+  const handleTogglePip = async () => {
+    if (!playerRef.current) return;
+    const video = playerRef.current.el().querySelector('video');
+    if (!video) return;
+
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+        setIsPipActive(false);
+      } else {
+        await video.requestPictureInPicture();
+        setIsPipActive(true);
+      }
+    } catch (e) {
+      console.error("PIP failed", e);
+    }
+  };
+
+  const handleShare = () => {
+    if (!channel) return;
+    if (navigator.share) {
+      navigator.share({
+        title: channel.name,
+        text: `Watch ${channel.name} live on GTNPlay!`,
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      toast({ title: "Link Copied", description: "Channel link copied to clipboard." });
+    }
+  };
+
+  const handleOutlink = () => {
+    if (channel?.url) {
+      window.open(channel.url, '_blank');
     }
   };
 
@@ -381,10 +435,14 @@ export default function VideoPlayer({
           {/* Middle Section - Centralized Playback Controls */}
           <div className="flex-1 flex items-center justify-center gap-12">
             <button 
-              onClick={() => handleSkip(-10)}
+              onClick={() => handleSkip(-15)}
               className="w-16 h-16 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/skip"
+              title="Prev-15"
             >
-              <RotateCcw className="w-8 h-8 text-white/60 group-hover/skip:text-white transition-colors" />
+              <div className="relative flex items-center justify-center">
+                <RotateCcw className="w-8 h-8 text-white/60 group-hover/skip:text-white transition-colors" />
+                <span className="absolute text-[10px] font-bold mt-1">15</span>
+              </div>
             </button>
 
             <button 
@@ -399,21 +457,35 @@ export default function VideoPlayer({
             </button>
 
             <button 
-              onClick={() => handleSkip(10)}
+              onClick={() => handleSkip(15)}
               className="w-16 h-16 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/skip"
+              title="Next+15"
             >
-              <RotateCw className="w-8 h-8 text-white/60 group-hover/skip:text-white transition-colors" />
+              <div className="relative flex items-center justify-center">
+                <RotateCw className="w-8 h-8 text-white/60 group-hover/skip:text-white transition-colors" />
+                <span className="absolute text-[10px] font-bold mt-1">15</span>
+              </div>
             </button>
           </div>
 
           {/* Bottom Section - Metadata & Progress */}
           <div className="p-6 space-y-4">
             {/* Metadata */}
-            <div className="space-y-1">
-              <h2 className="text-2xl font-bold tracking-tight">{channel.name}</h2>
-              <p className="text-sm italic text-white/60">
-                Live Broadcast • {channel.group.title || 'General'}
-              </p>
+            <div className="flex items-end justify-between">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-bold tracking-tight">{channel.name}</h2>
+                <p className="text-sm italic text-white/60">
+                  Live Broadcast • {channel.group.title || 'General'}
+                </p>
+              </div>
+              <div className="flex items-center gap-4 mb-1">
+                 <button onClick={handleShare} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="Share">
+                   <Share2 className="w-5 h-5 text-white/60" />
+                 </button>
+                 <button onClick={handleOutlink} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="External Link">
+                   <ExternalLink className="w-5 h-5 text-white/60" />
+                 </button>
+              </div>
             </div>
 
             {/* Progress Bar */}
@@ -438,12 +510,31 @@ export default function VideoPlayer({
                 {currentTime} <span className="text-white/20 mx-1">/</span> {totalTime}
               </div>
 
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={handleReplay}
+                  className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-all"
+                  title="Replay"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                </button>
+
+                <button 
+                  onClick={handleTogglePip}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-all",
+                    isPipActive ? "text-[#299fff] bg-[#299fff]/10" : "text-white/60 hover:text-white hover:bg-white/5"
+                  )}
+                  title="PIP Mode"
+                >
+                  <PictureInPicture2 className="w-5 h-5" />
+                </button>
+
                 <button 
                   onClick={handleToggleCaptions}
                   className={cn(
                     "transition-all duration-300 p-1.5 rounded-lg",
-                    captionsEnabled ? "text-[#299fff] bg-[#299fff]/10 shadow-[0_0_10px_rgba(41,159,255,0.3)]" : "text-white/60 hover:text-white"
+                    captionsEnabled ? "text-[#299fff] bg-[#299fff]/10 shadow-[0_0_10px_rgba(41,159,255,0.3)]" : "text-white/60 hover:text-white hover:bg-white/5"
                   )}
                   title="Toggle Subtitles"
                 >
@@ -452,11 +543,11 @@ export default function VideoPlayer({
                 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="text-white/60 hover:text-white transition-colors outline-none">
+                    <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5">
                       <SettingsIcon className="w-5 h-5" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64 bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2">
+                  <DropdownMenuContent align="end" side="top" className="w-64 bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]">
                     <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Streaming Settings</DropdownMenuLabel>
                     
                     <DropdownMenuSub>
@@ -469,7 +560,7 @@ export default function VideoPlayer({
                           {selectedQuality === 'auto' ? 'AUTO' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label}
                         </span>
                       </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[180px]">
+                      <DropdownMenuSubContent className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[180px] z-[120]">
                         <DropdownMenuRadioGroup value={selectedQuality} onValueChange={handleQualityChange}>
                           <DropdownMenuRadioItem value="auto" className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold uppercase tracking-widest">
                             Auto (Adjustable)
@@ -500,7 +591,7 @@ export default function VideoPlayer({
                           {playbackRate}X
                         </span>
                       </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[140px]">
+                      <DropdownMenuSubContent className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[140px] z-[120]">
                         <DropdownMenuRadioGroup value={playbackRate} onValueChange={handlePlaybackRateChange}>
                           {['0.5', '0.75', '1', '1.25', '1.5', '2'].map((rate) => (
                             <DropdownMenuRadioItem 
@@ -514,13 +605,25 @@ export default function VideoPlayer({
                         </DropdownMenuRadioGroup>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
-
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <button onClick={handleFullScreen} className="text-white/60 hover:text-white transition-colors">
+                <button onClick={handleFullScreen} className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
                   {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
                 </button>
+
+                <DropdownMenu>
+                   <DropdownMenuTrigger asChild>
+                     <button className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
+                       <MoreVertical className="w-5 h-5" />
+                     </button>
+                   </DropdownMenuTrigger>
+                   <DropdownMenuContent align="end" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[160px] z-[110]">
+                      <DropdownMenuItem className="py-2.5 px-3 rounded-xl focus:bg-white/5 cursor-pointer text-xs font-bold" onClick={() => window.open('https://gtnplay.com', '_blank')}>
+                        <span className="flex items-center gap-2">See More <ChevronRight className="w-3 h-3" /></span>
+                      </DropdownMenuItem>
+                   </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>
