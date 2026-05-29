@@ -25,7 +25,9 @@ import {
   PictureInPicture2,
   MoreVertical,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -77,6 +79,7 @@ export default function VideoPlayer({
   const [volume, setVolume] = useState(1);
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [isPipActive, setIsPipActive] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
   
   // Quality & Speed States
   const [qualityLevels, setQualityLevels] = useState<any[]>([]);
@@ -244,9 +247,9 @@ export default function VideoPlayer({
   };
 
   const handleSkip = (seconds: number) => {
-    if (!playerRef.current) return;
-    const currentTime = playerRef.current.currentTime();
-    playerRef.current.currentTime(currentTime + seconds);
+    if (!playerRef.current || isLocked) return;
+    const currentTimeValue = playerRef.current.currentTime();
+    playerRef.current.currentTime(currentTimeValue + seconds);
     resetControlsTimer();
   };
 
@@ -354,12 +357,23 @@ export default function VideoPlayer({
     }
   };
 
+  const handleToggleLock = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsLocked(!isLocked);
+    resetControlsTimer();
+  };
+
   // --- Gesture Controls ---
   const handleContainerClick = (e: React.MouseEvent) => {
     const now = Date.now();
     const threshold = 300; // ms
     const diff = now - lastClickTimeRef.current;
     lastClickTimeRef.current = now;
+
+    if (isLocked) {
+      resetControlsTimer();
+      return;
+    }
 
     if (diff < threshold) {
       // Double tap detected
@@ -378,7 +392,7 @@ export default function VideoPlayer({
   };
 
   const handleProgressBarInteraction = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!progressBarRef.current || !playerRef.current) return;
+    if (!progressBarRef.current || !playerRef.current || isLocked) return;
     const rect = progressBarRef.current.getBoundingClientRect();
     const clientX = 'clientX' in e ? e.clientX : e.touches[0].clientX;
     const offsetX = clientX - rect.left;
@@ -432,286 +446,302 @@ export default function VideoPlayer({
           {/* Top Section */}
           <div className="flex items-center justify-between p-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#299fff] flex items-center justify-center shadow-lg shadow-[#299fff]/20">
-                <span className="text-xl font-black italic">V</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-lg font-bold tracking-tight">CinemaPro</span>
-                <X className="w-4 h-4 text-white/40 cursor-pointer hover:text-white transition-colors" onClick={onClose} />
-              </div>
+               {/* Screen Lock Toggle */}
+               <button 
+                  onClick={handleToggleLock}
+                  className={cn(
+                    "p-3 rounded-xl transition-all duration-300 flex items-center gap-2",
+                    isLocked 
+                      ? "bg-red-500/20 border border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]" 
+                      : "bg-white/10 border border-white/10 text-white/60 hover:text-white hover:bg-white/20"
+                  )}
+                  title={isLocked ? "Unlock Screen" : "Lock Screen"}
+               >
+                 {isLocked ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
+                 <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                   {isLocked ? "Locked" : "Lock Screen"}
+                 </span>
+               </button>
+               {!isLocked && <X className="w-4 h-4 text-white/40 cursor-pointer hover:text-white transition-colors" onClick={onClose} />}
             </div>
             
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3">
-                <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">
-                  {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Source'}
-                </span>
-                <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">60 FPS</span>
-              </div>
-
-              {/* Vertical Volume Control */}
-              <div className="relative group/volume flex flex-col items-center gap-2">
-                <div className="absolute top-10 flex flex-col items-center bg-black/60 backdrop-blur-xl border border-white/10 p-3 rounded-full opacity-0 group-hover/volume:opacity-100 transition-all duration-300 pointer-events-none group-hover/volume:pointer-events-auto shadow-2xl">
-                  <input 
-                    type="range" min="0" max="1" step="0.05"
-                    value={isMuted ? 0 : volume}
-                    onChange={handleVolumeChange}
-                    className="h-32 appearance-none bg-white/20 rounded-full cursor-pointer accent-[#299fff] [writing-mode:bt-lr] [-webkit-appearance:slider-vertical]"
-                    style={{ WebkitAppearance: 'slider-vertical', width: '4px' }}
-                  />
+            {!isLocked && (
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">
+                    {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Source'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">60 FPS</span>
                 </div>
-                <button 
-                  onClick={handleToggleMute} 
-                  className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/20 transition-all"
-                >
-                  {isMuted || volume === 0 ? <VolumeX className="w-5 h-5 text-red-500" /> : <Volume2 className="w-5 h-5 text-[#299fff]" />}
-                </button>
-              </div>
 
-              <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center text-[10px] font-bold">
-                GTN
+                {/* Vertical Volume Control */}
+                <div className="relative group/volume flex flex-col items-center gap-2">
+                  <div className="absolute top-10 flex flex-col items-center bg-black/60 backdrop-blur-xl border border-white/10 p-3 rounded-full opacity-0 group-hover/volume:opacity-100 transition-all duration-300 pointer-events-none group-hover/volume:pointer-events-auto shadow-2xl">
+                    <input 
+                      type="range" min="0" max="1" step="0.05"
+                      value={isMuted ? 0 : volume}
+                      onChange={handleVolumeChange}
+                      className="h-32 appearance-none bg-white/20 rounded-full cursor-pointer accent-[#299fff] [writing-mode:bt-lr] [-webkit-appearance:slider-vertical]"
+                      style={{ WebkitAppearance: 'slider-vertical', width: '4px' }}
+                    />
+                  </div>
+                  <button 
+                    onClick={handleToggleMute} 
+                    className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/20 transition-all"
+                  >
+                    {isMuted || volume === 0 ? <VolumeX className="w-5 h-5 text-red-500" /> : <Volume2 className="w-5 h-5 text-[#299fff]" />}
+                  </button>
+                </div>
+
+                <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center text-[10px] font-bold">
+                  GTN
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Middle Section - Centralized Playback Controls */}
-          <div className="flex-1 flex items-center justify-center gap-12">
-            <button 
-              onClick={(e) => { e.stopPropagation(); handleSkip(-10); }}
-              className="w-16 h-16 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/skip"
-              title="Prev-10"
-            >
-              <div className="relative flex items-center justify-center">
-                <RotateCcw className="w-8 h-8 text-white/60 group-hover/skip:text-white transition-colors" />
-                <span className="absolute text-[10px] font-bold mt-1">10</span>
-              </div>
-            </button>
+          {!isLocked && (
+            <div className="flex-1 flex items-center justify-center gap-12">
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleSkip(-10); }}
+                className="w-16 h-16 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/skip"
+                title="Prev-10"
+              >
+                <div className="relative flex items-center justify-center">
+                  <RotateCcw className="w-8 h-8 text-white/60 group-hover/skip:text-white transition-colors" />
+                  <span className="absolute text-[10px] font-bold mt-1">10</span>
+                </div>
+              </button>
 
-            <button 
-              onClick={(e) => { e.stopPropagation(); handleTogglePlay(); }}
-              className="w-28 h-28 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/play shadow-[0_0_40px_rgba(255,255,255,0.05)]"
-            >
-              {isPlaying ? (
-                <Pause className="w-12 h-12 text-white fill-white group-hover/play:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
-              ) : (
-                <Play className="w-12 h-12 text-white fill-white ml-2 group-hover/play:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
-              )}
-            </button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleTogglePlay(); }}
+                className="w-28 h-28 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/play shadow-[0_0_40px_rgba(255,255,255,0.05)]"
+              >
+                {isPlaying ? (
+                  <Pause className="w-12 h-12 text-white fill-white group-hover/play:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
+                ) : (
+                  <Play className="w-12 h-12 text-white fill-white ml-2 group-hover/play:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
+                )}
+              </button>
 
-            <button 
-              onClick={(e) => { e.stopPropagation(); handleSkip(10); }}
-              className="w-16 h-16 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/skip"
-              title="Next+10"
-            >
-              <div className="relative flex items-center justify-center">
-                <RotateCw className="w-8 h-8 text-white/60 group-hover/skip:text-white transition-colors" />
-                <span className="absolute text-[10px] font-bold mt-1">10</span>
-              </div>
-            </button>
-          </div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleSkip(10); }}
+                className="w-16 h-16 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/skip"
+                title="Next+10"
+              >
+                <div className="relative flex items-center justify-center">
+                  <RotateCw className="w-8 h-8 text-white/60 group-hover/skip:text-white transition-colors" />
+                  <span className="absolute text-[10px] font-bold mt-1">10</span>
+                </div>
+              </button>
+            </div>
+          )}
 
           {/* Bottom Section - Metadata & Progress */}
-          <div className="p-6 space-y-4">
-            {/* Metadata */}
-            <div className="flex items-end justify-between">
-              <div className="space-y-1">
-                <h2 className="text-2xl font-bold tracking-tight">{channel.name}</h2>
-                <p className="text-sm italic text-white/60">
-                  Live Broadcast • {channel.group.title || 'General'}
-                </p>
+          {!isLocked && (
+            <div className="p-6 space-y-4">
+              {/* Metadata */}
+              <div className="flex items-end justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-2xl font-bold tracking-tight">{channel.name}</h2>
+                  <p className="text-sm italic text-white/60">
+                    Live Broadcast • {channel.group.title || 'General'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4 mb-1">
+                   <button onClick={(e) => { e.stopPropagation(); handleShare(); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="Share">
+                     <Share2 className="w-5 h-5 text-white/60" />
+                   </button>
+                   <button onClick={(e) => { e.stopPropagation(); handleOutlink(); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="External Link">
+                     <ExternalLink className="w-5 h-5 text-white/60" />
+                   </button>
+                </div>
               </div>
-              <div className="flex items-center gap-4 mb-1">
-                 <button onClick={(e) => { e.stopPropagation(); handleShare(); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="Share">
-                   <Share2 className="w-5 h-5 text-white/60" />
-                 </button>
-                 <button onClick={(e) => { e.stopPropagation(); handleOutlink(); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="External Link">
-                   <ExternalLink className="w-5 h-5 text-white/60" />
-                 </button>
-              </div>
-            </div>
 
-            {/* Progress Bar */}
-            <div 
-              ref={progressBarRef}
-              onMouseDown={handleProgressBarInteraction}
-              onClick={(e) => e.stopPropagation()}
-              className="relative group/progress cursor-pointer"
-            >
-              <div className="absolute -top-4 inset-x-0 h-10 z-10" /> {/* Larger hit area */}
-              <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden relative">
+              {/* Progress Bar */}
+              <div 
+                ref={progressBarRef}
+                onMouseDown={handleProgressBarInteraction}
+                onClick={(e) => e.stopPropagation()}
+                className="relative group/progress cursor-pointer"
+              >
+                <div className="absolute -top-4 inset-x-0 h-10 z-10" /> {/* Larger hit area */}
+                <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden relative">
+                  <div 
+                    className="absolute inset-y-0 left-0 bg-[#299fff] transition-all duration-300 ease-linear shadow-[0_0_10px_rgba(41,159,255,0.8)]"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                {/* Scrubber Thumb */}
                 <div 
-                  className="absolute inset-y-0 left-0 bg-[#299fff] transition-all duration-300 ease-linear shadow-[0_0_10px_rgba(41,159,255,0.8)]"
-                  style={{ width: `${progress}%` }}
+                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg scale-0 group-hover/progress:scale-100 transition-transform duration-200 z-20"
+                  style={{ left: `calc(${progress}% - 8px)` }}
                 />
               </div>
-              {/* Scrubber Thumb */}
-              <div 
-                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg scale-0 group-hover/progress:scale-100 transition-transform duration-200 z-20"
-                style={{ left: `calc(${progress}% - 8px)` }}
-              />
-            </div>
 
-            {/* Controls Bar */}
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
-                  {currentTime} <span className="text-white/20 mx-1">/</span> {totalTime}
+              {/* Controls Bar */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
+                    {currentTime} <span className="text-white/20 mx-1">/</span> {totalTime}
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleReplay(); }}
+                      className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-all"
+                      title="Replay"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                    </button>
+
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleTogglePip(); }}
+                      className={cn(
+                        "p-1.5 rounded-lg transition-all",
+                        isPipActive ? "text-[#299fff] bg-[#299fff]/10" : "text-white/60 hover:text-white hover:bg-white/5"
+                      )}
+                      title="PIP Mode"
+                    >
+                      <PictureInPicture2 className="w-5 h-5" />
+                    </button>
+
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleToggleCaptions(); }}
+                      className={cn(
+                        "transition-all duration-300 p-1.5 rounded-lg",
+                        captionsEnabled ? "text-[#299fff] bg-[#299fff]/10 shadow-[0_0_10px_rgba(41,159,255,0.3)]" : "text-white/60 hover:text-white hover:bg-white/5"
+                      )}
+                      title="Toggle Subtitles"
+                    >
+                      <Captions className="w-5 h-5" />
+                    </button>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5">
+                          <SettingsIcon className="w-5 h-5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" side="top" className="w-64 bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Streaming Settings</DropdownMenuLabel>
+                        
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="flex items-center justify-between py-3 px-3 rounded-xl hover:bg-white/5 focus:bg-white/5 transition-colors cursor-pointer group">
+                            <div className="flex items-center gap-3">
+                              <Zap className="w-4 h-4 text-[#299fff]" />
+                              <span className="text-sm font-bold">Video Quality</span>
+                            </div>
+                            <span className="text-[10px] font-black text-[#299fff] opacity-60">
+                              {selectedQuality === 'auto' ? 'AUTO' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label}
+                            </span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[180px] z-[120]">
+                            <DropdownMenuRadioGroup value={selectedQuality} onValueChange={handleQualityChange}>
+                              <DropdownMenuRadioItem value="auto" className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold uppercase tracking-widest">
+                                Auto (Adjustable)
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuSeparator className="bg-white/5 mx-2" />
+                              {qualityLevels.length > 0 ? qualityLevels.map((level) => (
+                                <DropdownMenuRadioItem 
+                                  key={level.index} 
+                                  value={level.index.toString()}
+                                  className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
+                                >
+                                  {level.label}
+                                </DropdownMenuRadioItem>
+                              )) : (
+                                <div className="py-2 px-3 text-xs text-slate-500 italic">No levels detected</div>
+                              )}
+                            </DropdownMenuRadioGroup>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="flex items-center justify-between py-3 px-3 rounded-xl hover:bg-white/5 focus:bg-white/5 transition-colors cursor-pointer group">
+                            <div className="flex items-center gap-3">
+                              <Play className="w-4 h-4 text-purple-500" />
+                              <span className="text-sm font-bold">Playback Speed</span>
+                            </div>
+                            <span className="text-[10px] font-black text-purple-500 opacity-60">
+                              {playbackRate}X
+                            </span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[140px] z-[120]">
+                            <DropdownMenuRadioGroup value={playbackRate} onValueChange={handlePlaybackRateChange}>
+                              {['0.5', '0.75', '1', '1.25', '1.5', '2'].map((rate) => (
+                                <DropdownMenuRadioItem 
+                                  key={rate} 
+                                  value={rate}
+                                  className="py-2.5 px-3 rounded-xl focus:bg-purple-600 transition-colors cursor-pointer text-xs font-bold"
+                                >
+                                  {rate === '1' ? 'Normal' : `${rate}X`}
+                                </DropdownMenuRadioItem>
+                              ))}
+                            </DropdownMenuRadioGroup>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <button onClick={(e) => { e.stopPropagation(); handleFullScreen(); }} className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
+                      {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                    </button>
+
+                    <DropdownMenu>
+                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                         <button className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
+                           <MoreVertical className="w-5 h-5" />
+                         </button>
+                       </DropdownMenuTrigger>
+                       <DropdownMenuContent align="end" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[160px] z-[110]" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem className="py-2.5 px-3 rounded-xl focus:bg-white/5 cursor-pointer text-xs font-bold" onClick={() => window.open('https://gtnplay.com', '_blank')}>
+                            <span className="flex items-center gap-2">See More <ChevronRight className="w-3 h-3" /></span>
+                          </DropdownMenuItem>
+                       </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleReplay(); }}
-                    className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-all"
-                    title="Replay"
-                  >
-                    <RefreshCw className="w-5 h-5" />
-                  </button>
-
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleTogglePip(); }}
-                    className={cn(
-                      "p-1.5 rounded-lg transition-all",
-                      isPipActive ? "text-[#299fff] bg-[#299fff]/10" : "text-white/60 hover:text-white hover:bg-white/5"
-                    )}
-                    title="PIP Mode"
-                  >
-                    <PictureInPicture2 className="w-5 h-5" />
-                  </button>
-
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleToggleCaptions(); }}
-                    className={cn(
-                      "transition-all duration-300 p-1.5 rounded-lg",
-                      captionsEnabled ? "text-[#299fff] bg-[#299fff]/10 shadow-[0_0_10px_rgba(41,159,255,0.3)]" : "text-white/60 hover:text-white hover:bg-white/5"
-                    )}
-                    title="Toggle Subtitles"
-                  >
-                    <Captions className="w-5 h-5" />
-                  </button>
-                  
+                {/* Resolution Selector Button */}
+                <div className="flex items-center py-3 border-t border-white/5">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5">
-                        <SettingsIcon className="w-5 h-5" />
+                      <button className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all outline-none group">
+                        <Zap className="w-4 h-4 text-[#299fff]" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/60 group-hover:text-white">Resolution</span>
+                        <div className="h-4 w-[1px] bg-white/10 mx-1" />
+                        <span className="text-xs font-bold text-[#299fff]">
+                          {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Source'}
+                        </span>
+                        <ChevronDown className="w-4 h-4 text-white/40 group-hover:text-white transition-transform duration-300" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" side="top" className="w-64 bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Streaming Settings</DropdownMenuLabel>
-                      
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger className="flex items-center justify-between py-3 px-3 rounded-xl hover:bg-white/5 focus:bg-white/5 transition-colors cursor-pointer group">
-                          <div className="flex items-center gap-3">
-                            <Zap className="w-4 h-4 text-[#299fff]" />
-                            <span className="text-sm font-bold">Video Quality</span>
-                          </div>
-                          <span className="text-[10px] font-black text-[#299fff] opacity-60">
-                            {selectedQuality === 'auto' ? 'AUTO' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label}
-                          </span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[180px] z-[120]">
-                          <DropdownMenuRadioGroup value={selectedQuality} onValueChange={handleQualityChange}>
-                            <DropdownMenuRadioItem value="auto" className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold uppercase tracking-widest">
-                              Auto (Adjustable)
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuSeparator className="bg-white/5 mx-2" />
-                            {qualityLevels.length > 0 ? qualityLevels.map((level) => (
-                              <DropdownMenuRadioItem 
-                                key={level.index} 
-                                value={level.index.toString()}
-                                className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
-                              >
-                                {level.label}
-                              </DropdownMenuRadioItem>
-                            )) : (
-                              <div className="py-2 px-3 text-xs text-slate-500 italic">No levels detected</div>
-                            )}
-                          </DropdownMenuRadioGroup>
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger className="flex items-center justify-between py-3 px-3 rounded-xl hover:bg-white/5 focus:bg-white/5 transition-colors cursor-pointer group">
-                          <div className="flex items-center gap-3">
-                            <Play className="w-4 h-4 text-purple-500" />
-                            <span className="text-sm font-bold">Playback Speed</span>
-                          </div>
-                          <span className="text-[10px] font-black text-purple-500 opacity-60">
-                            {playbackRate}X
-                          </span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[140px] z-[120]">
-                          <DropdownMenuRadioGroup value={playbackRate} onValueChange={handlePlaybackRateChange}>
-                            {['0.5', '0.75', '1', '1.25', '1.5', '2'].map((rate) => (
-                              <DropdownMenuRadioItem 
-                                key={rate} 
-                                value={rate}
-                                className="py-2.5 px-3 rounded-xl focus:bg-purple-600 transition-colors cursor-pointer text-xs font-bold"
-                              >
-                                {rate === '1' ? 'Normal' : `${rate}X`}
-                              </DropdownMenuRadioItem>
-                            ))}
-                          </DropdownMenuRadioGroup>
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
+                    <DropdownMenuContent align="start" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuRadioGroup value={selectedQuality} onValueChange={handleQualityChange}>
+                        <DropdownMenuRadioItem value="auto" className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold uppercase tracking-widest">
+                          Auto (Adjustable)
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuSeparator className="bg-white/5 mx-2" />
+                        {qualityLevels.length > 0 ? qualityLevels.map((level) => (
+                          <DropdownMenuRadioItem 
+                            key={level.index} 
+                            value={level.index.toString()}
+                            className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
+                          >
+                            {level.label}
+                          </DropdownMenuRadioItem>
+                        )) : (
+                          <div className="py-2 px-3 text-xs text-slate-500 italic">No levels detected</div>
+                        )}
+                      </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <button onClick={(e) => { e.stopPropagation(); handleFullScreen(); }} className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
-                    {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-                  </button>
-
-                  <DropdownMenu>
-                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                       <button className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
-                         <MoreVertical className="w-5 h-5" />
-                       </button>
-                     </DropdownMenuTrigger>
-                     <DropdownMenuContent align="end" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[160px] z-[110]" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuItem className="py-2.5 px-3 rounded-xl focus:bg-white/5 cursor-pointer text-xs font-bold" onClick={() => window.open('https://gtnplay.com', '_blank')}>
-                          <span className="flex items-center gap-2">See More <ChevronRight className="w-3 h-3" /></span>
-                        </DropdownMenuItem>
-                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               </div>
-
-              {/* Resolution Selector Button */}
-              <div className="flex items-center py-3 border-t border-white/5">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                    <button className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all outline-none group">
-                      <Zap className="w-4 h-4 text-[#299fff]" />
-                      <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/60 group-hover:text-white">Resolution</span>
-                      <div className="h-4 w-[1px] bg-white/10 mx-1" />
-                      <span className="text-xs font-bold text-[#299fff]">
-                        {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Source'}
-                      </span>
-                      <ChevronDown className="w-4 h-4 text-white/40 group-hover:text-white transition-transform duration-300" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenuRadioGroup value={selectedQuality} onValueChange={handleQualityChange}>
-                      <DropdownMenuRadioItem value="auto" className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold uppercase tracking-widest">
-                        Auto (Adjustable)
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuSeparator className="bg-white/5 mx-2" />
-                      {qualityLevels.length > 0 ? qualityLevels.map((level) => (
-                        <DropdownMenuRadioItem 
-                          key={level.index} 
-                          value={level.index.toString()}
-                          className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
-                        >
-                          {level.label}
-                        </DropdownMenuRadioItem>
-                      )) : (
-                        <div className="py-2 px-3 text-xs text-slate-500 italic">No levels detected</div>
-                      )}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
