@@ -10,7 +10,6 @@ import {
   Play, 
   Volume2, 
   VolumeX,
-  Settings as SettingsIcon,
   Settings2,
   Timer,
   Maximize,
@@ -22,7 +21,6 @@ import {
   Share2,
   ExternalLink,
   PictureInPicture2,
-  ChevronDown,
   Lock,
   Unlock,
   RefreshCw
@@ -441,17 +439,14 @@ export default function VideoPlayer({
                <button 
                   onClick={handleToggleLock}
                   className={cn(
-                    "p-3 rounded-xl transition-all duration-300 flex items-center gap-2",
+                    "p-1.5 rounded-lg transition-all flex items-center justify-center",
                     isLocked 
-                      ? "bg-red-500/20 border border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]" 
-                      : "bg-white/10 border border-white/10 text-white/60 hover:text-white hover:bg-white/20"
+                      ? "text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" 
+                      : "text-white/60 hover:text-white hover:bg-white/5"
                   )}
                   title={isLocked ? "Unlock Screen" : "Lock Screen"}
                >
                  {isLocked ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
-                 <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                   {isLocked ? "Locked" : "Lock Screen"}
-                 </span>
                </button>
                {!isLocked && <X className="w-4 h-4 text-white/40 cursor-pointer hover:text-white transition-colors" onClick={onClose} />}
             </div>
@@ -470,9 +465,9 @@ export default function VideoPlayer({
                   </div>
                   <button 
                     onClick={handleToggleMute} 
-                    className="text-white/60 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/5 flex items-center justify-center"
+                    className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5 flex items-center justify-center"
                   >
-                    {isMuted || volume === 0 ? <VolumeX className="w-5 h-5 text-red-500" /> : <Volume2 className="w-5 h-5 text-[#299fff]" />}
+                    {isMuted || volume === 0 ? <VolumeX className="w-5 h-5 text-red-500" /> : <Volume2 className="w-5 h-5 text-white" />}
                   </button>
                 </div>
               </div>
@@ -524,11 +519,11 @@ export default function VideoPlayer({
                   </p>
                 </div>
                 <div className="flex items-center gap-4 mb-1">
-                   <button onClick={handleShare} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                     <Share2 className="w-5 h-5 text-white/60" />
+                   <button onClick={handleShare} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                     <Share2 className="w-5 h-5" />
                    </button>
-                   <button onClick={handleOutlink} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                     <ExternalLink className="w-5 h-5 text-white/60" />
+                   <button onClick={handleOutlink} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                     <ExternalLink className="w-5 h-5" />
                    </button>
                 </div>
               </div>
@@ -626,20 +621,6 @@ export default function VideoPlayer({
                     <button onClick={handleToggleCaptions} className={cn("transition-all duration-300 p-1.5 rounded-lg", captionsEnabled ? "text-[#299fff] bg-[#299fff]/10" : "text-white/60 hover:text-white hover:bg-white/5")}>
                       <Captions className="w-5 h-5" />
                     </button>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5">
-                          <SettingsIcon className="w-5 h-5" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" side="top" className="w-64 bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Streaming Settings</DropdownMenuLabel>
-                        <DropdownMenuItem className="py-2.5 px-3 rounded-xl focus:bg-white/5 cursor-pointer text-xs font-bold" onClick={() => window.open('https://gtnplay.com', '_blank')}>
-                            See More Options
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
 
                     <button onClick={handleFullScreen} className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
                       {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
