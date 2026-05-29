@@ -1,10 +1,10 @@
+
 "use client";
 import { useEffect, useRef, useState, useCallback } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import { Channel } from '@/lib/m3u-parser';
 import { 
-  MonitorPlay, 
   Maximize2, 
   X, 
   Play, 
@@ -12,7 +12,8 @@ import {
   Minus, 
   ArrowUpLeft, 
   Maximize, 
-  Minimize
+  Minimize,
+  MonitorPlay
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -557,7 +558,7 @@ export default function VideoPlayer({
       <div className={cn("w-full h-full flex items-center justify-center bg-black video-container overflow-hidden", (isPip && isMinimized) && "hidden")}>
       </div>
 
-      {/* Broadcast Style Control Bar - Only visible in non-PIP/Fullscreen or Large stages */}
+      {/* Modern High-End Control Bar - Only visible in non-PIP/Fullscreen or Large stages */}
       {!isPip && !isFullscreen && (
         <div className="w-full shrink-0 z-40">
            <PlayerControlBar 
