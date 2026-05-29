@@ -15,8 +15,8 @@ import {
   Maximize,
   Minimize,
   Subtitles,
-  ChevronLeft,
-  ChevronRight,
+  RotateCcw,
+  RotateCw,
   X
 } from 'lucide-react';
 
@@ -176,11 +176,18 @@ export default function VideoPlayer({
       }
       if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
     };
-  }, [channel?.url, autoSkip, onStreamError, resetControlsTimer]);
+  }, [channel?.url, autoSkip, onStreamError, resetControlsTimer, isMuted]);
 
   const handleTogglePlay = () => {
     if (isPlaying) playerRef.current?.pause();
     else playerRef.current?.play();
+  };
+
+  const handleSkip = (seconds: number) => {
+    if (!playerRef.current) return;
+    const currentTime = playerRef.current.currentTime();
+    playerRef.current.currentTime(currentTime + seconds);
+    resetControlsTimer();
   };
 
   const handleToggleMute = () => {
@@ -239,12 +246,12 @@ export default function VideoPlayer({
 
         {/* --- Cinematic Overlay UI --- */}
         <div className={cn(
-          "absolute inset-0 z-20 flex flex-col p-6 transition-opacity duration-500",
+          "absolute inset-0 z-20 flex flex-col transition-opacity duration-500",
           showControls ? "opacity-100 bg-black/40" : "opacity-0 pointer-events-none"
         )}>
           
           {/* Top Section */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#299fff] flex items-center justify-center shadow-lg shadow-[#299fff]/20">
                 <span className="text-xl font-black italic">V</span>
@@ -255,31 +262,67 @@ export default function VideoPlayer({
               </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <div className="flex items-center gap-3">
                 <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">4K UHD</span>
                 <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">60 FPS</span>
               </div>
-              <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center text-[10px] font-bold">
+
+              {/* Vertical Volume Control */}
+              <div className="relative group/volume flex flex-col items-center gap-2">
+                <div className="absolute top-10 flex flex-col items-center bg-black/60 backdrop-blur-xl border border-white/10 p-3 rounded-full opacity-0 group-hover/volume:opacity-100 transition-all duration-300 pointer-events-none group-hover/volume:pointer-events-auto shadow-2xl">
+                  <input 
+                    type="range" min="0" max="1" step="0.05"
+                    value={isMuted ? 0 : volume}
+                    onChange={handleVolumeChange}
+                    className="h-32 appearance-none bg-white/20 rounded-full cursor-pointer accent-[#299fff] [writing-mode:bt-lr] [-webkit-appearance:slider-vertical]"
+                    style={{ WebkitAppearance: 'slider-vertical', width: '4px' }}
+                  />
+                </div>
+                <button 
+                  onClick={handleToggleMute} 
+                  className="w-10 h-10 rounded-full bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/20 transition-all"
+                >
+                  {isMuted || volume === 0 ? <VolumeX className="w-5 h-5 text-red-500" /> : <Volume2 className="w-5 h-5 text-[#299fff]" />}
+                </button>
+              </div>
+
+              <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center text-[10px] font-bold">
                 JD
               </div>
             </div>
           </div>
 
-          {/* Middle Section - Large Center Play Button */}
-          <div className="flex-1 flex items-center justify-center">
-            {!isPlaying && (
-              <button 
-                onClick={handleTogglePlay}
-                className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-xl border border-white/30 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/play"
-              >
-                <Play className="w-10 h-10 fill-white ml-1 text-white group-hover/play:drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" />
-              </button>
-            )}
+          {/* Middle Section - Centralized Playback Controls */}
+          <div className="flex-1 flex items-center justify-center gap-12">
+            <button 
+              onClick={() => handleSkip(-10)}
+              className="w-16 h-16 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/skip"
+            >
+              <RotateCcw className="w-8 h-8 text-white/60 group-hover/skip:text-white transition-colors" />
+            </button>
+
+            <button 
+              onClick={handleTogglePlay}
+              className="w-28 h-28 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/play shadow-[0_0_40px_rgba(255,255,255,0.05)]"
+            >
+              {isPlaying ? (
+                <Pause className="w-12 h-12 text-white fill-white group-hover/play:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
+              ) : (
+                <Play className="w-12 h-12 text-white fill-white ml-2 group-hover/play:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
+              )}
+            </button>
+
+            <button 
+              onClick={() => handleSkip(10)}
+              className="w-16 h-16 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/skip"
+            >
+              <RotateCw className="w-8 h-8 text-white/60 group-hover/skip:text-white transition-colors" />
+            </button>
           </div>
 
-          {/* Bottom Section - Metadata & Controls */}
-          <div className="space-y-4">
+          {/* Bottom Section - Metadata & Progress */}
+          <div className="p-6 space-y-4">
             {/* Metadata */}
             <div className="space-y-1">
               <h2 className="text-2xl font-bold tracking-tight">{channel.name}</h2>
@@ -306,39 +349,16 @@ export default function VideoPlayer({
 
             {/* Controls Bar */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <button onClick={handleTogglePlay} className="hover:text-[#299fff] transition-colors">
-                  {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
-                </button>
-                <div className="flex items-center gap-4">
-                  <button className="text-white/60 hover:text-white transition-colors"><ChevronLeft className="w-5 h-5" /></button>
-                  <button className="text-white/60 hover:text-white transition-colors"><ChevronRight className="w-5 h-5" /></button>
-                </div>
-                <div className="flex items-center gap-3 group/volume">
-                  <button onClick={handleToggleMute} className="hover:text-[#299fff] transition-colors">
-                    {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                  </button>
-                  <input 
-                    type="range" min="0" max="1" step="0.05"
-                    value={isMuted ? 0 : volume}
-                    onChange={handleVolumeChange}
-                    className="w-0 group-hover/volume:w-20 transition-all duration-300 h-1 bg-white/20 rounded-full appearance-none cursor-pointer accent-[#299fff] overflow-hidden"
-                  />
-                </div>
+              <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
+                {currentTime} <span className="text-white/20 mx-1">/</span> {totalTime}
               </div>
 
-              <div className="flex items-center gap-8">
-                <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
-                  {currentTime} <span className="text-white/20 mx-1">/</span> {totalTime}
-                </div>
-                
-                <div className="flex items-center gap-6">
-                  <button className="text-white/60 hover:text-white transition-colors"><Subtitles className="w-5 h-5" /></button>
-                  <button className="text-white/60 hover:text-white transition-colors"><Settings className="w-5 h-5" /></button>
-                  <button onClick={handleFullScreen} className="text-white/60 hover:text-white transition-colors">
-                    {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-                  </button>
-                </div>
+              <div className="flex items-center gap-6">
+                <button className="text-white/60 hover:text-white transition-colors"><Subtitles className="w-5 h-5" /></button>
+                <button className="text-white/60 hover:text-white transition-colors"><Settings className="w-5 h-5" /></button>
+                <button onClick={handleFullScreen} className="text-white/60 hover:text-white transition-colors">
+                  {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                </button>
               </div>
             </div>
           </div>
