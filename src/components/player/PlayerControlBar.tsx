@@ -10,8 +10,7 @@ import {
   Settings, 
   Maximize, 
   Minimize,
-  Activity,
-  Cpu
+  Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
@@ -24,7 +23,6 @@ import {
 interface PlayerControlBarProps {
   player: any;
   channelName: string;
-  channelLogo?: string;
   isPlaying: boolean;
   isMuted: boolean;
   onTogglePlay: () => void;
@@ -36,8 +34,6 @@ interface PlayerControlBarProps {
 
 export function PlayerControlBar({
   player,
-  channelName,
-  channelLogo,
   isPlaying,
   isMuted,
   onTogglePlay,
@@ -46,7 +42,8 @@ export function PlayerControlBar({
   isFullscreen,
   isError
 }: PlayerControlBarProps) {
-  const [stats, setStats] = useState({ resolution: 'Auto', bitrate: '---' });
+  const [stats, setStats] = useState({ resolution: 'Source', bitrate: 'Auto' });
+  const [volume, setVolume] = useState(1);
 
   useEffect(() => {
     if (!player || isError) return;
@@ -61,70 +58,57 @@ export function PlayerControlBar({
   }, [player, isError]);
 
   return (
-    <div className="w-full flex flex-col md:flex-row items-center gap-4 px-6 py-4 bg-[#121212]/50 backdrop-blur-md">
-      {/* Left: Metadata */}
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        <div className="w-10 h-10 rounded-lg bg-black/40 border border-white/5 p-1.5 flex items-center justify-center shrink-0">
-          {channelLogo ? (
-            <img src={channelLogo} alt="" className="w-full h-full object-contain" />
-          ) : (
-            <Cpu className="w-5 h-5 text-white/20" />
-          )}
-        </div>
-        <div className="flex flex-col min-w-0">
-          <h3 className="text-sm font-bold text-white truncate uppercase tracking-tight leading-none">
-            {channelName}
-          </h3>
-          <span className="text-[10px] text-white/30 uppercase tracking-widest mt-1">
-             Signal Status: {isError ? 'Interrupted' : 'Encrypted'}
-          </span>
-        </div>
-      </div>
-
-      {/* Center: Main Commands */}
+    <div className="w-full flex items-center justify-between px-8 py-4 pointer-events-auto">
+      {/* Left: Playback Commands */}
       <div className="flex items-center gap-6">
         <button 
           onClick={onTogglePlay}
           disabled={isError}
-          className="p-3 rounded-full bg-white/5 hover:bg-white/10 text-white transition-all disabled:opacity-20"
+          className="text-white hover:text-white/80 transition-all disabled:opacity-20"
         >
-          {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+          {isPlaying ? (
+            <Pause className="w-7 h-7 stroke-[1.5]" />
+          ) : (
+            <Play className="w-7 h-7 stroke-[1.5] fill-current" />
+          )}
         </button>
 
+        {/* Volume Control - LDSG Minimalist Slider */}
         <div className="flex items-center gap-3 group/volume">
-          <button onClick={onToggleMute} className="text-white/40 hover:text-white transition-colors">
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          <button onClick={onToggleMute} className="text-white/80 hover:text-white transition-colors">
+            {isMuted || volume === 0 ? <VolumeX className="w-6 h-6 stroke-[1.5]" /> : <Volume2 className="w-6 h-6 stroke-[1.5]" />}
           </button>
-          <div className="w-20 h-1 bg-white/5 rounded-full relative overflow-hidden">
-             <div className={cn("absolute inset-y-0 left-0 bg-white/40 transition-all", isMuted ? 'w-0' : 'w-full')} />
+          <div className="hidden sm:block w-0 group-hover/volume:w-24 transition-all duration-300 overflow-hidden">
+             <div className="w-24 h-1 bg-white/20 rounded-full relative ml-1 cursor-pointer">
+                <div 
+                  className={cn("absolute inset-y-0 left-0 bg-white transition-all rounded-full")} 
+                  style={{ width: isMuted ? '0%' : `${volume * 100}%` }}
+                />
+             </div>
           </div>
         </div>
       </div>
 
-      {/* Right: Technical Stats */}
-      <div className="flex items-center justify-end gap-6 flex-1">
+      {/* Right: Interface & Settings */}
+      <div className="flex items-center gap-6">
         {!isError && (
-          <div className="hidden lg:flex items-center gap-4 text-[10px] font-bold text-white/20 uppercase tracking-widest">
-            <div className="flex items-center gap-1.5">
-              <Activity className="w-3 h-3 text-[#299fff]" />
-              <span>{stats.resolution}</span>
-            </div>
-            <div className="h-3 w-px bg-white/5" />
-            <span>{stats.bitrate}</span>
+          <div className="hidden md:flex items-center gap-2 text-[11px] font-bold text-white/60 tracking-wider">
+            <Activity className="w-3.5 h-3.5" />
+            <span>{stats.resolution}</span>
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 transition-colors">
-                  <Settings className="w-4 h-4" />
+                <button className="text-white/80 hover:text-white transition-colors outline-none">
+                  <Settings className="w-6 h-6 stroke-[1.5]" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-[#0a0a0a] border-white/10 text-white font-mono">
-                <div className="px-3 py-2 text-[9px] text-white/40 border-b border-white/5">ENGINE PREFERENCES</div>
-                {['Direct HLS', 'Buffer-Free', 'High Efficiency'].map((opt) => (
-                   <DropdownMenuItem key={opt} className="text-[10px] focus:bg-white/10 cursor-pointer">
+              <DropdownMenuContent align="end" className="bg-black/90 backdrop-blur-2xl border-white/10 text-white min-w-[160px] p-2 rounded-xl">
+                <div className="px-3 py-2 text-[10px] text-white/40 font-bold uppercase tracking-widest border-b border-white/5 mb-1">Stream Options</div>
+                {['Direct HLS', 'Auto Buffer', 'Force High Quality'].map((opt) => (
+                   <DropdownMenuItem key={opt} className="text-xs font-medium focus:bg-white/10 focus:text-white cursor-pointer py-2 px-3 rounded-lg">
                       {opt}
                    </DropdownMenuItem>
                 ))}
@@ -133,9 +117,9 @@ export function PlayerControlBar({
 
             <button 
               onClick={onToggleFullscreen}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/40 transition-colors"
+              className="text-white/80 hover:text-white transition-colors"
             >
-              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+              {isFullscreen ? <Minimize className="w-6 h-6 stroke-[1.5]" /> : <Maximize className="w-6 h-6 stroke-[1.5]" />}
             </button>
         </div>
       </div>
