@@ -619,37 +619,9 @@ export default function VideoPlayer({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" side="top" className="w-64 bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Streaming Settings</DropdownMenuLabel>
-                        
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger className="flex items-center justify-between py-3 px-3 rounded-xl hover:bg-white/5 focus:bg-white/5 transition-colors cursor-pointer group">
-                            <div className="flex items-center gap-3">
-                              <Zap className="w-4 h-4 text-[#299fff]" />
-                              <span className="text-sm font-bold">Video Quality</span>
-                            </div>
-                            <span className="text-[10px] font-black text-[#299fff] opacity-60">
-                              {selectedQuality === 'auto' ? 'AUTO' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label}
-                            </span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[180px] z-[120]">
-                            <DropdownMenuRadioGroup value={selectedQuality} onValueChange={handleQualityChange}>
-                              <DropdownMenuRadioItem value="auto" className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold uppercase tracking-widest">
-                                Auto (Adjustable)
-                              </DropdownMenuRadioItem>
-                              <DropdownMenuSeparator className="bg-white/5 mx-2" />
-                              {qualityLevels.length > 0 ? qualityLevels.map((level) => (
-                                <DropdownMenuRadioItem 
-                                  key={level.index} 
-                                  value={level.index.toString()}
-                                  className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
-                                >
-                                  {level.label}
-                                </DropdownMenuRadioItem>
-                              )) : (
-                                <div className="py-2 px-3 text-xs text-slate-500 italic">No levels detected</div>
-                              )}
-                            </DropdownMenuRadioGroup>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
+                        <DropdownMenuItem className="py-2.5 px-3 rounded-xl focus:bg-white/5 cursor-pointer text-xs font-bold" onClick={() => window.open('https://gtnplay.com', '_blank')}>
+                            <span className="flex items-center gap-2">More Options <ChevronRight className="w-3 h-3" /></span>
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
 
@@ -657,18 +629,9 @@ export default function VideoPlayer({
                       {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
                     </button>
 
-                    <DropdownMenu>
-                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                         <button className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
-                           <MoreVertical className="w-5 h-5" />
-                         </button>
-                       </DropdownMenuTrigger>
-                       <DropdownMenuContent align="end" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[160px] z-[110]" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenuItem className="py-2.5 px-3 rounded-xl focus:bg-white/5 cursor-pointer text-xs font-bold" onClick={() => window.open('https://gtnplay.com', '_blank')}>
-                            <span className="flex items-center gap-2">See More <ChevronRight className="w-3 h-3" /></span>
-                          </DropdownMenuItem>
-                       </DropdownMenuContent>
-                    </DropdownMenu>
+                    <button onClick={(e) => { e.stopPropagation(); }} className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
+                      <MoreVertical className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
 
