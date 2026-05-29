@@ -467,13 +467,6 @@ export default function VideoPlayer({
             
             {!isLocked && (
               <div className="flex items-center gap-6">
-                <div className="flex items-center gap-3">
-                  <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">
-                    {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Source'}
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wider">60 FPS</span>
-                </div>
-
                 {/* Vertical Volume Control */}
                 <div className="relative group/volume flex flex-col items-center gap-2">
                   <div className="absolute top-10 flex flex-col items-center bg-black/60 backdrop-blur-xl border border-white/10 p-3 rounded-full opacity-0 group-hover/volume:opacity-100 transition-all duration-300 pointer-events-none group-hover/volume:pointer-events-auto shadow-2xl">
