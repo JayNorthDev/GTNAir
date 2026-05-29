@@ -105,12 +105,17 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
       setAllChannels(validAndVisibleChannels);
       setFilteredChannels(validAndVisibleChannels);
 
-      const uniqueCategories = ['All', ...new Set(validAndVisibleChannels.map(item => item.group.title || 'Other').filter(Boolean))];
+      // Enhanced category splitting for cases like "Animation;Classic"
+      const rawCategories = validAndVisibleChannels.flatMap(item => {
+        const group = item.group.title || 'Other';
+        return group.split(';').map(c => c.trim());
+      });
+      
+      const uniqueCategories = ['All', ...new Set(rawCategories.filter(Boolean))];
       setCategories(uniqueCategories.sort());
 
     } catch (e: any) {
       console.error('Channel fetch error:', e);
-      // Only set error if we have no channels at all to show
       if (allChannels.length === 0) {
           setError(e.message || 'Failed to load channels.');
       }
@@ -126,7 +131,11 @@ export function useChannels(customPlaylistUrl?: string, selectedPlaylistId?: str
   const filterChannels = useCallback((searchTerm: string, selectedCategory: string) => {
     let channels = allChannels;
     if (selectedCategory !== 'All') {
-      channels = channels.filter(c => (c.group.title || 'Other') === selectedCategory);
+      // Check if the channel's group string contains the selected category
+      channels = channels.filter(c => {
+        const groups = (c.group.title || 'Other').split(';').map(g => g.trim());
+        return groups.includes(selectedCategory);
+      });
     }
     if (searchTerm) {
       channels = channels.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
