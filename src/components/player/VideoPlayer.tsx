@@ -521,13 +521,32 @@ export default function VideoPlayer({
                     Live Broadcast • {channel.group.title || 'General'}
                   </p>
                 </div>
-                <div className="flex items-center gap-4 mb-1">
-                   <button onClick={handleShare} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                     <Share2 className="w-5 h-5" />
-                   </button>
-                   <button onClick={handleOutlink} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                     <ExternalLink className="w-5 h-5" />
-                   </button>
+                {/* Moved Time and Live Button here */}
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
+                    {currentTime} <span className="text-white/20 mx-1">/</span> 
+                  </div>
+                  {totalTime === 'LIVE' ? (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onToggleLiveEdge?.(); }}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-300",
+                        forceLiveEdge 
+                          ? "bg-red-500/10 text-red-500 border border-red-500/20" 
+                          : "bg-white/5 text-white/40 border border-white/5 hover:text-white"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-1.5 h-1.5 rounded-full",
+                        forceLiveEdge ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" : "bg-white/20"
+                      )} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Live</span>
+                    </button>
+                  ) : (
+                    <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
+                      {totalTime}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -552,31 +571,14 @@ export default function VideoPlayer({
 
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
-                      {currentTime} <span className="text-white/20 mx-1">/</span> 
-                    </div>
-                    {totalTime === 'LIVE' ? (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); onToggleLiveEdge?.(); }}
-                        className={cn(
-                          "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-300",
-                          forceLiveEdge 
-                            ? "bg-red-500/10 text-red-500 border border-red-500/20" 
-                            : "bg-white/5 text-white/40 border border-white/5 hover:text-white"
-                        )}
-                      >
-                        <div className={cn(
-                          "w-1.5 h-1.5 rounded-full",
-                          forceLiveEdge ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" : "bg-white/20"
-                        )} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Live</span>
-                      </button>
-                    ) : (
-                      <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
-                        {totalTime}
-                      </div>
-                    )}
+                  {/* Moved Share and Outlink here */}
+                  <div className="flex items-center gap-4">
+                    <button onClick={handleShare} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                      <Share2 className="w-5 h-5" />
+                    </button>
+                    <button onClick={handleOutlink} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                      <ExternalLink className="w-5 h-5" />
+                    </button>
                   </div>
 
                   <div className="flex items-center gap-2 sm:gap-4">
