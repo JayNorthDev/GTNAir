@@ -650,31 +650,6 @@ export default function VideoPlayer({
                             </DropdownMenuRadioGroup>
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>
-
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger className="flex items-center justify-between py-3 px-3 rounded-xl hover:bg-white/5 focus:bg-white/5 transition-colors cursor-pointer group">
-                            <div className="flex items-center gap-3">
-                              <Play className="w-4 h-4 text-purple-500" />
-                              <span className="text-sm font-bold">Playback Speed</span>
-                            </div>
-                            <span className="text-[10px] font-black text-purple-500 opacity-60">
-                              {playbackRate}X
-                            </span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[140px] z-[120]">
-                            <DropdownMenuRadioGroup value={playbackRate} onValueChange={handlePlaybackRateChange}>
-                              {['0.5', '0.75', '1', '1.25', '1.5', '2'].map((rate) => (
-                                <DropdownMenuRadioItem 
-                                  key={rate} 
-                                  value={rate}
-                                  className="py-2.5 px-3 rounded-xl focus:bg-purple-600 transition-colors cursor-pointer text-xs font-bold"
-                                >
-                                  {rate === '1' ? 'Normal' : `${rate}X`}
-                                </DropdownMenuRadioItem>
-                              ))}
-                            </DropdownMenuRadioGroup>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
                       </DropdownMenuContent>
                     </DropdownMenu>
 
@@ -697,8 +672,9 @@ export default function VideoPlayer({
                   </div>
                 </div>
 
-                {/* Resolution Selector Button */}
-                <div className="flex items-center py-3 border-t border-white/5">
+                {/* Independent Resolution & Speed Bar */}
+                <div className="flex items-center gap-4 py-3 border-t border-white/5">
+                  {/* Resolution Selector */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                       <button className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all outline-none group">
@@ -729,6 +705,34 @@ export default function VideoPlayer({
                           <div className="py-2 px-3 text-xs text-slate-500 italic">No levels detected</div>
                         )}
                       </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Playback Speed Selector */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <button className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all outline-none group">
+                        <Play className="w-4 h-4 text-purple-500" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/60 group-hover:text-white">Speed</span>
+                        <div className="h-4 w-[1px] bg-white/10 mx-1" />
+                        <span className="text-xs font-bold text-purple-500">
+                          {playbackRate === '1' ? 'Normal' : `${playbackRate}X`}
+                        </span>
+                        <ChevronDown className="w-4 h-4 text-white/40 group-hover:text-white transition-transform duration-300" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[140px] z-[110]" onClick={(e) => e.stopPropagation()}>
+                       <DropdownMenuRadioGroup value={playbackRate} onValueChange={handlePlaybackRateChange}>
+                          {['0.5', '0.75', '1', '1.25', '1.5', '2'].map((rate) => (
+                            <DropdownMenuRadioItem 
+                              key={rate} 
+                              value={rate}
+                              className="py-2.5 px-3 rounded-xl focus:bg-purple-600 transition-colors cursor-pointer text-xs font-bold"
+                            >
+                              {rate === '1' ? 'Normal' : `${rate}X`}
+                            </DropdownMenuRadioItem>
+                          ))}
+                       </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
