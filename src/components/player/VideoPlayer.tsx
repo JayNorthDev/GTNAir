@@ -44,10 +44,22 @@ export default function VideoPlayer({
   const [showControls, setShowControls] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentTime, setCurrentTime] = useState('01:35');
-  const [totalTime, setTotalTime] = useState('02:00');
-  const [progress, setProgress] = useState(75);
+  
+  // Real-time functioning states
+  const [currentTime, setCurrentTime] = useState('00:00');
+  const [totalTime, setTotalTime] = useState('00:00');
+  const [progress, setProgress] = useState(0);
+  const [adCountdown, setAdCountdown] = useState(15);
+  const [showAdNotice, setShowAdNotice] = useState(true);
+
   const controlsTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const formatTime = (seconds: number) => {
+    if (isNaN(seconds) || seconds === Infinity) return '00:00';
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const resetControlsTimer = useCallback(() => {
     setShowControls(true);
@@ -65,11 +77,28 @@ export default function VideoPlayer({
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
+  // Ad countdown logic
+  useEffect(() => {
+    if (adCountdown > 0 && showAdNotice) {
+      const timer = setTimeout(() => setAdCountdown(adCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (adCountdown === 0) {
+      setShowAdNotice(false);
+    }
+  }, [adCountdown, showAdNotice]);
+
   useEffect(() => {
     if (!channel?.url || !containerRef.current) return;
 
     setError(null);
     setIsLoading(true);
+    // Reset functioning states for new channel
+    setCurrentTime('00:00');
+    setTotalTime('00:00');
+    setProgress(0);
+    setAdCountdown(15);
+    setShowAdNotice(true);
+
     const videoElement = document.createElement('video');
     videoElement.className = 'video-js vjs-big-play-centered w-full h-full object-contain';
     videoElement.setAttribute('playsinline', 'true');
@@ -109,7 +138,32 @@ export default function VideoPlayer({
     });
     player.on('waiting', () => setIsLoading(true));
     player.on('playing', () => setIsLoading(false));
-    player.on('loadedmetadata', () => setIsLoading(false));
+    player.on('loadedmetadata', () => {
+      setIsLoading(false);
+      const duration = player.duration();
+      if (duration && duration !== Infinity) {
+        setTotalTime(formatTime(duration));
+      } else {
+        setTotalTime('LIVE');
+      }
+    });
+
+    // Real-time timeupdate listener
+    player.on('timeupdate', () => {
+      const current = player.currentTime();
+      const duration = player.duration();
+      setCurrentTime(formatTime(current));
+      
+      if (duration && duration !== Infinity) {
+        const prog = (current / duration) * 100;
+        setProgress(prog);
+        setTotalTime(formatTime(duration));
+      } else {
+        // For live streams, we can show a moving bar based on buffer or just stay full
+        setProgress(100); 
+        setTotalTime('LIVE');
+      }
+    });
     
     player.on('error', () => {
       const vjsError = player.error();
@@ -194,10 +248,10 @@ export default function VideoPlayer({
                 )}
               </div>
               <div className="flex flex-col">
-                <h2 className="text-2xl font-bold tracking-tight uppercase">{channel.name || 'THIS IS A VIDEO TITLE'}</h2>
+                <h2 className="text-2xl font-bold tracking-tight uppercase">{channel.name}</h2>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="px-1 py-0.5 text-[8px] font-bold border border-white/40 rounded-sm opacity-60">AD</span>
-                  <span className="text-xs font-bold uppercase opacity-60">{channel.group.title || 'SPONSOR NAME'}</span>
+                  <span className="text-xs font-bold uppercase opacity-60">{channel.group.title || 'SPONSOR'}</span>
                 </div>
               </div>
             </div>
@@ -240,20 +294,22 @@ export default function VideoPlayer({
             </div>
           </div>
 
-          {/* Lower Middle - Ad Notice */}
-          <div className="flex justify-center mb-6">
-            <div className="px-5 py-2 bg-black/80 backdrop-blur-md rounded-full border border-white/5 flex items-center gap-2">
-              <span className="text-sm font-medium text-white/90">This video will start to play in</span>
-              <span className="text-sm font-bold text-green-400">13</span>
+          {/* Lower Middle - Ad Notice (Functional Countdown) */}
+          {showAdNotice && (
+            <div className="flex justify-center mb-6">
+              <div className="px-5 py-2 bg-black/80 backdrop-blur-md rounded-full border border-white/5 flex items-center gap-2">
+                <span className="text-sm font-medium text-white/90">This video will start to play in</span>
+                <span className="text-sm font-bold text-green-400">{adCountdown}</span>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Bottom Section - Progress & Time */}
+          {/* Bottom Section - Progress & Time (Accurate Real-time) */}
           <div className="flex items-center gap-6">
             <span className="text-sm font-bold tracking-tighter opacity-80">{currentTime}</span>
             <div className="flex-1 relative h-1.5 bg-white/20 rounded-full overflow-hidden">
               <div 
-                className="absolute inset-y-0 left-0 bg-white"
+                className="absolute inset-y-0 left-0 bg-white transition-all duration-300 ease-linear"
                 style={{ width: `${progress}%` }}
               />
             </div>
