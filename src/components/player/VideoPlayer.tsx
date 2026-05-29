@@ -675,41 +675,40 @@ export default function VideoPlayer({
                 </div>
               </div>
 
-              {/* Resolution Selector Bar matching image */}
-              <div className="flex items-center gap-8 py-3 border-t border-white/5">
-                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/30">Resolution</span>
-                <div className="flex items-center gap-6">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleQualityChange('auto'); }}
-                    className={cn(
-                      "flex items-center gap-1.5 text-xs font-bold transition-all group/res",
-                      selectedQuality === 'auto' ? "text-[#299fff]" : "text-white/60 hover:text-white"
-                    )}
-                  >
-                    Auto 
-                    <ChevronDown className={cn(
-                      "w-3.5 h-3.5 transition-transform duration-300", 
-                      selectedQuality === 'auto' ? "rotate-180" : ""
-                    )} />
-                  </button>
-                  
-                  {qualityLevels.map((level) => (
-                    <button 
-                      key={level.index}
-                      onClick={(e) => { e.stopPropagation(); handleQualityChange(level.index.toString()); }}
-                      className={cn(
-                        "flex items-center gap-1.5 text-xs font-bold transition-all group/res",
-                        selectedQuality === level.index.toString() ? "text-[#299fff]" : "text-white/60 hover:text-white"
-                      )}
-                    >
-                      {level.label}
-                      <ChevronDown className={cn(
-                        "w-3.5 h-3.5 transition-transform duration-300", 
-                        selectedQuality === level.index.toString() ? "rotate-180" : ""
-                      )} />
+              {/* Resolution Selector Button */}
+              <div className="flex items-center py-3 border-t border-white/5">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <button className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all outline-none group">
+                      <Zap className="w-4 h-4 text-[#299fff]" />
+                      <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/60 group-hover:text-white">Resolution</span>
+                      <div className="h-4 w-[1px] bg-white/10 mx-1" />
+                      <span className="text-xs font-bold text-[#299fff]">
+                        {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Source'}
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-white/40 group-hover:text-white transition-transform duration-300" />
                     </button>
-                  ))}
-                </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuRadioGroup value={selectedQuality} onValueChange={handleQualityChange}>
+                      <DropdownMenuRadioItem value="auto" className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold uppercase tracking-widest">
+                        Auto (Adjustable)
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuSeparator className="bg-white/5 mx-2" />
+                      {qualityLevels.length > 0 ? qualityLevels.map((level) => (
+                        <DropdownMenuRadioItem 
+                          key={level.index} 
+                          value={level.index.toString()}
+                          className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
+                        >
+                          {level.label}
+                        </DropdownMenuRadioItem>
+                      )) : (
+                        <div className="py-2 px-3 text-xs text-slate-500 italic">No levels detected</div>
+                      )}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>
