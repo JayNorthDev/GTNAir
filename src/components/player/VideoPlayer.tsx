@@ -65,6 +65,7 @@ export default function VideoPlayer({
 }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
   const [isPlaying, setIsPlaying] = useState(true);
@@ -88,6 +89,7 @@ export default function VideoPlayer({
   const [progress, setProgress] = useState(0);
 
   const controlsTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastClickTimeRef = useRef<number>(0);
 
   const formatTime = (seconds: number) => {
     if (isNaN(seconds) || seconds === Infinity) return '00:00';
@@ -352,13 +354,50 @@ export default function VideoPlayer({
     }
   };
 
+  // --- Gesture Controls ---
+  const handleContainerClick = (e: React.MouseEvent) => {
+    const now = Date.now();
+    const threshold = 300; // ms
+    const diff = now - lastClickTimeRef.current;
+    lastClickTimeRef.current = now;
+
+    if (diff < threshold) {
+      // Double tap detected
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const midPoint = rect.width / 2;
+
+      if (clickX < midPoint) {
+        handleSkip(-10);
+      } else {
+        handleSkip(10);
+      }
+    } else {
+      resetControlsTimer();
+    }
+  };
+
+  const handleProgressBarInteraction = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!progressBarRef.current || !playerRef.current) return;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const clientX = 'clientX' in e ? e.clientX : e.touches[0].clientX;
+    const offsetX = clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, offsetX / rect.width));
+    const duration = playerRef.current.duration();
+    
+    if (duration && duration !== Infinity) {
+      playerRef.current.currentTime(duration * percentage);
+      setProgress(percentage * 100);
+    }
+  };
+
   if (!channel) return null;
 
   return (
     <div 
       ref={containerRef}
       onMouseMove={resetControlsTimer}
-      onClick={resetControlsTimer}
+      onClick={handleContainerClick}
       className={cn(
         "group relative flex flex-col bg-black text-white select-none overflow-hidden transition-all duration-500",
         isPip ? "fixed bottom-6 right-6 w-[400px] rounded-xl shadow-2xl border border-white/10 z-[100]" : "flex-1 w-full h-full",
@@ -438,18 +477,18 @@ export default function VideoPlayer({
           {/* Middle Section - Centralized Playback Controls */}
           <div className="flex-1 flex items-center justify-center gap-12">
             <button 
-              onClick={() => handleSkip(-15)}
+              onClick={(e) => { e.stopPropagation(); handleSkip(-10); }}
               className="w-16 h-16 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/skip"
-              title="Prev-15"
+              title="Prev-10"
             >
               <div className="relative flex items-center justify-center">
                 <RotateCcw className="w-8 h-8 text-white/60 group-hover/skip:text-white transition-colors" />
-                <span className="absolute text-[10px] font-bold mt-1">15</span>
+                <span className="absolute text-[10px] font-bold mt-1">10</span>
               </div>
             </button>
 
             <button 
-              onClick={handleTogglePlay}
+              onClick={(e) => { e.stopPropagation(); handleTogglePlay(); }}
               className="w-28 h-28 rounded-full bg-white/10 backdrop-blur-2xl border border-white/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/play shadow-[0_0_40px_rgba(255,255,255,0.05)]"
             >
               {isPlaying ? (
@@ -460,13 +499,13 @@ export default function VideoPlayer({
             </button>
 
             <button 
-              onClick={() => handleSkip(15)}
+              onClick={(e) => { e.stopPropagation(); handleSkip(10); }}
               className="w-16 h-16 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center transition-all hover:scale-110 active:scale-95 group/skip"
-              title="Next+15"
+              title="Next+10"
             >
               <div className="relative flex items-center justify-center">
                 <RotateCw className="w-8 h-8 text-white/60 group-hover/skip:text-white transition-colors" />
-                <span className="absolute text-[10px] font-bold mt-1">15</span>
+                <span className="absolute text-[10px] font-bold mt-1">10</span>
               </div>
             </button>
           </div>
@@ -482,17 +521,22 @@ export default function VideoPlayer({
                 </p>
               </div>
               <div className="flex items-center gap-4 mb-1">
-                 <button onClick={handleShare} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="Share">
+                 <button onClick={(e) => { e.stopPropagation(); handleShare(); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="Share">
                    <Share2 className="w-5 h-5 text-white/60" />
                  </button>
-                 <button onClick={handleOutlink} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="External Link">
+                 <button onClick={(e) => { e.stopPropagation(); handleOutlink(); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors" title="External Link">
                    <ExternalLink className="w-5 h-5 text-white/60" />
                  </button>
               </div>
             </div>
 
             {/* Progress Bar */}
-            <div className="relative group/progress cursor-pointer">
+            <div 
+              ref={progressBarRef}
+              onMouseDown={handleProgressBarInteraction}
+              onClick={(e) => e.stopPropagation()}
+              className="relative group/progress cursor-pointer"
+            >
               <div className="absolute -top-4 inset-x-0 h-10 z-10" /> {/* Larger hit area */}
               <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden relative">
                 <div 
@@ -516,7 +560,7 @@ export default function VideoPlayer({
 
                 <div className="flex items-center gap-4">
                   <button 
-                    onClick={handleReplay}
+                    onClick={(e) => { e.stopPropagation(); handleReplay(); }}
                     className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-all"
                     title="Replay"
                   >
@@ -524,7 +568,7 @@ export default function VideoPlayer({
                   </button>
 
                   <button 
-                    onClick={handleTogglePip}
+                    onClick={(e) => { e.stopPropagation(); handleTogglePip(); }}
                     className={cn(
                       "p-1.5 rounded-lg transition-all",
                       isPipActive ? "text-[#299fff] bg-[#299fff]/10" : "text-white/60 hover:text-white hover:bg-white/5"
@@ -535,7 +579,7 @@ export default function VideoPlayer({
                   </button>
 
                   <button 
-                    onClick={handleToggleCaptions}
+                    onClick={(e) => { e.stopPropagation(); handleToggleCaptions(); }}
                     className={cn(
                       "transition-all duration-300 p-1.5 rounded-lg",
                       captionsEnabled ? "text-[#299fff] bg-[#299fff]/10 shadow-[0_0_10px_rgba(41,159,255,0.3)]" : "text-white/60 hover:text-white hover:bg-white/5"
@@ -546,12 +590,12 @@ export default function VideoPlayer({
                   </button>
                   
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                       <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5">
                         <SettingsIcon className="w-5 h-5" />
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" side="top" className="w-64 bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]">
+                    <DropdownMenuContent align="end" side="top" className="w-64 bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Streaming Settings</DropdownMenuLabel>
                       
                       <DropdownMenuSub>
@@ -612,17 +656,17 @@ export default function VideoPlayer({
                     </DropdownMenuContent>
                   </DropdownMenu>
 
-                  <button onClick={handleFullScreen} className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
+                  <button onClick={(e) => { e.stopPropagation(); handleFullScreen(); }} className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
                     {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
                   </button>
 
                   <DropdownMenu>
-                     <DropdownMenuTrigger asChild>
+                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                        <button className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
                          <MoreVertical className="w-5 h-5" />
                        </button>
                      </DropdownMenuTrigger>
-                     <DropdownMenuContent align="end" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[160px] z-[110]">
+                     <DropdownMenuContent align="end" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl p-2 min-w-[160px] z-[110]" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenuItem className="py-2.5 px-3 rounded-xl focus:bg-white/5 cursor-pointer text-xs font-bold" onClick={() => window.open('https://gtnplay.com', '_blank')}>
                           <span className="flex items-center gap-2">See More <ChevronRight className="w-3 h-3" /></span>
                         </DropdownMenuItem>
@@ -636,7 +680,7 @@ export default function VideoPlayer({
                 <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/30">Resolution</span>
                 <div className="flex items-center gap-6">
                   <button 
-                    onClick={() => handleQualityChange('auto')}
+                    onClick={(e) => { e.stopPropagation(); handleQualityChange('auto'); }}
                     className={cn(
                       "flex items-center gap-1.5 text-xs font-bold transition-all group/res",
                       selectedQuality === 'auto' ? "text-[#299fff]" : "text-white/60 hover:text-white"
@@ -652,7 +696,7 @@ export default function VideoPlayer({
                   {qualityLevels.map((level) => (
                     <button 
                       key={level.index}
-                      onClick={() => handleQualityChange(level.index.toString())}
+                      onClick={(e) => { e.stopPropagation(); handleQualityChange(level.index.toString()); }}
                       className={cn(
                         "flex items-center gap-1.5 text-xs font-bold transition-all group/res",
                         selectedQuality === level.index.toString() ? "text-[#299fff]" : "text-white/60 hover:text-white"
