@@ -515,38 +515,39 @@ export default function VideoPlayer({
           {!isLocked && (
             <div className="p-6 space-y-4">
               <div className="flex items-end justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-2xl font-bold tracking-tight">{channel.name}</h2>
-                  <p className="text-sm italic text-white/60">
-                    Live Broadcast • {channel.group.title || 'General'}
-                  </p>
-                </div>
-                {/* Moved Time and Live Button here */}
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
-                    {currentTime} <span className="text-white/20 mx-1">/</span> 
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="space-y-1 truncate">
+                    <h2 className="text-2xl font-bold tracking-tight truncate">{channel.name}</h2>
+                    <p className="text-sm italic text-white/60 truncate">
+                      Live Broadcast • {channel.group.title || 'General'}
+                    </p>
                   </div>
-                  {totalTime === 'LIVE' ? (
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); onToggleLiveEdge?.(); }}
-                      className={cn(
-                        "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-300",
-                        forceLiveEdge 
-                          ? "bg-red-500/10 text-red-500 border border-red-500/20" 
-                          : "bg-white/5 text-white/40 border border-white/5 hover:text-white"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        forceLiveEdge ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" : "bg-white/20"
-                      )} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Live</span>
-                    </button>
-                  ) : (
+                  <div className="flex items-center gap-3 shrink-0 mb-1">
                     <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
-                      {totalTime}
+                      {currentTime} <span className="text-white/20 mx-1">/</span> 
                     </div>
-                  )}
+                    {totalTime === 'LIVE' ? (
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); onToggleLiveEdge?.(); }}
+                        className={cn(
+                          "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-300",
+                          forceLiveEdge 
+                            ? "bg-red-500/10 text-red-500 border border-red-500/20" 
+                            : "bg-white/5 text-white/40 border border-white/5 hover:text-white"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          forceLiveEdge ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" : "bg-white/20"
+                        )} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Live</span>
+                      </button>
+                    ) : (
+                      <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
+                        {totalTime}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -554,25 +555,35 @@ export default function VideoPlayer({
                 ref={progressBarRef}
                 onMouseDown={handleProgressBarInteraction}
                 onClick={(e) => e.stopPropagation()}
-                className="relative group/progress cursor-pointer"
+                className={cn(
+                  "relative group/progress",
+                  totalTime === 'LIVE' ? "cursor-default" : "cursor-pointer"
+                )}
               >
                 <div className="absolute -top-4 inset-x-0 h-10 z-10" />
-                <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden relative">
+                <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden relative">
                   <div 
-                    className="absolute inset-y-0 left-0 bg-[#299fff] transition-all duration-300 ease-linear shadow-[0_0_10px_rgba(41,159,255,0.8)]"
-                    style={{ width: `${progress}%` }}
+                    className={cn(
+                      "absolute inset-y-0 left-0 bg-[#299fff] transition-all duration-300 ease-linear shadow-[0_0_15px_rgba(41,159,255,0.6)]",
+                      totalTime === 'LIVE' && "w-full opacity-80"
+                    )}
+                    style={{ width: totalTime === 'LIVE' ? '100%' : `${progress}%` }}
                   />
+                  {totalTime === 'LIVE' && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-shimmer" />
+                  )}
                 </div>
-                <div 
-                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg scale-0 group-hover/progress:scale-100 transition-transform duration-200 z-20"
-                  style={{ left: `calc(${progress}% - 8px)` }}
-                />
+                {totalTime !== 'LIVE' && (
+                  <div 
+                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-xl scale-0 group-hover/progress:scale-100 transition-transform duration-200 z-20 pointer-events-none"
+                    style={{ left: `calc(${progress}% - 8px)` }}
+                  />
+                )}
               </div>
 
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  {/* Moved Share and Outlink here */}
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 sm:gap-4">
                     <button onClick={handleShare} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors">
                       <Share2 className="w-5 h-5" />
                     </button>
@@ -582,7 +593,6 @@ export default function VideoPlayer({
                   </div>
 
                   <div className="flex items-center gap-2 sm:gap-4">
-                    {/* Quality Button */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5 flex items-center gap-2">
@@ -612,7 +622,6 @@ export default function VideoPlayer({
                       </DropdownMenuContent>
                     </DropdownMenu>
 
-                    {/* Speed Button */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5 flex items-center gap-2">
