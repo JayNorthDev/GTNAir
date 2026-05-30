@@ -654,7 +654,7 @@ export default function VideoPlayer({
                 onMouseDown={handleMouseDown}
                 onTouchStart={handleTouchStart}
                 onClick={(e) => e.stopPropagation()}
-                className="relative h-6 flex items-center group/progress cursor-pointer px-4"
+                className="relative h-6 flex items-center group/progress cursor-pointer px-1.5"
               >
                 {/* Visual line container */}
                 <div className="w-full relative h-[2px] bg-white/10 rounded-full">
@@ -693,25 +693,20 @@ export default function VideoPlayer({
                 <div className="flex items-center gap-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <button className="text-white/40 hover:text-white transition-colors outline-none p-2 rounded-lg hover:bg-white/5 flex items-center gap-2">
+                      <button className="text-white/40 hover:text-white transition-colors outline-none p-2 rounded-lg hover:bg-white/5 flex items-center justify-center">
                         <Settings2 className="w-4 h-4" />
-                        <span className="text-[9px] font-black uppercase tracking-widest hidden sm:inline">
-                          Quality: {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Auto'}
-                        </span>
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Video Quality</DropdownMenuLabel>
                       <DropdownMenuRadioGroup value={selectedQuality} onValueChange={handleQualityChange}>
-                        <DropdownMenuRadioItem value="auto" className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold uppercase tracking-widest">
+                        <DropdownMenuRadioItem value="auto" className="py-2.5 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold uppercase tracking-widest">
                           Auto
                         </DropdownMenuRadioItem>
-                        <DropdownMenuSeparator className="bg-white/5 mx-2" />
                         {qualityLevels.map((level) => (
                           <DropdownMenuRadioItem 
                             key={level.index} 
                             value={level.index.toString()}
-                            className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
+                            className="py-2.5 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
                           >
                             {level.label}
                           </DropdownMenuRadioItem>
@@ -722,23 +717,19 @@ export default function VideoPlayer({
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <button className="text-white/40 hover:text-white transition-colors outline-none p-2 rounded-lg hover:bg-white/5 flex items-center gap-2">
+                      <button className="text-white/40 hover:text-white transition-colors outline-none p-2 rounded-lg hover:bg-white/5 flex items-center justify-center">
                         <Timer className="w-4 h-4" />
-                        <span className="text-[9px] font-black uppercase tracking-widest hidden sm:inline">
-                          Speed: {playbackRate === '1' ? 'Normal' : `${playbackRate}X`}
-                        </span>
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Playback Speed</DropdownMenuLabel>
                        <DropdownMenuRadioGroup value={playbackRate} onValueChange={handlePlaybackRateChange}>
                           {['0.5', '0.75', '1', '1.25', '1.5', '2'].map((rate) => (
                             <DropdownMenuRadioItem 
                               key={rate} 
                               value={rate}
-                              className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
+                              className="py-2.5 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
                             >
-                              {rate === '1' ? 'Normal (1X)' : `${rate}X`}
+                              {rate === '1' ? '1X' : `${rate}X`}
                             </DropdownMenuRadioItem>
                           ))}
                        </DropdownMenuRadioGroup>
