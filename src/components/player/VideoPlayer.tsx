@@ -245,6 +245,28 @@ export default function VideoPlayer({
     };
   }, [channel?.url, autoSkip, onStreamError, resetControlsTimer, isMuted, isDragging]);
 
+  // Enforcement logic for Smart Live Sync
+  useEffect(() => {
+    if (!playerRef.current || !forceLiveEdge || isDragging || !isPlaying) return;
+
+    const syncInterval = setInterval(() => {
+      const player = playerRef.current;
+      if (!player) return;
+      
+      const seekable = player.seekable();
+      if (seekable && seekable.length > 0) {
+        const end = seekable.end(0);
+        const current = player.currentTime();
+        // If we're more than 3 seconds away from the live edge, jump to it
+        if (end - current > 3) {
+          player.currentTime(end);
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(syncInterval);
+  }, [forceLiveEdge, isDragging, isPlaying]);
+
   const handleTogglePlay = () => {
     if (isPlaying) playerRef.current?.pause();
     else playerRef.current?.play();
@@ -252,6 +274,10 @@ export default function VideoPlayer({
 
   const handleSkip = (seconds: number) => {
     if (!playerRef.current || isLocked) return;
+    // Auto-disable Live Sync if skipping
+    if (forceLiveEdge && onToggleLiveEdge) {
+      onToggleLiveEdge();
+    }
     const currentTimeValue = playerRef.current.currentTime();
     playerRef.current.currentTime(currentTimeValue + seconds);
     resetControlsTimer();
@@ -260,6 +286,10 @@ export default function VideoPlayer({
   const handleReplay = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!playerRef.current) return;
+    // Auto-disable Live Sync if replaying
+    if (forceLiveEdge && onToggleLiveEdge) {
+      onToggleLiveEdge();
+    }
     playerRef.current.currentTime(0);
     playerRef.current.play();
     resetControlsTimer();
@@ -425,6 +455,10 @@ export default function VideoPlayer({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
+    // Auto-disable Live Sync on interaction
+    if (forceLiveEdge && onToggleLiveEdge) {
+      onToggleLiveEdge();
+    }
     seekToPosition(e.clientX);
   };
 
@@ -440,6 +474,10 @@ export default function VideoPlayer({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setIsDragging(true);
+    // Auto-disable Live Sync on interaction
+    if (forceLiveEdge && onToggleLiveEdge) {
+      onToggleLiveEdge();
+    }
     seekToPosition(e.touches[0].clientX);
   };
 
