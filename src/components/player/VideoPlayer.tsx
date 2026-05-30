@@ -245,7 +245,6 @@ export default function VideoPlayer({
     };
   }, [channel?.url, autoSkip, onStreamError, resetControlsTimer, isMuted, isDragging]);
 
-  // Enforcement logic for Smart Live Sync
   useEffect(() => {
     if (!playerRef.current || !forceLiveEdge || isDragging || !isPlaying) return;
 
@@ -257,7 +256,6 @@ export default function VideoPlayer({
       if (seekable && seekable.length > 0) {
         const end = seekable.end(0);
         const current = player.currentTime();
-        // If we're more than 3 seconds away from the live edge, jump to it
         if (end - current > 3) {
           player.currentTime(end);
         }
@@ -274,7 +272,6 @@ export default function VideoPlayer({
 
   const handleSkip = (seconds: number) => {
     if (!playerRef.current || isLocked) return;
-    // Auto-disable Live Sync if skipping
     if (forceLiveEdge && onToggleLiveEdge) {
       onToggleLiveEdge();
     }
@@ -286,7 +283,6 @@ export default function VideoPlayer({
   const handleReplay = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!playerRef.current) return;
-    // Auto-disable Live Sync if replaying
     if (forceLiveEdge && onToggleLiveEdge) {
       onToggleLiveEdge();
     }
@@ -453,7 +449,6 @@ export default function VideoPlayer({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
-    // Auto-disable Live Sync on interaction
     if (forceLiveEdge && onToggleLiveEdge) {
       onToggleLiveEdge();
     }
@@ -472,7 +467,6 @@ export default function VideoPlayer({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setIsDragging(true);
-    // Auto-disable Live Sync on interaction
     if (forceLiveEdge && onToggleLiveEdge) {
       onToggleLiveEdge();
     }
@@ -536,7 +530,6 @@ export default function VideoPlayer({
           <div className="video-container w-full h-full" />
         )}
 
-        {/* Floating Utility Controls (Always Top) */}
         <div className={cn(
           "absolute inset-0 z-20 flex flex-col transition-opacity duration-500",
           (showControls || isDragging) ? "opacity-100 bg-black/40" : "opacity-0 pointer-events-none"
@@ -657,13 +650,14 @@ export default function VideoPlayer({
 
               {/* Progress Bar (Interactive DVR Seeking) */}
               <div 
+                ref={progressBarRef}
                 onMouseDown={handleMouseDown}
                 onTouchStart={handleTouchStart}
                 onClick={(e) => e.stopPropagation()}
-                className="relative h-6 flex items-center group/progress cursor-pointer px-1.5"
+                className="relative h-6 flex items-center group/progress cursor-pointer px-4"
               >
                 {/* Visual line container */}
-                <div ref={progressBarRef} className="w-full relative h-[2px] bg-white/10 rounded-full">
+                <div className="w-full relative h-[2px] bg-white/10 rounded-full">
                     {/* Track Fill */}
                     <div 
                         className="absolute inset-y-0 left-0 bg-[#299fff] rounded-full"
@@ -677,16 +671,16 @@ export default function VideoPlayer({
 
                     {/* Vertical Pill Marker (Google Chrome Standard) */}
                     <div 
-                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#299fff] rounded-full shadow-[0_0_12px_rgba(41,159,255,1)] transition-transform duration-150 group-hover/progress:scale-110 z-20 pointer-events-none"
+                        className="absolute top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#299fff] rounded-full shadow-[0_0_12px_rgba(41,159,255,1)] transition-all duration-150 group-hover/progress:scale-110 z-20 pointer-events-none"
                         style={{ 
-                            left: `${progress}%`
+                            left: `${progress}%`,
+                            transform: 'translate(-50%, -50%)'
                         }}
                     />
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
-                {/* Bottom Left: Share & External */}
                 <div className="flex items-center gap-1">
                   <button onClick={handleShare} className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors">
                     <Share2 className="w-4 h-4" />
@@ -696,7 +690,6 @@ export default function VideoPlayer({
                   </button>
                 </div>
 
-                {/* Bottom Right: Feature Controls */}
                 <div className="flex items-center gap-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
