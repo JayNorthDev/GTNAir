@@ -432,10 +432,8 @@ export default function VideoPlayer({
   const seekToPosition = (clientX: number) => {
     if (!progressBarRef.current || !playerRef.current || isLocked) return;
     const rect = progressBarRef.current.getBoundingClientRect();
-    const padding = 6; // Account for px-1.5 padding in JSX
-    const trackWidth = rect.width - (padding * 2);
-    const offsetX = clientX - rect.left - padding;
-    const percentage = Math.max(0, Math.min(1, offsetX / trackWidth));
+    const offsetX = clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, offsetX / rect.width));
     
     const duration = playerRef.current.duration();
     const seekable = playerRef.current.seekable();
@@ -663,27 +661,30 @@ export default function VideoPlayer({
                 onMouseDown={handleMouseDown}
                 onTouchStart={handleTouchStart}
                 onClick={(e) => e.stopPropagation()}
-                className="relative h-6 flex items-center group/progress cursor-pointer px-1.5"
+                className="relative h-6 flex items-center group/progress cursor-pointer"
               >
-                {/* Thick hit area */}
-                <div className="absolute inset-x-0 h-full z-10" />
-                
-                {/* Visual line */}
-                <div className="h-[2px] w-full bg-white/10 rounded-full overflow-hidden relative">
-                  <div 
-                    className="absolute inset-y-0 left-0 bg-[#299fff]"
-                    style={{ width: `${progress}%` }}
-                  />
-                  {totalTime === 'LIVE' && progress >= 98 && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-shimmer" />
-                  )}
-                </div>
+                {/* Visual line container */}
+                <div className="w-full relative h-[2px] bg-white/10 rounded-full">
+                    {/* Track Fill */}
+                    <div 
+                        className="absolute inset-y-0 left-0 bg-[#299fff] rounded-full"
+                        style={{ width: `${progress}%` }}
+                    />
+                    
+                    {/* Shimmer Effect for Live Edge */}
+                    {totalTime === 'LIVE' && progress >= 95 && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-shimmer" />
+                    )}
 
-                {/* Vertical Pill Marker (Chrome Hub Standard) */}
-                <div 
-                  className="absolute top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#299fff] rounded-full shadow-[0_0_12px_rgba(41,159,255,1)] scale-100 group-hover/progress:scale-110 transition-transform duration-200 z-20 pointer-events-none"
-                  style={{ left: `calc(6px + ${progress}% * (100% - 12px) / 100 - 1.5px)` }}
-                />
+                    {/* Vertical Pill Marker (Google Chrome Standard) */}
+                    <div 
+                        className="absolute top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#299fff] rounded-full shadow-[0_0_12px_rgba(41,159,255,1)] transition-transform duration-150 group-hover/progress:scale-110 z-20 pointer-events-none"
+                        style={{ 
+                            left: `${progress}%`,
+                            transform: 'translate(-50%, -50%)'
+                        }}
+                    />
+                </div>
               </div>
 
               <div className="flex items-center justify-between">
