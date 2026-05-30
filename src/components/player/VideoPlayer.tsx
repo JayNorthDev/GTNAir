@@ -76,6 +76,7 @@ export default function VideoPlayer({
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [isPipActive, setIsPipActive] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   
   const [qualityLevels, setQualityLevels] = useState<any[]>([]);
   const [selectedQuality, setSelectedQuality] = useState<string>('auto');
@@ -99,9 +100,9 @@ export default function VideoPlayer({
     setShowControls(true);
     if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
     controlsTimerRef.current = setTimeout(() => {
-      if (isPlaying) setShowControls(false);
+      if (isPlaying && !isDragging) setShowControls(false);
     }, 5000);
-  }, [isPlaying]);
+  }, [isPlaying, isDragging]);
 
   useEffect(() => {
     const handleFsChange = () => {
@@ -196,14 +197,25 @@ export default function VideoPlayer({
     });
 
     player.on('timeupdate', () => {
+      if (isDragging) return;
       const current = player.currentTime();
       const duration = player.duration();
+      const seekable = player.seekable();
+      
       setCurrentTime(formatTime(current));
       
       if (duration && duration !== Infinity) {
         const prog = (current / duration) * 100;
         setProgress(prog);
         setTotalTime(formatTime(duration));
+      } else if (seekable && seekable.length > 0) {
+        // Handle Live DVR Window
+        const start = seekable.start(0);
+        const end = seekable.end(0);
+        const window = end - start;
+        const prog = window > 0 ? ((current - start) / window) * 100 : 100;
+        setProgress(prog);
+        setTotalTime('LIVE');
       } else {
         setProgress(100); 
         setTotalTime('LIVE');
@@ -232,7 +244,7 @@ export default function VideoPlayer({
       }
       if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
     };
-  }, [channel?.url, autoSkip, onStreamError, resetControlsTimer, isMuted]);
+  }, [channel?.url, autoSkip, onStreamError, resetControlsTimer, isMuted, isDragging]);
 
   const handleTogglePlay = () => {
     if (isPlaying) playerRef.current?.pause();
@@ -388,19 +400,73 @@ export default function VideoPlayer({
     }
   };
 
-  const handleProgressBarInteraction = (e: React.MouseEvent | React.TouchEvent) => {
+  const seekToPosition = (clientX: number) => {
     if (!progressBarRef.current || !playerRef.current || isLocked) return;
     const rect = progressBarRef.current.getBoundingClientRect();
-    const clientX = 'clientX' in e ? (e as React.MouseEvent).clientX : (e as any).touches[0].clientX;
     const offsetX = clientX - rect.left;
     const percentage = Math.max(0, Math.min(1, offsetX / rect.width));
-    const duration = playerRef.current.duration();
     
+    const duration = playerRef.current.duration();
+    const seekable = playerRef.current.seekable();
+
     if (duration && duration !== Infinity) {
       playerRef.current.currentTime(duration * percentage);
       setProgress(percentage * 100);
+    } else if (seekable && seekable.length > 0) {
+      const start = seekable.start(0);
+      const end = seekable.end(0);
+      const window = end - start;
+      const targetTime = start + (window * percentage);
+      playerRef.current.currentTime(targetTime);
+      setProgress(percentage * 100);
     }
   };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    seekToPosition(e.clientX);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      seekToPosition(e.clientX);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(true);
+    seekToPosition(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isDragging) {
+      seekToPosition(e.touches[0].clientX);
+    }
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove as any);
+      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchmove', handleTouchMove as any);
+      window.addEventListener('touchend', handleMouseUp);
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove as any);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMove as any);
+      window.removeEventListener('touchend', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove as any);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMove as any);
+      window.removeEventListener('touchend', handleMouseUp);
+    };
+  }, [isDragging]);
 
   if (!channel) return null;
 
@@ -436,7 +502,7 @@ export default function VideoPlayer({
         {/* Floating Utility Controls (Always Top) */}
         <div className={cn(
           "absolute inset-0 z-20 flex flex-col transition-opacity duration-500",
-          showControls ? "opacity-100 bg-black/40" : "opacity-0 pointer-events-none"
+          (showControls || isDragging) ? "opacity-100 bg-black/40" : "opacity-0 pointer-events-none"
         )}>
           <div className="flex items-center justify-between p-6">
             <div className="flex items-center gap-3">
@@ -552,15 +618,13 @@ export default function VideoPlayer({
                 </div>
               </div>
 
-              {/* Progress Bar (Styled like user screenshot) */}
+              {/* Progress Bar (Interactive DVR Seeking) */}
               <div 
                 ref={progressBarRef}
-                onMouseDown={handleProgressBarInteraction}
+                onMouseDown={handleMouseDown}
+                onTouchStart={handleTouchStart}
                 onClick={(e) => e.stopPropagation()}
-                className={cn(
-                  "relative h-6 flex items-center group/progress",
-                  totalTime === 'LIVE' ? "cursor-default" : "cursor-pointer"
-                )}
+                className="relative h-6 flex items-center group/progress cursor-pointer"
               >
                 {/* Thick hit area */}
                 <div className="absolute -top-2 inset-x-0 h-10 z-10" />
@@ -568,18 +632,15 @@ export default function VideoPlayer({
                 {/* Visual line */}
                 <div className="h-[2px] w-full bg-white/10 rounded-full overflow-hidden relative">
                   <div 
-                    className={cn(
-                      "absolute inset-y-0 left-0 bg-[#299fff] transition-all duration-300 ease-linear",
-                      totalTime === 'LIVE' && "w-full opacity-60"
-                    )}
-                    style={{ width: totalTime === 'LIVE' ? '100%' : `${progress}%` }}
+                    className="absolute inset-y-0 left-0 bg-[#299fff] transition-all duration-300 ease-linear"
+                    style={{ width: `${progress}%` }}
                   />
-                  {totalTime === 'LIVE' && (
+                  {totalTime === 'LIVE' && progress >= 98 && (
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-shimmer" />
                   )}
                 </div>
 
-                {/* Vertical Pill Marker (from screenshot) - Always visible when progress is present */}
+                {/* Vertical Pill Marker (Chrome Hub Standard) */}
                 <div 
                   className="absolute top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#299fff] rounded-full shadow-[0_0_12px_rgba(41,159,255,1)] scale-100 group-hover/progress:scale-110 transition-transform duration-200 z-20 pointer-events-none"
                   style={{ left: `calc(${progress}% - 1.5px)` }}
@@ -587,7 +648,7 @@ export default function VideoPlayer({
               </div>
 
               <div className="flex items-center justify-between">
-                {/* Bottom Left: Share & External (Repositioned) */}
+                {/* Bottom Left: Share & External */}
                 <div className="flex items-center gap-1">
                   <button onClick={handleShare} className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors">
                     <Share2 className="w-4 h-4" />
