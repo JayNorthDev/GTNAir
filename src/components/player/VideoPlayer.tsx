@@ -433,6 +433,7 @@ export default function VideoPlayer({
           <div className="video-container w-full h-full" />
         )}
 
+        {/* Floating Utility Controls (Always Top) */}
         <div className={cn(
           "absolute inset-0 z-20 flex flex-col transition-opacity duration-500",
           showControls ? "opacity-100 bg-black/40" : "opacity-0 pointer-events-none"
@@ -514,36 +515,36 @@ export default function VideoPlayer({
 
           {!isLocked && (
             <div className="p-6 space-y-4">
-              <div className="flex items-end justify-between">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="space-y-1 truncate">
-                    <h2 className="text-2xl font-bold tracking-tight truncate">{channel.name}</h2>
-                    <p className="text-sm italic text-white/60 truncate">
+                  <div className="space-y-0.5 truncate">
+                    <h2 className="text-xl font-bold tracking-tight truncate">{channel.name}</h2>
+                    <p className="text-[10px] text-white/40 truncate uppercase tracking-[0.2em] font-black">
                       Live Broadcast • {channel.group.title || 'General'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0 mb-1">
-                    <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
-                      {currentTime} <span className="text-white/20 mx-1">/</span> 
+                  <div className="flex items-center gap-3 shrink-0 ml-4">
+                    <div className="text-[10px] font-black tracking-widest tabular-nums text-white/60">
+                      {currentTime} <span className="text-white/20 mx-0.5">/</span> 
                     </div>
                     {totalTime === 'LIVE' ? (
                       <button 
                         onClick={(e) => { e.stopPropagation(); onToggleLiveEdge?.(); }}
                         className={cn(
-                          "flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-300",
+                          "flex items-center gap-1.5 px-2 py-0.5 rounded-md transition-all duration-300",
                           forceLiveEdge 
                             ? "bg-red-500/10 text-red-500 border border-red-500/20" 
                             : "bg-white/5 text-white/40 border border-white/5 hover:text-white"
                         )}
                       >
                         <div className={cn(
-                          "w-1.5 h-1.5 rounded-full",
+                          "w-1 h-1 rounded-full",
                           forceLiveEdge ? "bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" : "bg-white/20"
                         )} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Live</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest">Live</span>
                       </button>
                     ) : (
-                      <div className="text-xs font-medium tracking-widest tabular-nums text-white/80">
+                      <div className="text-[10px] font-black tracking-widest tabular-nums text-white/60">
                         {totalTime}
                       </div>
                     )}
@@ -551,21 +552,25 @@ export default function VideoPlayer({
                 </div>
               </div>
 
+              {/* Progress Bar (Styled like user screenshot) */}
               <div 
                 ref={progressBarRef}
                 onMouseDown={handleProgressBarInteraction}
                 onClick={(e) => e.stopPropagation()}
                 className={cn(
-                  "relative group/progress",
+                  "relative h-6 flex items-center group/progress",
                   totalTime === 'LIVE' ? "cursor-default" : "cursor-pointer"
                 )}
               >
-                <div className="absolute -top-4 inset-x-0 h-10 z-10" />
-                <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden relative">
+                {/* Thick hit area */}
+                <div className="absolute -top-2 inset-x-0 h-10 z-10" />
+                
+                {/* Visual line */}
+                <div className="h-[2px] w-full bg-white/10 rounded-full overflow-hidden relative">
                   <div 
                     className={cn(
-                      "absolute inset-y-0 left-0 bg-[#299fff] transition-all duration-300 ease-linear shadow-[0_0_15px_rgba(41,159,255,0.6)]",
-                      totalTime === 'LIVE' && "w-full opacity-80"
+                      "absolute inset-y-0 left-0 bg-[#299fff] transition-all duration-300 ease-linear",
+                      totalTime === 'LIVE' && "w-full opacity-60"
                     )}
                     style={{ width: totalTime === 'LIVE' ? '100%' : `${progress}%` }}
                   />
@@ -573,96 +578,98 @@ export default function VideoPlayer({
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-shimmer" />
                   )}
                 </div>
+
+                {/* Vertical Pill Marker (from screenshot) */}
                 {totalTime !== 'LIVE' && (
                   <div 
-                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-xl scale-0 group-hover/progress:scale-100 transition-transform duration-200 z-20 pointer-events-none"
-                    style={{ left: `calc(${progress}% - 8px)` }}
+                    className="absolute top-1/2 -translate-y-1/2 w-[3px] h-4 bg-[#299fff] rounded-full shadow-[0_0_8px_rgba(41,159,255,0.8)] scale-100 group-hover/progress:scale-110 transition-transform duration-200 z-20 pointer-events-none"
+                    style={{ left: `calc(${progress}% - 1.5px)` }}
                   />
                 )}
               </div>
 
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 sm:gap-4">
-                    <button onClick={handleShare} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                      <Share2 className="w-5 h-5" />
-                    </button>
-                    <button onClick={handleOutlink} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors">
-                      <ExternalLink className="w-5 h-5" />
-                    </button>
-                  </div>
+              <div className="flex items-center justify-between">
+                {/* Bottom Left: Share & External (Repositioned) */}
+                <div className="flex items-center gap-1">
+                  <button onClick={handleShare} className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors">
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                  <button onClick={handleOutlink} className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-colors">
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                </div>
 
-                  <div className="flex items-center gap-2 sm:gap-4">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5 flex items-center gap-2">
-                          <Settings2 className="w-5 h-5" />
-                          <span className="text-[10px] font-bold uppercase tracking-tight hidden sm:inline">
-                            Quality: {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Auto'}
-                          </span>
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Video Quality</DropdownMenuLabel>
-                        <DropdownMenuRadioGroup value={selectedQuality} onValueChange={handleQualityChange}>
-                          <DropdownMenuRadioItem value="auto" className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold uppercase tracking-widest">
-                            Auto
+                {/* Bottom Right: Feature Controls */}
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <button className="text-white/40 hover:text-white transition-colors outline-none p-2 rounded-lg hover:bg-white/5 flex items-center gap-2">
+                        <Settings2 className="w-4 h-4" />
+                        <span className="text-[9px] font-black uppercase tracking-widest hidden sm:inline">
+                          Quality: {selectedQuality === 'auto' ? 'Auto' : qualityLevels.find(q => q.index.toString() === selectedQuality)?.label || 'Auto'}
+                        </span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Video Quality</DropdownMenuLabel>
+                      <DropdownMenuRadioGroup value={selectedQuality} onValueChange={handleQualityChange}>
+                        <DropdownMenuRadioItem value="auto" className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold uppercase tracking-widest">
+                          Auto
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuSeparator className="bg-white/5 mx-2" />
+                        {qualityLevels.map((level) => (
+                          <DropdownMenuRadioItem 
+                            key={level.index} 
+                            value={level.index.toString()}
+                            className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
+                          >
+                            {level.label}
                           </DropdownMenuRadioItem>
-                          <DropdownMenuSeparator className="bg-white/5 mx-2" />
-                          {qualityLevels.map((level) => (
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <button className="text-white/40 hover:text-white transition-colors outline-none p-2 rounded-lg hover:bg-white/5 flex items-center gap-2">
+                        <Timer className="w-4 h-4" />
+                        <span className="text-[9px] font-black uppercase tracking-widest hidden sm:inline">
+                          Speed: {playbackRate === '1' ? 'Normal' : `${playbackRate}X`}
+                        </span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Playback Speed</DropdownMenuLabel>
+                       <DropdownMenuRadioGroup value={playbackRate} onValueChange={handlePlaybackRateChange}>
+                          {['0.5', '0.75', '1', '1.25', '1.5', '2'].map((rate) => (
                             <DropdownMenuRadioItem 
-                              key={level.index} 
-                              value={level.index.toString()}
+                              key={rate} 
+                              value={rate}
                               className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
                             >
-                              {level.label}
+                              {rate === '1' ? 'Normal (1X)' : `${rate}X`}
                             </DropdownMenuRadioItem>
                           ))}
-                        </DropdownMenuRadioGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                       </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <button className="text-white/60 hover:text-white transition-colors outline-none p-1.5 rounded-lg hover:bg-white/5 flex items-center gap-2">
-                          <Timer className="w-5 h-5" />
-                          <span className="text-[10px] font-bold uppercase tracking-tight hidden sm:inline">
-                            Speed: {playbackRate === '1' ? '1X' : `${playbackRate}X`}
-                          </span>
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" side="top" className="bg-[#0a0a0a]/95 backdrop-blur-2xl border-white/10 text-white rounded-2xl shadow-2xl p-2 z-[110]" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-2 px-2">Playback Speed</DropdownMenuLabel>
-                         <DropdownMenuRadioGroup value={playbackRate} onValueChange={handlePlaybackRateChange}>
-                            {['0.5', '0.75', '1', '1.25', '1.5', '2'].map((rate) => (
-                              <DropdownMenuRadioItem 
-                                key={rate} 
-                                value={rate}
-                                className="py-2.5 px-3 rounded-xl focus:bg-[#299fff] transition-colors cursor-pointer text-xs font-bold"
-                              >
-                                {rate === '1' ? 'Normal (1X)' : `${rate}X`}
-                              </DropdownMenuRadioItem>
-                            ))}
-                         </DropdownMenuRadioGroup>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <button onClick={handleReplay} className="p-2 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all">
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
 
-                    <button onClick={handleReplay} className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-all">
-                      <RefreshCw className="w-5 h-5" />
-                    </button>
+                  <button onClick={handleTogglePip} className={cn("p-2 rounded-lg transition-all", isPipActive ? "text-[#299fff] bg-[#299fff]/10" : "text-white/40 hover:text-white hover:bg-white/5")}>
+                    <PictureInPicture2 className="w-4 h-4" />
+                  </button>
 
-                    <button onClick={handleTogglePip} className={cn("p-1.5 rounded-lg transition-all", isPipActive ? "text-[#299fff] bg-[#299fff]/10" : "text-white/60 hover:text-white hover:bg-white/5")}>
-                      <PictureInPicture2 className="w-5 h-5" />
-                    </button>
+                  <button onClick={handleToggleCaptions} className={cn("transition-all duration-300 p-2 rounded-lg", captionsEnabled ? "text-[#299fff] bg-[#299fff]/10" : "text-white/40 hover:text-white hover:bg-white/5")}>
+                    <Captions className="w-4 h-4" />
+                  </button>
 
-                    <button onClick={handleToggleCaptions} className={cn("transition-all duration-300 p-1.5 rounded-lg", captionsEnabled ? "text-[#299fff] bg-[#299fff]/10" : "text-white/60 hover:text-white hover:bg-white/5")}>
-                      <Captions className="w-5 h-5" />
-                    </button>
-
-                    <button onClick={handleFullScreen} className="text-white/60 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
-                      {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-                    </button>
-                  </div>
+                  <button onClick={handleFullScreen} className="text-white/40 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/5">
+                    {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
             </div>
