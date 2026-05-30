@@ -579,13 +579,11 @@ export default function VideoPlayer({
                   )}
                 </div>
 
-                {/* Vertical Pill Marker (from screenshot) */}
-                {totalTime !== 'LIVE' && (
-                  <div 
-                    className="absolute top-1/2 -translate-y-1/2 w-[3px] h-4 bg-[#299fff] rounded-full shadow-[0_0_8px_rgba(41,159,255,0.8)] scale-100 group-hover/progress:scale-110 transition-transform duration-200 z-20 pointer-events-none"
-                    style={{ left: `calc(${progress}% - 1.5px)` }}
-                  />
-                )}
+                {/* Vertical Pill Marker (from screenshot) - Always visible when progress is present */}
+                <div 
+                  className="absolute top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#299fff] rounded-full shadow-[0_0_12px_rgba(41,159,255,1)] scale-100 group-hover/progress:scale-110 transition-transform duration-200 z-20 pointer-events-none"
+                  style={{ left: `calc(${progress}% - 1.5px)` }}
+                />
               </div>
 
               <div className="flex items-center justify-between">
