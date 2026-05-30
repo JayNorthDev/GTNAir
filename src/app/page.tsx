@@ -23,6 +23,18 @@ interface HomeProps {
   searchParams: Promise<any>;
 }
 
+const GREETINGS = [
+  "Hello",
+  "Bonjour",
+  "Hola",
+  "Ciao",
+  "Konnichiwa",
+  "Ayubowan",
+  "Namaste",
+  "Salu",
+  "Nǐ hǎo"
+];
+
 export default function Home(props: HomeProps) {
   const params = use(props.params);
   const searchParams = use(props.searchParams);
@@ -53,6 +65,9 @@ export default function Home(props: HomeProps) {
   const [failCount, setFailCount] = useState(0);
   const [skipError, setSkipError] = useState(false);
 
+  // Apple Hello Loader State
+  const [greetingIndex, setGreetingIndex] = useState(0);
+
   const favoriteChannels = useMemo(
     () => allChannels.filter(channel => favoriteUrls.includes(channel.url)),
     [allChannels, favoriteUrls]
@@ -67,6 +82,17 @@ export default function Home(props: HomeProps) {
   useEffect(() => {
     filterChannels(searchTerm, selectedCategory);
   }, [searchTerm, selectedCategory, filterChannels]);
+
+  // Greeting Cycle Effect
+  useEffect(() => {
+    const isLoading = (loading && allChannels.length === 0) || !settingsLoaded;
+    if (isLoading) {
+      const interval = setInterval(() => {
+        setGreetingIndex((prev) => (prev + 1) % GREETINGS.length);
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [loading, allChannels.length, settingsLoaded]);
 
   const handleChannelSelect = useCallback((channel: Channel) => {
     setSelectedChannel(channel);
@@ -111,7 +137,7 @@ export default function Home(props: HomeProps) {
         <div className="flex flex-col items-center gap-4 text-center p-4">
           <AlertTriangle className="w-16 h-16 text-destructive" />
           <h2 className="text-2xl font-semibold">Failed to load playlist</h2>
-          <p className="text-muted-foreground max-w-md">{error}</p>
+          <p className="text-muted-foreground max-md">{error}</p>
         </div>
       </div>
     );
@@ -287,28 +313,43 @@ export default function Home(props: HomeProps) {
 
       <SettingsView isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
+      {/* Apple Hello Style Loader */}
       {isLoading && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/60 backdrop-blur-md animate-in fade-in duration-700">
-          <div className="flex flex-col items-center gap-10">
-            <div className="relative">
-              <div className="absolute -inset-10 bg-[#299fff]/20 blur-3xl rounded-full animate-pulse" />
-              <GtnLogo className="w-20 h-20 text-[#299fff] relative z-10 drop-shadow-[0_0_15px_rgba(41,159,255,0.8)]" />
+        <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black animate-in fade-in duration-1000">
+          <div className="relative flex flex-col items-center justify-center min-h-[200px] w-full">
+            {/* Animated Greeting Text */}
+            <div className="relative overflow-hidden h-32 flex items-center justify-center w-full">
+               {GREETINGS.map((text, idx) => (
+                 <span 
+                   key={text}
+                   className={cn(
+                     "absolute text-5xl md:text-7xl font-bold tracking-tight text-white transition-all duration-1000 ease-in-out transform-gpu",
+                     idx === greetingIndex 
+                      ? "opacity-100 translate-y-0 blur-0 scale-100" 
+                      : "opacity-0 translate-y-8 blur-xl scale-90 pointer-events-none"
+                   )}
+                   style={{ fontFamily: 'var(--font-headline)' }}
+                 >
+                   {text}
+                 </span>
+               ))}
             </div>
-            <div className="flex items-center gap-3">
-              {[0, 1, 2, 3].map((i) => (
-                <div 
-                  key={i}
-                  className="w-4 h-4 bg-[#299fff]/90 rounded-[2px] shadow-[0_0_12px_rgba(41,159,255,0.5)] animate-pulse spinner"
-                  style={{ animationDelay: `${i * 200}ms`, animationDuration: '1.5s' }}
-                />
-              ))}
+
+            {/* Subtle Progress Indicator */}
+            <div className="mt-12 flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-500">
+               <div className="w-48 h-[1px] bg-white/10 overflow-hidden rounded-full">
+                  <div className="h-full bg-white/40 animate-shimmer w-full translate-x-[-100%]" />
+               </div>
+               <div className="flex items-center gap-3">
+                  <GtnLogo className="w-6 h-6 text-white/20 animate-pulse" />
+                  <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">GTNPlay Premium</span>
+               </div>
             </div>
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-sm font-bold tracking-[0.4em] text-[#299fff] uppercase animate-pulse word">
-                Initializing Channels
-              </span>
-              <div className="h-[1px] w-16 bg-[#299fff]/30" />
-            </div>
+          </div>
+
+          {/* Background Ambient Glow */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden z-[-1]">
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/[0.03] blur-[120px] rounded-full" />
           </div>
         </div>
       )}
