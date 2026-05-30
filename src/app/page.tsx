@@ -315,8 +315,23 @@ export default function Home(props: HomeProps) {
 
       {/* Apple Hello Style Loader */}
       {isLoading && (
-        <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black animate-in fade-in duration-1000">
-          <div className="relative flex flex-col items-center justify-center min-h-[200px] w-full">
+        <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-[#050505] animate-in fade-in duration-1000 overflow-hidden">
+          {/* Apple-style background gradient layers */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {/* Main central soft light */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.04)_0%,_transparent_70%)]" />
+            
+            {/* Top left subtle purple bloom */}
+            <div className="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] bg-purple-600/5 blur-[120px] rounded-full animate-pulse duration-[10s]" />
+            
+            {/* Bottom right subtle blue bloom */}
+            <div className="absolute -bottom-[20%] -right-[10%] w-[70%] h-[70%] bg-blue-600/5 blur-[120px] rounded-full animate-pulse duration-[8s] delay-1000" />
+            
+            {/* Soft edge vignette */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_40%,_rgba(0,0,0,0.4)_100%)]" />
+          </div>
+
+          <div className="relative z-10 flex flex-col items-center justify-center min-h-[200px] w-full">
             {/* Animated Greeting Text */}
             <div className="relative overflow-hidden h-32 flex items-center justify-center w-full">
                {GREETINGS.map((text, idx) => (
@@ -345,11 +360,6 @@ export default function Home(props: HomeProps) {
                   <span className="text-[10px] font-black text-white/30 uppercase tracking-[0.4em]">GTNPlay Premium</span>
                </div>
             </div>
-          </div>
-
-          {/* Background Ambient Glow */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden z-[-1]">
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/[0.03] blur-[120px] rounded-full" />
           </div>
         </div>
       )}
