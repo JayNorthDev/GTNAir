@@ -209,7 +209,6 @@ export default function VideoPlayer({
         setProgress(prog);
         setTotalTime(formatTime(duration));
       } else if (seekable && seekable.length > 0) {
-        // Handle Live DVR Window
         const start = seekable.start(0);
         const end = seekable.end(0);
         const window = end - start;
@@ -403,8 +402,10 @@ export default function VideoPlayer({
   const seekToPosition = (clientX: number) => {
     if (!progressBarRef.current || !playerRef.current || isLocked) return;
     const rect = progressBarRef.current.getBoundingClientRect();
-    const offsetX = clientX - rect.left;
-    const percentage = Math.max(0, Math.min(1, offsetX / rect.width));
+    const padding = 6; // Account for px-1.5 padding in JSX
+    const trackWidth = rect.width - (padding * 2);
+    const offsetX = clientX - rect.left - padding;
+    const percentage = Math.max(0, Math.min(1, offsetX / trackWidth));
     
     const duration = playerRef.current.duration();
     const seekable = playerRef.current.seekable();
@@ -624,15 +625,15 @@ export default function VideoPlayer({
                 onMouseDown={handleMouseDown}
                 onTouchStart={handleTouchStart}
                 onClick={(e) => e.stopPropagation()}
-                className="relative h-6 flex items-center group/progress cursor-pointer"
+                className="relative h-6 flex items-center group/progress cursor-pointer px-1.5"
               >
                 {/* Thick hit area */}
-                <div className="absolute -top-2 inset-x-0 h-10 z-10" />
+                <div className="absolute inset-x-0 h-full z-10" />
                 
                 {/* Visual line */}
                 <div className="h-[2px] w-full bg-white/10 rounded-full overflow-hidden relative">
                   <div 
-                    className="absolute inset-y-0 left-0 bg-[#299fff] transition-all duration-300 ease-linear"
+                    className="absolute inset-y-0 left-0 bg-[#299fff]"
                     style={{ width: `${progress}%` }}
                   />
                   {totalTime === 'LIVE' && progress >= 98 && (
@@ -643,7 +644,7 @@ export default function VideoPlayer({
                 {/* Vertical Pill Marker (Chrome Hub Standard) */}
                 <div 
                   className="absolute top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#299fff] rounded-full shadow-[0_0_12px_rgba(41,159,255,1)] scale-100 group-hover/progress:scale-110 transition-transform duration-200 z-20 pointer-events-none"
-                  style={{ left: `calc(${progress}% - 1.5px)` }}
+                  style={{ left: `calc(6px + ${progress}% * (100% - 12px) / 100 - 1.5px)` }}
                 />
               </div>
 
