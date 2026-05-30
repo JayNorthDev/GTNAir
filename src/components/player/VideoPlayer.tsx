@@ -657,14 +657,13 @@ export default function VideoPlayer({
 
               {/* Progress Bar (Interactive DVR Seeking) */}
               <div 
-                ref={progressBarRef}
                 onMouseDown={handleMouseDown}
                 onTouchStart={handleTouchStart}
                 onClick={(e) => e.stopPropagation()}
-                className="relative h-6 flex items-center group/progress cursor-pointer"
+                className="relative h-6 flex items-center group/progress cursor-pointer px-1.5"
               >
                 {/* Visual line container */}
-                <div className="w-full relative h-[2px] bg-white/10 rounded-full">
+                <div ref={progressBarRef} className="w-full relative h-[2px] bg-white/10 rounded-full">
                     {/* Track Fill */}
                     <div 
                         className="absolute inset-y-0 left-0 bg-[#299fff] rounded-full"
@@ -678,10 +677,9 @@ export default function VideoPlayer({
 
                     {/* Vertical Pill Marker (Google Chrome Standard) */}
                     <div 
-                        className="absolute top-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#299fff] rounded-full shadow-[0_0_12px_rgba(41,159,255,1)] transition-transform duration-150 group-hover/progress:scale-110 z-20 pointer-events-none"
+                        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-[3px] h-5 bg-[#299fff] rounded-full shadow-[0_0_12px_rgba(41,159,255,1)] transition-transform duration-150 group-hover/progress:scale-110 z-20 pointer-events-none"
                         style={{ 
-                            left: `${progress}%`,
-                            transform: 'translate(-50%, -50%)'
+                            left: `${progress}%`
                         }}
                     />
                 </div>
